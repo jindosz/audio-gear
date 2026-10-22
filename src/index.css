@@ -716,3 +716,16 @@ button.small {
   border-left: 3px solid var(--danger);
   background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
+
+/* ---- 차이 그래프 ----
+   flex 비율로 높이를 나눈다: 위 FR 그래프 3 : 아래 차이 그래프 2 */
+.chart-box:not(.diff) {
+  flex: 3;
+}
+
+.chart-box.diff {
+  flex: 2;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}

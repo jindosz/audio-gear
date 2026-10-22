@@ -67,5 +67,10 @@ export interface CompareTab {
   /** 정규화 기준 주파수(Hz). null이면 정규화하지 않음 */
   normalizeHz: number | null
   targetId: string | null
+  /**
+   * 차이 곡선의 기준: 'target'(타깃) 또는 측정치 id. null이면 차이 곡선을 그리지 않는다.
+   * 이 필드가 생기기 전에 만든 탭에는 없을 수 있어서 선택(?) 필드
+   */
+  diffRef?: string | null
   createdAt: number
 }

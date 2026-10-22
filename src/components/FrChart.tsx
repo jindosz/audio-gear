@@ -28,6 +28,10 @@ interface Props {
   series: ChartSeries[]
   /** y축 제목. 예: "dB (1kHz = 0)" */
   yTitle: string
+  /** 차이 그래프면 true: 툴팁 값에 +/- 부호를 붙인다 */
+  signed?: boolean
+  /** 바깥 상자에 더할 CSS 클래스 */
+  className?: string
 }
 
 // 그래프 점 하나: x = 주파수(Hz), y = dB (값이 없으면 null)
@@ -58,7 +62,7 @@ function useColorScheme(): 'light' | 'dark' {
   return scheme
 }
 
-export function FrChart({ grid, series, yTitle }: Props) {
+export function FrChart({ grid, series, yTitle, signed = false, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart<'line', XY[]> | null>(null)
   const scheme = useColorScheme()
@@ -96,7 +100,6 @@ export function FrChart({ grid, series, yTitle }: Props) {
           tooltip: {
             callbacks: {
               title: (items) => `${formatHz(items[0].parsed.x ?? 0)}Hz`,
-              label: (item) => ` ${item.dataset.label}: ${item.parsed.y?.toFixed(1)} dB`,
             },
           },
         },
@@ -132,11 +135,15 @@ export function FrChart({ grid, series, yTitle }: Props) {
       axis.ticks = { ...axis.ticks, color: text }
     }
     y!.title = { display: true, text: yTitle, color: text }
+    chart.options.plugins!.tooltip!.callbacks!.label = (item) => {
+      const v = item.parsed.y ?? 0
+      return ` ${item.dataset.label}: ${signed && v > 0 ? '+' : ''}${v.toFixed(1)} dB`
+    }
     chart.update()
-  }, [grid, series, yTitle, scheme])
+  }, [grid, series, yTitle, signed, scheme])
 
   return (
-    <div className="chart-box">
+    <div className={className ? `chart-box ${className}` : 'chart-box'}>
       <canvas ref={canvasRef} role="img" aria-label="주파수 응답 그래프" />
     </div>
   )

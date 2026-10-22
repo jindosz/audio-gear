@@ -49,3 +49,14 @@ export function normalizeAt(values: (number | null)[], curve: FrCurve, hz: numbe
   if (ref === null) return values
   return values.map((v) => (v === null ? null : v - ref))
 }
+
+/**
+ * 차이 곡선: 칸마다 a - b. 둘 중 하나라도 값이 없는 칸은 null.
+ * +면 a가 그 주파수에서 더 크고, -면 더 작다.
+ */
+export function diffValues(a: (number | null)[], b: (number | null)[]): (number | null)[] {
+  return a.map((v, i) => {
+    const w = b[i]
+    return v === null || w === null || w === undefined ? null : v - w
+  })
+}

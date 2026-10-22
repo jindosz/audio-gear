@@ -156,6 +156,11 @@ export async function toggleSelection(tabId: string, measurementId: string): Pro
   })
 }
 
+/** 비교 탭의 차이 곡선 기준을 바꾼다('target' 또는 측정치 id, null이면 끔) */
+export async function setDiffRef(tabId: string, diffRef: string | null): Promise<void> {
+  await db.tabs.update(tabId, { diffRef })
+}
+
 /** 비교 탭의 타깃을 바꾼다. null이면 타깃 없음 */
 export async function setTabTarget(tabId: string, targetId: string | null): Promise<void> {
   await db.tabs.update(tabId, { targetId })

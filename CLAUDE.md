@@ -29,7 +29,7 @@
 - `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), wishlist(찜, 선택 필드: 예전 데이터엔 없음), notes, createdAt
 - `Measurement`: 측정치. deviceId로 기기를 가리킴. variant(이어팁·패드 등 구성), rig(`5128` | `711` | `gras` | `other`), source(`local` 또는 출처명), channel(`L` | `R` | `avg`), curve
 - `Target`: 타깃 커브(Harman OE/IE 등). category, rig, isCustom, curve. 측정치와 같은 곡선 형식이라 불러오기 코드를 재사용한다.
-- `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId
+- `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId, diffRef(차이 곡선 기준: 'target' 또는 측정치 id, 선택 필드)
 - `FrCurve`는 `{ freq: number; db: number }[]`
 - 탭은 기기가 아니라 측정치를 선택한다(같은 기기의 구성별 비교 가능). 목록 클릭은 첫 번째 측정치를 선택하고, 다른/여러 측정치는 기기 상세 팝업의 "비교에 추가"로 고른다. 같은 기기가 여러 번 선택되면 그래프 이름 뒤에 구성/출처를 붙인다.
 - 색은 실제 색 값이 아니라 팔레트 순번(colorIndex)만 저장한다. 라이트/다크 모드별 실제 색은 팔레트에서 정한다.
@@ -50,6 +50,7 @@
    - 상단: 브라우저처럼 여러 비교 탭을 열고 닫고 전환. 선택 기기, 색 배정, 정규화 기준, 타깃은 탭마다 저장하고 앱을 다시 열면 복원한다.
    - 그래프 툴바: 정규화 기준 선택과 타깃 선택 드롭다운. 타깃은 현재 기기 종류(헤드폰/이어폰)에 맞는 것을 먼저 보여주고 나머지는 접어둔다. 기기 측정치와 타깃의 리그가 다르면 경고를 표시한다.
    - 그래프: FR 곡선 겹쳐보기. 타깃은 회색 점선으로 표시.
+   - 차이 그래프: 툴바의 "차이 기준"(타깃 또는 선택한 측정치)을 고르면 FR 그래프 아래에 나머지 곡선 − 기준을 그린다. 기준이 선택에서 빠지면 꺼진 것으로 본다.
 
 색 배정 규칙:
 - 8색 팔레트(색각 이상 친화, `index.css`의 `--series-0`~`--series-7`, 라이트/다크 값 따로, dataviz 검증기 통과). 기기를 클릭으로 선택하면 비어 있는 첫 번째 색을 배정한다. 기기 클릭 시 그 기기의 첫 번째 측정치가 선택되고, 측정치가 없으면 상세 팝업을 연다.
@@ -72,7 +73,7 @@
 
 ### 2단계 (핵심 가치)
 - [x] 3단 레이아웃과 비교 탭 구현 (`TabBar.tsx`, `useTabs.ts`. 보고 있던 탭 id는 localStorage에 저장)
-- [ ] FR 곡선 그래프(Chart.js, 로그 축), 기준점 정규화, 차이 곡선 — 그래프·정규화 완료(`src/curve.ts`, `FrChart.tsx`), 차이 곡선 남음
+- [x] FR 곡선 그래프(Chart.js, 로그 축), 기준점 정규화, 차이 곡선 (`src/curve.ts`, `FrChart.tsx`. 차이 기준은 툴바에서 고르고, 아래 작은 그래프에 "곡선 − 기준"을 그림)
 - [x] 클릭 선택 시 색 자동 배정과 목록 배경 연동 (`src/selection.ts`, 선택은 첫 번째 비교 탭에 저장)
 - [ ] 타깃 선택 드롭다운과 리그 불일치 경고, 커스텀 타깃 CSV 불러오기 — 드롭다운(AutoEQ 기본 타깃 8개, `src/targets.ts`)·회색 점선·리그 경고 완료, 커스텀 CSV 남음
 - [x] 기기 삭제 시 연결된 측정치도 함께 삭제 (`deleteDevice`)
@@ -90,4 +91,4 @@
 ## 다음 작업
 
 1. 커스텀 타깃 CSV 불러오기 (타깃 드롭다운에 "CSV 불러오기…" 추가, `parseFrCsv` 재사용, `isCustom: true`)
-2. 차이 곡선 (두 곡선의 dB 차이, `curve.ts`의 공통 주파수 위치를 그대로 사용)
+2. JSON 내보내기/가져오기 백업 (iOS 저장소 삭제 대비)

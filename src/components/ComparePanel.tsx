@@ -1,9 +1,9 @@
-// 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃) + 리그 경고 + 범례 + FR 그래프
+// 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃, 차이 기준) + 리그 경고 + 범례 + FR 그래프 + 차이 그래프
 import type { CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { logGrid, normalizeAt, resample } from '../curve'
+import { diffValues, logGrid, normalizeAt, resample } from '../curve'
 import { measurementLabel, rigLabels, sourceLabel } from '../labels'
-import { getTarget, setNormalizeHz } from '../repo'
+import { getTarget, setDiffRef, setNormalizeHz } from '../repo'
 import { seriesColor } from '../selection'
 import type { CompareTab, DeviceCategory } from '../types'
 import { useCompareData, type SelectedItem } from '../useCompareData'
@@ -36,20 +36,32 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
     `${device.brand} ${device.model}` +
     ((deviceCount.get(device.id) ?? 0) > 1 ? ` (${measurementLabel(measurement)})` : '')
 
-  // 곡선 8개 × 240칸 계산은 가벼워서 화면을 그릴 때마다 다시 계산해도 된다
-  const series: ChartSeries[] = selected.map((item) => ({
+  // 곡선 8개 × 240칸 계산은 가벼워서 화면을 그릴 때마다 다시 계산해도 된다.
+  // key: 차이 기준을 고를 때 쓰는 이름표(측정치 id, 타깃은 'target')
+  const curves: (ChartSeries & { key: string })[] = selected.map((item) => ({
+    key: item.measurement.id,
     label: labelOf(item),
     colorIndex: item.selection.colorIndex,
     values: normalizeAt(resample(item.measurement.curve, GRID), item.measurement.curve, normalizeHz),
   }))
   if (target) {
     // 타깃도 같은 기준으로 정규화해야 기기 곡선과 겹쳐 비교할 수 있다
-    series.push({
+    curves.push({
+      key: 'target',
       label: `타깃: ${target.name}`,
       colorIndex: null,
       values: normalizeAt(resample(target.curve, GRID), target.curve, normalizeHz),
     })
   }
+  const series: ChartSeries[] = curves
+
+  // 차이 곡선: 기준 곡선을 나머지 곡선에서 뺀다. 기준이 사라졌으면(선택 해제·타깃 끔) 끈 것으로 본다
+  const reference = curves.find((c) => c.key === tab?.diffRef)
+  const diffSeries: ChartSeries[] = reference
+    ? curves
+        .filter((c) => c !== reference)
+        .map((c) => ({ label: c.label, colorIndex: c.colorIndex, values: diffValues(c.values, reference.values) }))
+    : []
 
   // 리그 불일치: 리그를 아는 측정치 중 타깃과 리그가 다른 것. '기타'(모름)는 따로 안내만 한다
   const mismatched = target ? selected.filter((s) => s.measurement.rig !== 'other' && s.measurement.rig !== target.rig) : []
@@ -87,6 +99,17 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
           </select>
         </label>
         <TargetSelect tabId={tab.id} targetId={targetId} category={category} />
+        <label>
+          차이 기준{' '}
+          <select value={reference?.key ?? ''} onChange={(e) => setDiffRef(tab.id, e.target.value || null)}>
+            <option value="">끔</option>
+            {curves.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {target && mismatched.length > 0 && (
@@ -120,6 +143,18 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
       </ul>
 
       <FrChart grid={GRID} series={series} yTitle={yTitle} />
+      {reference && diffSeries.length > 0 && (
+        <FrChart
+          className="diff"
+          grid={GRID}
+          series={diffSeries}
+          yTitle={`차이 dB (기준: ${reference.label})`}
+          signed
+        />
+      )}
+      {reference && diffSeries.length === 0 && (
+        <p className="muted small">차이를 볼 곡선이 없습니다. 기기를 하나 더 선택하세요.</p>
+      )}
     </main>
   )
 }

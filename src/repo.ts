@@ -41,6 +41,12 @@ export function getTarget(id: string): Promise<Target | undefined> {
   return db.targets.get(id)
 }
 
+/** 사용자가 CSV로 불러온 타깃 목록(이름순). isCustom은 boolean이라 인덱스 대신 filter로 거른다 */
+export async function listCustomTargets(): Promise<Target[]> {
+  const targets = await db.targets.filter((t) => t.isCustom).toArray()
+  return targets.sort((a, b) => a.name.localeCompare(b.name))
+}
+
 /** 보관해 둔 값을 읽는다. 없으면 undefined */
 export function getMeta(key: string): Promise<MetaRecord | undefined> {
   return db.meta.get(key)
@@ -159,6 +165,16 @@ export async function toggleSelection(tabId: string, measurementId: string): Pro
 /** 비교 탭의 차이 곡선 기준을 바꾼다('target' 또는 측정치 id, null이면 끔) */
 export async function setDiffRef(tabId: string, diffRef: string | null): Promise<void> {
   await db.tabs.update(tabId, { diffRef })
+}
+
+/** 타깃을 삭제하고, 그 타깃을 쓰던 탭은 타깃 없음으로 바꾼다 */
+export async function deleteTarget(id: string): Promise<void> {
+  await db.transaction('rw', db.targets, db.tabs, async () => {
+    await db.targets.delete(id)
+    await db.tabs.toCollection().modify((tab) => {
+      if (tab.targetId === id) tab.targetId = null
+    })
+  })
 }
 
 /** 비교 탭의 타깃을 바꾼다. null이면 타깃 없음 */

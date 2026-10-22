@@ -75,7 +75,7 @@
 - [x] 3단 레이아웃과 비교 탭 구현 (`TabBar.tsx`, `useTabs.ts`. 보고 있던 탭 id는 localStorage에 저장)
 - [x] FR 곡선 그래프(Chart.js, 로그 축), 기준점 정규화, 차이 곡선 (`src/curve.ts`, `FrChart.tsx`. 차이 기준은 툴바에서 고르고, 아래 작은 그래프에 "곡선 − 기준"을 그림)
 - [x] 클릭 선택 시 색 자동 배정과 목록 배경 연동 (`src/selection.ts`, 선택은 첫 번째 비교 탭에 저장)
-- [ ] 타깃 선택 드롭다운과 리그 불일치 경고, 커스텀 타깃 CSV 불러오기 — 드롭다운(AutoEQ 기본 타깃 8개, `src/targets.ts`)·회색 점선·리그 경고 완료, 커스텀 CSV 남음
+- [x] 타깃 선택 드롭다운과 리그 불일치 경고, 커스텀 타깃 CSV 불러오기 (기본 타깃 `src/targets.ts`, 커스텀은 드롭다운의 "+ CSV 불러오기…" → `CustomTargetDialog.tsx`, `isCustom: true`로 저장·삭제 가능)
 - [x] 기기 삭제 시 연결된 측정치도 함께 삭제 (`deleteDevice`)
 - [ ] JSON 내보내기/가져오기 백업
 - [ ] PWA 적용과 배포
@@ -90,5 +90,5 @@
 
 ## 다음 작업
 
-1. 커스텀 타깃 CSV 불러오기 (타깃 드롭다운에 "CSV 불러오기…" 추가, `parseFrCsv` 재사용, `isCustom: true`)
-2. JSON 내보내기/가져오기 백업 (iOS 저장소 삭제 대비)
+1. JSON 내보내기/가져오기 백업 (iOS 저장소 삭제 대비, 설정 버튼 자리에 붙이기)
+2. 다크/라이트 모드 전환 버튼 (지금은 시스템 설정만 따름)

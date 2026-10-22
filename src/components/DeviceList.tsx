@@ -10,10 +10,12 @@ import { DeviceDetailDialog } from './DeviceDetailDialog'
 
 interface Props {
   category: DeviceCategory
+  /** 선택을 저장할 비교 탭 */
+  tabId: string | undefined
 }
 
-export function DeviceList({ category }: Props) {
-  const { loading, devices, measurementsByDevice, selected } = useCompareData()
+export function DeviceList({ category, tabId }: Props) {
+  const { loading, devices, measurementsByDevice, selected } = useCompareData(tabId)
   const [query, setQuery] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   // 상세 팝업에 보여줄 기기 id (null이면 닫힘)
@@ -45,13 +47,14 @@ export function DeviceList({ category }: Props) {
       setDetailId(device.id)
       return
     }
-    const result = await toggleSelection(first.id)
+    if (!tabId) return
+    const result = await toggleSelection(tabId, first.id)
     if (result === 'full') setNotice(`최대 ${PALETTE_SIZE}개까지 비교할 수 있습니다. 하나를 해제한 뒤 선택하세요.`)
   }
 
   async function handleUnselect(measurementId: string) {
     setNotice('')
-    await toggleSelection(measurementId)
+    if (tabId) await toggleSelection(tabId, measurementId)
   }
 
   return (

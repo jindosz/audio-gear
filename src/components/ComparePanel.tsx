@@ -1,17 +1,25 @@
-// 오른쪽 메인: 그래프 툴바(정규화 기준) + 범례 + FR 그래프
+// 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준) + 범례 + FR 그래프
 import { useMemo, type CSSProperties } from 'react'
 import { logGrid, normalizeAt, resample } from '../curve'
 import { setNormalizeHz } from '../repo'
 import { seriesColor } from '../selection'
+import type { CompareTab } from '../types'
 import { useCompareData } from '../useCompareData'
 import { FrChart, type ChartSeries } from './FrChart'
+import { TabBar } from './TabBar'
 
 // 모든 곡선을 같은 주파수 위치로 맞춰 그린다(한 번만 계산)
 const GRID = logGrid()
 const NORMALIZE_OPTIONS = [200, 500, 1000, 2000]
 
-export function ComparePanel() {
-  const { selected, tab } = useCompareData()
+interface Props {
+  tabs: CompareTab[]
+  activeId: string | undefined
+  onSelectTab: (id: string) => void
+}
+
+export function ComparePanel({ tabs, activeId, onSelectTab }: Props) {
+  const { selected, tab } = useCompareData(activeId)
   const normalizeHz = tab?.normalizeHz ?? null
 
   // useMemo: 선택이나 정규화 기준이 바뀔 때만 다시 계산한다(곡선 계산은 비교적 무거움)
@@ -25,10 +33,13 @@ export function ComparePanel() {
     [selected, normalizeHz],
   )
 
+  const tabBar = <TabBar tabs={tabs} activeId={activeId} onSelect={onSelectTab} />
+
   if (selected.length === 0 || !tab) {
     return (
-      <main className="main-col empty">
-        <p className="muted">목록에서 기기를 클릭하면 여기에서 비교합니다.</p>
+      <main className="main-col">
+        {tabBar}
+        <p className="muted placeholder">목록에서 기기를 클릭하면 여기에서 비교합니다.</p>
       </main>
     )
   }
@@ -37,6 +48,7 @@ export function ComparePanel() {
 
   return (
     <main className="main-col">
+      {tabBar}
       <div className="toolbar">
         <label>
           정규화 기준{' '}

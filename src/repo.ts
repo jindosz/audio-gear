@@ -24,9 +24,13 @@ export function listMeasurements(): Promise<Measurement[]> {
   return db.measurements.toArray()
 }
 
-/** 현재 비교 탭. 탭 기능을 만들기 전까지는 첫 번째 탭 하나만 쓴다 */
-export function getActiveTab(): Promise<CompareTab | undefined> {
-  return db.tabs.orderBy('createdAt').first()
+/** 비교 탭 목록 (만든 순서) */
+export function listTabs(): Promise<CompareTab[]> {
+  return db.tabs.orderBy('createdAt').toArray()
+}
+
+export function getTab(id: string): Promise<CompareTab | undefined> {
+  return db.tabs.get(id)
 }
 
 export function listMeasurementsByDevice(deviceId: string): Promise<Measurement[]> {
@@ -75,24 +79,50 @@ export async function deleteMeasurement(id: string): Promise<void> {
   })
 }
 
-// ---- 비교 선택 ----
+// ---- 비교 탭 ----
 
-export type ToggleResult = 'selected' | 'unselected' | 'full'
-
-/**
- * 측정치를 현재 비교 탭에서 선택하거나 해제한다.
- * 탭이 아직 없으면 "비교 1" 탭을 만든다. 색이 모두 쓰이고 있으면 'full'을 돌려준다.
- */
-export async function toggleSelection(measurementId: string): Promise<ToggleResult> {
+/** 새 비교 탭을 만들고 id를 돌려준다. 이름은 "비교 N" (지금 있는 번호 중 가장 큰 것 + 1) */
+export async function createTab(): Promise<string> {
   return db.transaction('rw', db.tabs, async () => {
-    const tab: CompareTab = (await getActiveTab()) ?? {
-      id: crypto.randomUUID(),
-      name: '비교 1',
+    const numbers = (await db.tabs.toArray()).map((t) => Number(t.name.match(/^비교 (\d+)$/)?.[1] ?? 0))
+    const id = crypto.randomUUID()
+    await db.tabs.add({
+      id,
+      name: `비교 ${Math.max(0, ...numbers) + 1}`,
       selections: [],
       normalizeHz: 1000,
       targetId: null,
       createdAt: Date.now(),
-    }
+    })
+    return id
+  })
+}
+
+/** 탭이 하나도 없으면 하나 만든다. 앱 시작 시 부른다 */
+export async function ensureTab(): Promise<void> {
+  // transaction 안에서 개수를 세고 만들기 때문에, 두 번 연달아 불려도 탭이 두 개 생기지 않는다
+  await db.transaction('rw', db.tabs, async () => {
+    if ((await db.tabs.count()) === 0) await createTab()
+  })
+}
+
+/** 탭을 닫는다(삭제). 마지막 탭이었으면 빈 탭을 새로 만들어 항상 하나는 남긴다 */
+export async function deleteTab(id: string): Promise<void> {
+  await db.transaction('rw', db.tabs, async () => {
+    await db.tabs.delete(id)
+    if ((await db.tabs.count()) === 0) await createTab()
+  })
+}
+
+// ---- 비교 선택 ----
+
+export type ToggleResult = 'selected' | 'unselected' | 'full'
+
+/** 측정치를 비교 탭에서 선택하거나 해제한다. 색이 모두 쓰이고 있으면 'full'을 돌려준다 */
+export async function toggleSelection(tabId: string, measurementId: string): Promise<ToggleResult> {
+  return db.transaction('rw', db.tabs, async () => {
+    const tab = await db.tabs.get(tabId)
+    if (!tab) throw new Error('비교 탭을 찾을 수 없습니다.')
     const isSelected = tab.selections.some((s) => s.measurementId === measurementId)
     const next = isSelected
       ? removeSelection(tab.selections, [measurementId])

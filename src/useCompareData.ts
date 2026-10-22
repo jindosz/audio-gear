@@ -36,5 +36,5 @@ export function useCompareData() {
     if (measurement && device) selected.push({ selection, measurement, device })
   }
 
-  return { loading, devices: devices ?? [], measurementsByDevice, selected }
+  return { loading, devices: devices ?? [], measurementsByDevice, selected, tab: tab?.value }
 }

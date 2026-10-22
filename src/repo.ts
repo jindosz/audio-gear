@@ -89,7 +89,7 @@ export async function toggleSelection(measurementId: string): Promise<ToggleResu
       id: crypto.randomUUID(),
       name: '비교 1',
       selections: [],
-      normalizeHz: null,
+      normalizeHz: 1000,
       targetId: null,
       createdAt: Date.now(),
     }
@@ -101,6 +101,11 @@ export async function toggleSelection(measurementId: string): Promise<ToggleResu
     await db.tabs.put({ ...tab, selections: next })
     return isSelected ? 'unselected' : 'selected'
   })
+}
+
+/** 비교 탭의 정규화 기준 주파수를 바꾼다. null이면 정규화하지 않음 */
+export async function setNormalizeHz(tabId: string, normalizeHz: number | null): Promise<void> {
+  await db.tabs.update(tabId, { normalizeHz })
 }
 
 /** 삭제된 측정치를 모든 탭의 선택에서 뺀다(지워진 측정치를 가리키는 선택이 남지 않게) */

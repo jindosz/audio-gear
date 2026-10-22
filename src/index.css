@@ -56,6 +56,8 @@ body {
 .app {
   display: grid;
   grid-template-columns: 72px 260px 1fr;
+  /* minmax(0, 1fr): 칸 높이를 화면 높이로 고정. 안 하면 내용(그래프)이 칸을 밀어 늘린다 */
+  grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
 }
 
@@ -232,6 +234,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   padding: 16px;
 }
 
@@ -504,4 +507,28 @@ button.chip:not(:disabled):hover {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+/* ---- 그래프 ---- */
+.main-col:not(.empty) {
+  gap: 10px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.toolbar select {
+  padding: 3px 6px;
+}
+
+/* 남은 높이를 모두 그래프가 쓴다. min-height: 0이 없으면 flex 안에서 줄어들지 못한다 */
+.chart-box {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }

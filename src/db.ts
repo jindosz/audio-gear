@@ -1,7 +1,7 @@
 // IndexedDB(브라우저 안의 데이터베이스)를 Dexie로 정의하는 파일.
 // 화면 코드는 이 파일의 db만 사용하고, 저장 방식은 여기서만 신경 쓴다.
 import Dexie, { type EntityTable } from 'dexie'
-import type { CompareTab, Device, Measurement, MetaRecord, Target } from './types'
+import type { CatalogSummary, CompareTab, Device, Measurement, MetaRecord, Target } from './types'
 
 export const db = new Dexie('audio-gear') as Dexie & {
   devices: EntityTable<Device, 'id'>
@@ -9,6 +9,7 @@ export const db = new Dexie('audio-gear') as Dexie & {
   targets: EntityTable<Target, 'id'>
   tabs: EntityTable<CompareTab, 'id'>
   meta: EntityTable<MetaRecord, 'key'>
+  summaries: EntityTable<CatalogSummary, 'path'>
 }
 
 // 문자열은 "기본 키, 인덱스1, 인덱스2..." 순서.
@@ -25,4 +26,9 @@ db.version(1).stores({
 // 그러면 이미 버전 1 DB를 쓰던 브라우저도 데이터를 유지한 채 자동으로 버전 2로 바뀐다(마이그레이션).
 db.version(2).stores({
   meta: 'key',
+})
+
+// 버전 3: 추천용 요약값 테이블. 카테고리별로 세고 읽을 수 있게 category 인덱스
+db.version(3).stores({
+  summaries: 'path, category',
 })

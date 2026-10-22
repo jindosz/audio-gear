@@ -893,3 +893,28 @@ button.toggle.on {
 .import-box p {
   margin: 0;
 }
+
+/* 추천용 데이터 받기 상자 */
+.data-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.data-box .row {
+  justify-content: space-between;
+  padding-block: 0;
+}
+
+.data-box progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.data-box p {
+  margin: 0;
+}

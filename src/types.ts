@@ -62,6 +62,22 @@ export interface Target {
   curve: FrCurve
 }
 
+/**
+ * 추천용 요약값: AutoEQ 기기 하나의 추천 측정치를 1/6옥타브로 줄인 곡선(약 60개 숫자).
+ * 전체 곡선 대신 이것만 저장해서, 후보 수천 개를 적은 용량으로 비교한다(similarity.ts의 SUMMARY_GRID 기준)
+ */
+export interface CatalogSummary {
+  /** AutoEQ results 폴더 기준 경로(측정치 하나를 가리키는 고유 이름) */
+  path: string
+  name: string
+  category: DeviceCategory
+  /** 측정자. 예: oratory1990 */
+  measurer: string
+  rig: Rig
+  values: (number | null)[]
+  updatedAt: number
+}
+
 /** 앱이 보관하는 값 하나(예: 내려받은 AutoEQ 목록 원문) */
 export interface MetaRecord {
   key: string

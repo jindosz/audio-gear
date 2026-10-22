@@ -4,7 +4,7 @@
 import { db } from './db'
 import { BACKUP_APP, BACKUP_VERSION, type BackupData } from './backup'
 import { addSelection, removeSelection } from './selection'
-import type { CompareTab, Device, Measurement, MetaRecord, Target } from './types'
+import type { CatalogSummary, CompareTab, Device, DeviceCategory, Measurement, MetaRecord, Target } from './types'
 
 export type NewDevice = Omit<Device, 'id' | 'createdAt'>
 export type NewMeasurement = Omit<Measurement, 'id'>
@@ -48,6 +48,16 @@ export async function listCustomTargets(): Promise<Target[]> {
   return targets.sort((a, b) => a.name.localeCompare(b.name))
 }
 
+/** 카테고리의 추천용 요약값 전부 */
+export function listSummaries(category: DeviceCategory): Promise<CatalogSummary[]> {
+  return db.summaries.where('category').equals(category).toArray()
+}
+
+/** 카테고리에 이미 받아 둔 요약값의 경로 목록(이어 받기용, 값은 읽지 않아 가볍다) */
+export async function listSummaryPaths(category: DeviceCategory): Promise<string[]> {
+  return (await db.summaries.where('category').equals(category).primaryKeys()) as string[]
+}
+
 /** 보관해 둔 값을 읽는다. 없으면 undefined */
 export function getMeta(key: string): Promise<MetaRecord | undefined> {
   return db.meta.get(key)
@@ -58,6 +68,15 @@ export function getMeta(key: string): Promise<MetaRecord | undefined> {
 /** 타깃을 저장한다(같은 id가 있으면 덮어씀) */
 export async function putTarget(target: Target): Promise<void> {
   await db.targets.put(target)
+}
+
+export async function putSummary(summary: CatalogSummary): Promise<void> {
+  await db.summaries.put(summary)
+}
+
+/** 카테고리의 추천용 요약값을 모두 지운다 */
+export async function clearSummaries(category: DeviceCategory): Promise<void> {
+  await db.summaries.where('category').equals(category).delete()
 }
 
 export async function setMeta(key: string, value: string): Promise<void> {

@@ -60,7 +60,7 @@
 
 모바일: 왼쪽 두 칸은 햄버거 메뉴로 접고 그래프를 전체 폭으로 쓰는 반응형 레이아웃.
 
-다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환.
+다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환. 다크 색은 `@media (prefers-color-scheme: dark)` 안(`:root:not([data-theme=light])`)과 `:root[data-theme=dark]` 두 곳에 같은 값으로 적는다. 그래프처럼 색을 직접 읽는 화면은 `useResolvedTheme()`으로 테마 변화를 구독한다.
 
 ## 기능 로드맵
 
@@ -69,7 +69,7 @@
 - [x] Dexie DB 정의 (`src/db.ts`)
 - [x] 기기 추가 팝업: AutoEQ 카탈로그 검색 + 직접 추가, 보유/그 외 목록, 보유 토글, 삭제 (`src/components/AddDeviceDialog.tsx`)
 - [x] CSV 측정치 업로드: 주파수,dB 형식 파싱 → Measurement로 저장 (구성, 리그, 채널 입력) (파서 `src/csv.ts`, 폼 `src/components/MeasurementUpload.tsx`)
-- [ ] 다크/라이트 모드
+- [x] 다크/라이트 모드 (설정 팝업의 시스템 설정/라이트/다크, `src/theme.ts`. 고른 값은 localStorage, `<html data-theme>`로 CSS 변수 전환)
 
 ### 2단계 (핵심 가치)
 - [x] 3단 레이아웃과 비교 탭 구현 (`TabBar.tsx`, `useTabs.ts`. 보고 있던 탭 id는 localStorage에 저장)
@@ -90,5 +90,5 @@
 
 ## 다음 작업
 
-1. 다크/라이트 모드 전환 버튼 (설정 팝업에 넣기, 지금은 시스템 설정만 따름)
-2. PWA 적용과 배포 (vite-plugin-pwa, 빌드 파일 500KB 경고 정리 포함)
+1. PWA 적용과 배포 (vite-plugin-pwa, Cloudflare Pages 또는 GitHub Pages, 빌드 파일 500KB 경고 정리 포함)
+2. 모바일 반응형: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로

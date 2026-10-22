@@ -1,6 +1,6 @@
 // FR 곡선 그래프. Chart.js는 React용 라이브러리가 아니라서,
 // <canvas> 요소를 useRef로 잡고 useEffect 안에서 직접 차트를 만들고 갱신한다.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   Chart,
   LinearScale,
@@ -11,6 +11,7 @@ import {
   Tooltip,
   type ChartDataset,
 } from 'chart.js'
+import { useResolvedTheme } from '../theme'
 
 // Chart.js는 필요한 부품만 등록해서 쓴다(안 쓰는 기능은 번들에서 빠져 앱이 가벼워짐)
 Chart.register(LineController, LineElement, PointElement, LinearScale, LogarithmicScale, Tooltip)
@@ -48,24 +49,11 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-/** 시스템 라이트/다크 설정이 바뀌면 다시 그리도록 상태로 들고 있는다 */
-function useColorScheme(): 'light' | 'dark' {
-  const query = '(prefers-color-scheme: dark)'
-  const [scheme, setScheme] = useState<'light' | 'dark'>(() => (matchMedia(query).matches ? 'dark' : 'light'))
-  useEffect(() => {
-    const mql = matchMedia(query)
-    const onChange = () => setScheme(mql.matches ? 'dark' : 'light')
-    mql.addEventListener('change', onChange)
-    // 반환한 함수는 "정리(clean-up)": 컴포넌트가 사라질 때 이벤트 연결을 끊는다
-    return () => mql.removeEventListener('change', onChange)
-  }, [])
-  return scheme
-}
-
 export function FrChart({ grid, series, yTitle, signed = false, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart<'line', XY[]> | null>(null)
-  const scheme = useColorScheme()
+  // 테마(시스템 설정 또는 설정 팝업에서 고른 값)가 바뀌면 그래프 색을 다시 읽도록 쓴다
+  const scheme = useResolvedTheme()
 
   // 차트는 처음에 한 번 만들고, 화면이 사라질 때 없앤다
   useEffect(() => {

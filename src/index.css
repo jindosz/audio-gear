@@ -26,8 +26,12 @@
   background: var(--bg);
 }
 
+/* 다크 색은 두 경우에 쓴다.
+   1) 시스템이 다크이고, 사용자가 라이트로 고정하지 않았을 때
+   2) 사용자가 다크로 고정했을 때(<html data-theme="dark">)
+   같은 값을 두 번 적는 이유: CSS 미디어 쿼리 안과 밖을 한 규칙으로 묶을 수 없어서 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --text: #e6e4ea;
     --muted: #9893a3;
     --bg: #1b1b1d;
@@ -47,6 +51,36 @@
     --series-6: #9085e9;
     --series-7: #e66767;
   }
+}
+
+:root[data-theme='dark'] {
+  --text: #e6e4ea;
+  --muted: #9893a3;
+  --bg: #1b1b1d;
+  --card: #232326;
+  --border: #34343a;
+  --hover: rgb(255 255 255 / 0.05);
+  --accent: #5aa2f5;
+  --danger: #ff7a7a;
+  --star: #f0b429;
+
+  --series-0: #3987e5;
+  --series-1: #d95926;
+  --series-2: #199e70;
+  --series-3: #c98500;
+  --series-4: #d55181;
+  --series-5: #008300;
+  --series-6: #9085e9;
+  --series-7: #e66767;
+}
+
+/* 고정한 테마에 맞춰 스크롤바·입력칸 같은 브라우저 기본 부품의 색도 바꾼다 */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
@@ -767,4 +801,27 @@ button.small {
 
 .import-box .row {
   padding-block: 4px 0;
+}
+
+/* 세그먼트 버튼: 붙어 있는 버튼 묶음 중 하나만 눌림 */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented button {
+  border: none;
+  border-radius: 0;
+  padding: 6px 14px;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+
+.segmented button.active {
+  background: var(--accent);
+  color: #fff;
 }

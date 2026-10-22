@@ -1,7 +1,8 @@
-// 설정 팝업: 백업 내보내기/가져오기, 브라우저 저장소 영구 보존
+// 설정 팝업: 화면 테마, 백업 내보내기/가져오기, 브라우저 저장소 영구 보존
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { backupFileName, parseBackup, summarize, type BackupData } from '../backup'
 import { exportAll, importAll } from '../repo'
+import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 
 interface Props {
@@ -13,10 +14,41 @@ export function SettingsDialog({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="설정">
       <div className="detail settings">
+        <ThemeSection />
         <BackupSection />
         <StorageSection />
       </div>
     </Modal>
+  )
+}
+
+const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
+  { value: 'system', label: '시스템 설정' },
+  { value: 'light', label: '라이트' },
+  { value: 'dark', label: '다크' },
+]
+
+function ThemeSection() {
+  const pref = useThemePref()
+  return (
+    <section>
+      <h3>화면 테마</h3>
+      {/* 세 버튼 중 하나만 눌린 상태가 되는 "세그먼트 버튼". aria-pressed로 눌림 상태를 알린다 */}
+      <div className="segmented" role="group" aria-label="화면 테마">
+        {THEME_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            className={pref === o.value ? 'active' : undefined}
+            aria-pressed={pref === o.value}
+            onClick={() => setThemePref(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <p className="muted small">시스템 설정을 고르면 운영체제의 라이트/다크 설정을 따라 자동으로 바뀝니다.</p>
+    </section>
   )
 }
 

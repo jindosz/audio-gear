@@ -31,7 +31,7 @@
 - `Target`: 타깃 커브(Harman OE/IE 등). category, rig, isCustom, curve. 측정치와 같은 곡선 형식이라 불러오기 코드를 재사용한다.
 - `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId
 - `FrCurve`는 `{ freq: number; db: number }[]`
-- 탭은 기기가 아니라 측정치를 선택한다(같은 기기의 구성별 비교 가능).
+- 탭은 기기가 아니라 측정치를 선택한다(같은 기기의 구성별 비교 가능). 목록 클릭은 첫 번째 측정치를 선택하고, 다른/여러 측정치는 기기 상세 팝업의 "비교에 추가"로 고른다. 같은 기기가 여러 번 선택되면 그래프 이름 뒤에 구성/출처를 붙인다.
 - 색은 실제 색 값이 아니라 팔레트 순번(colorIndex)만 저장한다. 라이트/다크 모드별 실제 색은 팔레트에서 정한다.
 - Dexie 인덱스: `devices: 'id, category, createdAt'`, `measurements: 'id, deviceId, rig'`, `targets: 'id, category, rig'`, `tabs: 'id, createdAt'`. IndexedDB는 boolean을 인덱스로 쓸 수 없어서 owned는 인덱스에서 뺐고 JS의 filter로 나눈다.
 
@@ -88,5 +88,5 @@
 
 ## 다음 작업
 
-1. 기기 상세 팝업에서 비교에 쓸 측정치 고르기 (지금은 첫 번째 측정치 자동 선택)
-2. 타깃 커브 선택 드롭다운과 리그 불일치 경고
+1. 타깃 커브 선택 드롭다운과 리그 불일치 경고 (타깃은 측정치와 같은 CSV 형식, `parseFrCsv` 재사용)
+2. 차이 곡선 (두 곡선의 dB 차이, `curve.ts`의 공통 주파수 위치를 그대로 사용)

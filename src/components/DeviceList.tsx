@@ -1,6 +1,7 @@
 // 가운데 목록 열: 검색창, 기기 추가 버튼, "선택됨 → 보유 기기 → 전체 기기" 목록
 import { useState, type CSSProperties } from 'react'
 import { normalize } from '../catalog'
+import { measurementLabel } from '../labels'
 import { toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Device, DeviceCategory, Measurement } from '../types'
@@ -116,7 +117,7 @@ export function DeviceList({ category, tabId }: Props) {
       </div>
 
       <AddDeviceDialog open={addOpen} onClose={() => setAddOpen(false)} />
-      <DeviceDetailDialog deviceId={detailId} onClose={() => setDetailId(null)} />
+      <DeviceDetailDialog deviceId={detailId} tabId={tabId} onClose={() => setDetailId(null)} />
     </aside>
   )
 }
@@ -145,7 +146,7 @@ function DeviceRow({ device, measurement, colorIndex, noMeasurement, onClick, on
         </span>
         {measurement && (
           <span className="device-sub muted">
-            {measurement.variant || (measurement.source === 'local' ? '직접 업로드' : measurement.source)}
+            {measurementLabel(measurement)}
           </span>
         )}
         {noMeasurement && <span className="device-sub muted">측정치 없음</span>}

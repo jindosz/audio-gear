@@ -2,7 +2,7 @@
 // https://github.com/jaakkopasanen/AutoEq (코드는 MIT 라이선스, 측정치 저작권은 각 측정자에게 있음)
 // 측정치는 앱에 넣어 배포하지 않고, 사용자가 고를 때만 GitHub에서 받아 출처를 붙여 저장한다.
 import { parseFrCsv } from './csv'
-import { addDevice, addMeasurement, findDeviceByName, listMeasurementsByDevice } from './repo'
+import { addDevice, addMeasurement, findDeviceByName, getMeta, listMeasurementsByDevice, setMeta } from './repo'
 import type { DeviceCategory, FrCurve, Rig } from './types'
 
 const RAW_BASE = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results'
@@ -20,14 +20,24 @@ export interface CatalogEntry {
   path: string
   /** crinacle은 측정치 CSV가 공개되어 있지 않다 */
   hasCurve: boolean
+  /** AutoEQ가 이 기기의 측정치 중 가장 정확하다고 고른 것 */
+  recommended: boolean
 }
 
 /**
  * AutoEQ results/INDEX.md를 읽어 카탈로그로 바꾼다. 줄 형식 예:
  * - [Sennheiser HD 600](./oratory1990/over-ear/Sennheiser%20HD%20600) by oratory1990
  * - [1MORE MK801](./crinacle/GRAS%2043AG-7%20over-ear/1MORE%20MK801) by crinacle on GRAS 43AG-7
+ *
+ * recommendedText(results/README.md)에는 기기마다 추천 측정치 하나의 경로가 같은 형식으로 들어 있다.
  */
-export function parseAutoEqIndex(text: string): CatalogEntry[] {
+export function parseAutoEqIndex(text: string, recommendedText = ''): CatalogEntry[] {
+  const recommendedPaths = new Set<string>()
+  for (const line of recommendedText.split(/\r?\n/)) {
+    const match = line.match(/^- \[.+\]\(\.\/(.+)\)$/)
+    if (match) recommendedPaths.add(decodeURIComponent(match[1]))
+  }
+
   const entries: CatalogEntry[] = []
   for (const line of text.split(/\r?\n/)) {
     // 정규식의 ( ) 부분이 이름, 경로, 출처, 리그를 하나씩 잡아낸다
@@ -44,6 +54,7 @@ export function parseAutoEqIndex(text: string): CatalogEntry[] {
       category: formDir.endsWith('over-ear') ? 'headphone' : 'iem',
       path,
       hasCurve: source !== 'crinacle',
+      recommended: recommendedPaths.has(path),
     })
   }
   return entries
@@ -56,21 +67,81 @@ function toRig(rigName: string): Rig {
   return 'other'
 }
 
-// 한 번 받은 목록은 앱을 끌 때까지 기억해 둔다(약 850KB라 매번 받지 않도록)
+// ---- 목록 받기와 보관 ----
+// 목록 원문(INDEX.md 약 850KB + README.md 약 490KB)은 DB의 meta 테이블에 보관한다.
+// 그래서 두 번째 실행부터는 인터넷 없이도 바로 목록이 뜬다. 7일이 지나면 뒤에서 조용히 새로 받는다.
+
+const INDEX_KEY = 'autoeq.index'
+const RECOMMENDED_KEY = 'autoeq.recommended'
+const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
+async function fetchText(file: string): Promise<string> {
+  const res = await fetch(`${RAW_BASE}/${file}`)
+  if (!res.ok) throw new Error(`목록을 받지 못했습니다 (${res.status})`)
+  return res.text()
+}
+
+async function downloadAndStore(): Promise<[string, string]> {
+  const [index, recommended] = await Promise.all([fetchText('INDEX.md'), fetchText('README.md')])
+  await setMeta(INDEX_KEY, index)
+  await setMeta(RECOMMENDED_KEY, recommended)
+  return [index, recommended]
+}
+
+async function loadTexts(): Promise<[string, string]> {
+  const [index, recommended] = await Promise.all([getMeta(INDEX_KEY), getMeta(RECOMMENDED_KEY)])
+  if (!index || !recommended) return downloadAndStore()
+  if (Date.now() - index.updatedAt > MAX_AGE_MS) {
+    // 오래된 목록이면 지금은 보관본을 쓰고, 새 목록은 다음 실행부터 반영된다. 실패해도 무시
+    downloadAndStore().catch(() => {})
+  }
+  return [index.value, recommended.value]
+}
+
+// 한 번 읽은 목록은 앱을 끌 때까지 기억해 둔다
 let catalogPromise: Promise<CatalogEntry[]> | null = null
 
 export function loadCatalog(): Promise<CatalogEntry[]> {
-  catalogPromise ??= fetch(`${RAW_BASE}/INDEX.md`)
-    .then((res) => {
-      if (!res.ok) throw new Error(`목록을 받지 못했습니다 (${res.status})`)
-      return res.text()
-    })
-    .then(parseAutoEqIndex)
+  catalogPromise ??= loadTexts()
+    .then(([index, recommended]) => parseAutoEqIndex(index, recommended))
     .catch((err) => {
       catalogPromise = null // 실패하면 다음에 다시 시도할 수 있게 비워 둔다
       throw err
     })
   return catalogPromise
+}
+
+/** 전체 기기 목록용: 기기 이름별로 묶은 카탈로그 */
+export interface CatalogDevice {
+  name: string
+  category: DeviceCategory
+  /** 검색용으로 미리 normalize한 이름 */
+  searchKey: string
+  /** 클릭했을 때 받을 측정치: 추천 측정치, 추천이 비공개면 공개된 것 중 첫 번째. 없으면 undefined */
+  primary: CatalogEntry | undefined
+}
+
+export function groupCatalog(entries: CatalogEntry[]): CatalogDevice[] {
+  const byName = new Map<string, CatalogEntry[]>()
+  for (const e of entries) byName.set(e.name, [...(byName.get(e.name) ?? []), e])
+
+  return [...byName.entries()].map(([name, list]) => {
+    const primary = list.find((e) => e.recommended && e.hasCurve) ?? list.find((e) => e.hasCurve)
+    const category = (list.find((e) => e.recommended) ?? list[0]).category
+    return { name, category, searchKey: normalize(name), primary }
+  })
+}
+
+let devicesPromise: Promise<CatalogDevice[]> | null = null
+
+export function loadCatalogDevices(): Promise<CatalogDevice[]> {
+  devicesPromise ??= loadCatalog()
+    .then(groupCatalog)
+    .catch((err) => {
+      devicesPromise = null
+      throw err
+    })
+  return devicesPromise
 }
 
 /** 검색어 비교용: 소문자로 바꾸고 공백·기호를 지운다 ("HD600"과 "HD 600"이 같게 됨) */
@@ -129,28 +200,33 @@ export function splitBrand(name: string): { brand: string; model: string } {
 
 export type AddResult = 'added' | 'deviceOnly' | 'measurementAdded' | 'alreadyExists'
 
+/** 추가 결과. measurementId는 새로 추가했거나 이미 있던 같은 출처 측정치의 id */
+export interface AddOutcome {
+  result: AddResult
+  deviceId: string
+  measurementId?: string
+}
+
 /**
  * 카탈로그 항목을 내 기기로 추가한다.
  * - 같은 이름의 기기가 이미 있으면 기기는 새로 만들지 않고 측정치만 붙인다
- * - 같은 출처의 측정치가 이미 있으면 아무것도 하지 않는다
+ * - 같은 출처의 측정치가 이미 있으면 새로 받지 않고 그 측정치를 돌려준다
  */
-export async function addFromCatalog(entry: CatalogEntry, owned: boolean): Promise<AddResult> {
+export async function addFromCatalog(entry: CatalogEntry, owned: boolean): Promise<AddOutcome> {
   const source = `AutoEQ · ${entry.source}`
+  const existing = await findDeviceByName(entry.name)
+  if (existing) {
+    const same = (await listMeasurementsByDevice(existing.id)).find((m) => m.source === source)
+    if (same || !entry.hasCurve) return { result: 'alreadyExists', deviceId: existing.id, measurementId: same?.id }
+  }
+
   // 네트워크에서 먼저 받아 둔다. 실패하면 여기서 오류가 나서 DB에는 아무것도 저장되지 않는다
   const curve = entry.hasCurve ? await fetchCatalogCurve(entry) : null
 
-  const existing = await findDeviceByName(entry.name)
-  if (existing && curve) {
-    const measurements = await listMeasurementsByDevice(existing.id)
-    if (measurements.some((m) => m.source === source)) return 'alreadyExists'
-  } else if (existing) {
-    return 'alreadyExists'
-  }
-
   const deviceId =
     existing?.id ?? (await addDevice({ ...splitBrand(entry.name), category: entry.category, owned, notes: '' }))
-  if (!curve) return 'deviceOnly'
+  if (!curve) return { result: 'deviceOnly', deviceId }
 
-  await addMeasurement({ deviceId, variant: '', rig: entry.rig, source, channel: 'avg', curve })
-  return existing ? 'measurementAdded' : 'added'
+  const measurementId = await addMeasurement({ deviceId, variant: '', rig: entry.rig, source, channel: 'avg', curve })
+  return { result: existing ? 'measurementAdded' : 'added', deviceId, measurementId }
 }

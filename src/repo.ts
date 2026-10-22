@@ -3,7 +3,7 @@
 // 나중에 동기화(Supabase 등)를 붙일 때 이 파일만 고치면 되도록 하기 위함.
 import { db } from './db'
 import { addSelection, removeSelection } from './selection'
-import type { CompareTab, Device, Measurement } from './types'
+import type { CompareTab, Device, Measurement, MetaRecord } from './types'
 
 export type NewDevice = Omit<Device, 'id' | 'createdAt'>
 export type NewMeasurement = Omit<Measurement, 'id'>
@@ -37,7 +37,17 @@ export function listMeasurementsByDevice(deviceId: string): Promise<Measurement[
   return db.measurements.where('deviceId').equals(deviceId).toArray()
 }
 
+/** 보관해 둔 값을 읽는다. 없으면 undefined */
+export function getMeta(key: string): Promise<MetaRecord | undefined> {
+  return db.meta.get(key)
+}
+
 // ---- 쓰기 ----
+
+export async function setMeta(key: string, value: string): Promise<void> {
+  await db.meta.put({ key, value, updatedAt: Date.now() })
+}
+
 
 export async function addDevice(input: NewDevice): Promise<string> {
   const id = crypto.randomUUID()

@@ -44,6 +44,13 @@ export interface Target {
   curve: FrCurve
 }
 
+/** 앱이 보관하는 값 하나(예: 내려받은 AutoEQ 목록 원문) */
+export interface MetaRecord {
+  key: string
+  value: string
+  updatedAt: number
+}
+
 /** 비교 탭에서 고른 측정치 하나와 그 색 순번 */
 export interface CompareSelection {
   measurementId: string

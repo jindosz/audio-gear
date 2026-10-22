@@ -61,7 +61,7 @@ function AddDeviceBody() {
     setBusyPath(entry.path)
     setMessage('')
     try {
-      const result = await addFromCatalog(entry, owned)
+      const { result } = await addFromCatalog(entry, owned)
       setMessage(`${entry.name}: ${resultMessages[result]}`)
     } catch (err) {
       setMessage(`${entry.name}: ${err instanceof Error ? err.message : String(err)}`)

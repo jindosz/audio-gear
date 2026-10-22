@@ -633,3 +633,42 @@ button.small {
   flex: 1;
   min-height: 0;
 }
+
+/* ---- 전체 기기(가상 스크롤) ---- */
+.list-scroll {
+  position: relative;
+}
+
+.list-section h2 .count {
+  font-weight: 400;
+}
+
+/* 줄들이 position: absolute로 놓이는 기준 상자 */
+.virtual-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* 가상 스크롤 줄은 높이가 모두 같아야 해서 설명을 이름 오른쪽에 한 줄로 둔다 */
+.device-row.compact {
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.device-row.compact .row-main {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding-block: 0;
+}
+
+.device-row.compact .device-name {
+  flex: 0 1 auto;
+}
+
+.device-row.compact .device-sub {
+  flex-shrink: 0;
+}

@@ -1,5 +1,5 @@
 // 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃, 차이 기준) + 리그 경고 + 범례 + FR 그래프 + 차이 그래프
-import type { CSSProperties } from 'react'
+import { lazy, Suspense, type CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { diffValues, logGrid, normalizeAt, resample } from '../curve'
 import { measurementLabel, rigLabels, sourceLabel } from '../labels'
@@ -7,9 +7,13 @@ import { getTarget, setDiffRef, setNormalizeHz } from '../repo'
 import { seriesColor } from '../selection'
 import type { CompareTab, DeviceCategory } from '../types'
 import { useCompareData, type SelectedItem } from '../useCompareData'
-import { FrChart, type ChartSeries } from './FrChart'
+import type { ChartSeries } from './FrChart'
 import { TabBar } from './TabBar'
 import { TargetSelect } from './TargetSelect'
+
+// 그래프(Chart.js, 앱 코드의 절반 가까운 크기)는 필요할 때 따로 불러온다(lazy).
+// 첫 화면에 필요한 파일이 작아져서 앱이 더 빨리 뜨고, 빌드 파일도 둘로 나뉜다
+const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
 // 모든 곡선을 같은 주파수 위치로 맞춰 그린다(한 번만 계산)
 const GRID = logGrid()
@@ -142,19 +146,22 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
         )}
       </ul>
 
-      <FrChart grid={GRID} series={series} yTitle={yTitle} />
-      {reference && diffSeries.length > 0 && (
-        <FrChart
-          className="diff"
-          grid={GRID}
-          series={diffSeries}
-          yTitle={`차이 dB (기준: ${reference.label})`}
-          signed
-        />
-      )}
-      {reference && diffSeries.length === 0 && (
-        <p className="muted small">차이를 볼 곡선이 없습니다. 기기를 하나 더 선택하세요.</p>
-      )}
+      {/* Suspense: lazy로 불러오는 동안 fallback을 대신 보여준다 */}
+      <Suspense fallback={<p className="muted placeholder">그래프 불러오는 중…</p>}>
+        <FrChart grid={GRID} series={series} yTitle={yTitle} />
+        {reference && diffSeries.length > 0 && (
+          <FrChart
+            className="diff"
+            grid={GRID}
+            series={diffSeries}
+            yTitle={`차이 dB (기준: ${reference.label})`}
+            signed
+          />
+        )}
+        {reference && diffSeries.length === 0 && (
+          <p className="muted small">차이를 볼 곡선이 없습니다. 기기를 하나 더 선택하세요.</p>
+        )}
+      </Suspense>
     </main>
   )
 }

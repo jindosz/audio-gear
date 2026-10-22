@@ -14,7 +14,7 @@
 
 - React + TypeScript + Vite (템플릿 `react-ts`)
 - 저장: 브라우저 IndexedDB, Dexie.js(`dexie`, `dexie-react-hooks`)로 접근
-- 예정: Chart.js(FR 그래프, 주파수 축은 로그 스케일), vite-plugin-pwa(폰 설치), Cloudflare Pages 또는 GitHub Pages(배포)
+- Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 Cloudflare Pages 또는 GitHub Pages 예정(아직 안 정함. GitHub Pages면 `vite.config.ts`에 `base: '/audio-gear/'` 필요)
 - 저장소: https://github.com/jindosz/audio-gear (main 브랜치)
 
 ## 아키텍처 결정
@@ -78,7 +78,7 @@
 - [x] 타깃 선택 드롭다운과 리그 불일치 경고, 커스텀 타깃 CSV 불러오기 (기본 타깃 `src/targets.ts`, 커스텀은 드롭다운의 "+ CSV 불러오기…" → `CustomTargetDialog.tsx`, `isCustom: true`로 저장·삭제 가능)
 - [x] 기기 삭제 시 연결된 측정치도 함께 삭제 (`deleteDevice`)
 - [x] JSON 내보내기/가져오기 백업 (왼쪽 아래 설정 버튼 → `SettingsDialog.tsx`. 형식·검사는 `src/backup.ts`, 버전 필드로 나중 형식 변경 대비. 가져오기는 합치기/모두 바꾸기. AutoEQ 목록 보관본은 제외) + `navigator.storage.persist()` 요청
-- [ ] PWA 적용과 배포
+- [ ] PWA 적용과 배포 — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 남음
 
 ### 3단계 (나중에)
 - [ ] 두 곡선 차이로 PEQ 계산 → Wavelet, Poweramp 등에 넣을 수 있게 내보내기 (앱 안 실시간 재생은 보류)
@@ -90,5 +90,5 @@
 
 ## 다음 작업
 
-1. PWA 적용과 배포 (vite-plugin-pwa, Cloudflare Pages 또는 GitHub Pages, 빌드 파일 500KB 경고 정리 포함)
-2. 모바일 반응형: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로
+1. 모바일 반응형: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로
+2. 배포 (위치를 정한 뒤)

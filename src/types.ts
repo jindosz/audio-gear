@@ -17,6 +17,8 @@ export interface Device {
   model: string
   category: DeviceCategory
   owned: boolean
+  /** 찜(관심 기기). 이 필드가 생기기 전에 저장된 기기에는 없을 수 있어서 선택(?) 필드 */
+  wishlist?: boolean
   notes: string
   createdAt: number
 }

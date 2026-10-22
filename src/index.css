@@ -8,6 +8,7 @@
   --hover: rgb(0 0 0 / 0.04);
   --accent: #2f7de1;
   --danger: #c43d3d;
+  --star: #d99a00; /* 찜 별 색. 그래프 팔레트와 따로 둔다 */
 
   /* 비교 색 팔레트(색각 이상 친화, 8색). 순서대로 배정하고 순번(colorIndex)만 저장한다 */
   --series-0: #2a78d6;
@@ -35,6 +36,7 @@
     --hover: rgb(255 255 255 / 0.05);
     --accent: #5aa2f5;
     --danger: #ff7a7a;
+    --star: #f0b429;
 
     --series-0: #3987e5;
     --series-1: #d95926;
@@ -671,4 +673,30 @@ button.small {
 
 .device-row.compact .device-sub {
   flex-shrink: 0;
+}
+
+/* 찜(별) 버튼: 찜한 기기는 항상, 나머지는 마우스를 올렸을 때만 보인다 */
+.star-btn {
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 2px 4px;
+  font-size: 15px;
+  visibility: hidden;
+}
+
+.star-btn.on {
+  visibility: visible;
+  color: var(--star);
+}
+
+.device-row:hover .star-btn,
+.star-btn:focus-visible {
+  visibility: visible;
+}
+
+@media (hover: none) {
+  .star-btn {
+    visibility: visible;
+  }
 }

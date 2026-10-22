@@ -10,6 +10,7 @@ import {
   getTab,
   listMeasurementsByDevice,
   setDeviceOwned,
+  setDeviceWishlist,
   toggleSelection,
 } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
@@ -73,6 +74,14 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
         <label className="check">
           <input type="checkbox" checked={device.owned} onChange={(e) => setDeviceOwned(deviceId, e.target.checked)} />
           보유
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={device.wishlist ?? false}
+            onChange={(e) => setDeviceWishlist(deviceId, e.target.checked)}
+          />
+          찜
         </label>
       </div>
       {device.notes && <p className="muted small">{device.notes}</p>}

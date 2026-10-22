@@ -26,7 +26,7 @@
 
 ## 데이터 구조 (`src/types.ts`, `src/db.ts`)
 
-- `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), notes, createdAt
+- `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), wishlist(찜, 선택 필드: 예전 데이터엔 없음), notes, createdAt
 - `Measurement`: 측정치. deviceId로 기기를 가리킴. variant(이어팁·패드 등 구성), rig(`5128` | `711` | `gras` | `other`), source(`local` 또는 출처명), channel(`L` | `R` | `avg`), curve
 - `Target`: 타깃 커브(Harman OE/IE 등). category, rig, isCustom, curve. 측정치와 같은 곡선 형식이라 불러오기 코드를 재사용한다.
 - `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId
@@ -40,8 +40,9 @@
 데스크톱 기준 3단 구성.
 
 1. 왼쪽 메뉴: 카테고리(헤드폰, 이어폰)와 설정
-2. 기기 목록: 위에 검색창, 그 아래 "선택됨 → 보유 기기 → 전체 기기" 순서
+2. 기기 목록: 위에 검색창, 그 아래 "선택됨 → 보유 기기 → 찜한 기기 → 전체 기기" 순서
    - 선택된 기기는 "선택됨" 구역으로 올라가고 원래 구역에서는 빠진다. 보유 기기면 "보유" 표시를 붙인다.
+   - 각 줄의 별(☆/★)로 찜한다. 한 기기는 보유 > 찜 > 전체 중 한 곳에만 보인다. 아직 받지 않은 AutoEQ 기기를 찜하면 추천 측정치까지 받아 저장한다. 측정치 없는 내 기기를 클릭하면 AutoEQ에 있으면 받아온다.
    - "전체 기기" = 내 기기(보유 제외) + AutoEQ 목록 전체(현재 카테고리, 이름순). 수천 개라 가상 스크롤(`VirtualList.tsx`, 줄 높이 40px 고정)로 그린다.
    - 목록 위 검색창 옆 `+` 버튼은 다른 출처 측정치 추가·직접 입력용 팝업을 연다. "전체 기기"에는 보유 기기를 다시 넣지 않는다.
    - 기기 클릭은 비교 선택에 쓰므로, 보유 토글·측정치 관리·삭제는 각 줄의 `⋯` 버튼으로 여는 기기 상세 팝업에서 한다.
@@ -88,5 +89,5 @@
 
 ## 다음 작업
 
-1. 타깃 커브 선택 드롭다운과 리그 불일치 경고 (타깃은 측정치와 같은 CSV 형식, `parseFrCsv` 재사용)
+1. 왼쪽 메뉴: 카테고리(헤드폰, 이어폰)와 설정
 2. 차이 곡선 (두 곡선의 dB 차이, `curve.ts`의 공통 주파수 위치를 그대로 사용)

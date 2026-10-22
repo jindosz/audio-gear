@@ -65,6 +65,10 @@ export async function setDeviceOwned(id: string, owned: boolean): Promise<void> 
   await db.devices.update(id, { owned })
 }
 
+export async function setDeviceWishlist(id: string, wishlist: boolean): Promise<void> {
+  await db.devices.update(id, { wishlist })
+}
+
 /** 기기와 그 기기의 측정치를 함께 삭제한다 */
 export async function deleteDevice(id: string): Promise<void> {
   // transaction: 안의 작업이 전부 성공하거나 전부 취소된다(중간에 실패해도 반쯤 지워진 상태가 남지 않음)

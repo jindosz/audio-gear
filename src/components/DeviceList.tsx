@@ -1,9 +1,9 @@
-// 가운데 목록 열: 검색창, 기기 추가 버튼, "선택됨 → 보유 기기 → 전체 기기" 목록
+// 가운데 목록 열: 검색창, 기기 추가 버튼, "선택됨 → 보유 기기 → 찜한 기기 → 전체 기기" 목록
 // 전체 기기 = 내가 가진 기기(보유 제외) + AutoEQ 목록의 모든 기기. 수천 개라 가상 스크롤로 그린다.
-import { useRef, useState, type CSSProperties } from 'react'
-import { addFromCatalog, normalize, type CatalogDevice } from '../catalog'
+import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
 import { measurementLabel } from '../labels'
-import { toggleSelection } from '../repo'
+import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Device, DeviceCategory } from '../types'
 import { useCatalogDevices } from '../useCatalogDevices'
@@ -38,6 +38,10 @@ export function DeviceList({ category, tabId }: Props) {
   const [pendingName, setPendingName] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // 이름 → AutoEQ 기기. 측정치 없는 내 기기를 클릭했을 때 AutoEQ에서 받아올 수 있는지 찾는 데 쓴다.
+  // 목록(6천 개)이 바뀔 때만 다시 만든다
+  const catalogByName = useMemo(() => new Map((catalogDevices ?? []).map((e) => [e.name, e])), [catalogDevices])
+
   // 선택된 기기는 "선택됨"으로 올라가고 원래 구역에서는 빠진다
   const selectedDeviceIds = new Set(selected.map((s) => s.device.id))
 
@@ -48,12 +52,14 @@ export function DeviceList({ category, tabId }: Props) {
   const mine = devices.filter(
     (d) => d.category === category && !selectedDeviceIds.has(d.id) && matches(normalize(deviceName(d))),
   )
-  const owned = mine.filter((d) => d.owned) // owned는 인덱스가 없어서 JS의 filter로 나눈다
+  // owned·wishlist는 인덱스가 없어서 JS의 filter로 나눈다. 보유 > 찜 > 전체 순으로 한 곳에만 보인다
+  const owned = mine.filter((d) => d.owned)
+  const wished = mine.filter((d) => !d.owned && d.wishlist)
 
   // 내 DB에 이미 있는 이름은 AutoEQ 쪽에서 빼서 한 번만 보이게 한다
   const myNames = new Set(devices.map(deviceName))
   const allItems: ListItem[] = [
-    ...mine.filter((d) => !d.owned).map((d): ListItem => ({ kind: 'mine', name: deviceName(d), device: d })),
+    ...mine.filter((d) => !d.owned && !d.wishlist).map((d): ListItem => ({ kind: 'mine', name: deviceName(d), device: d })),
     ...(catalogDevices ?? [])
       .filter((e) => e.category === category && !myNames.has(e.name) && matches(e.searchKey))
       .map((e): ListItem => ({ kind: 'catalog', name: e.name, entry: e })),
@@ -67,7 +73,9 @@ export function DeviceList({ category, tabId }: Props) {
     setNotice('')
     const first = measurementsByDevice.get(device.id)?.[0]
     if (!first) {
-      // 측정치가 없으면 그래프에 그릴 게 없으니, 측정치를 추가할 수 있는 상세 팝업을 연다
+      // 측정치가 없을 때: AutoEQ에 있으면 받아오고(찜만 해 둔 기기 등), 없으면 측정치를 추가할 상세 팝업을 연다
+      const catalogEntry = catalogByName.get(deviceName(device))
+      if (catalogEntry?.primary) return handleSelectCatalog(catalogEntry)
       setDetailId(device.id)
       return
     }
@@ -95,12 +103,30 @@ export function DeviceList({ category, tabId }: Props) {
     }
   }
 
+  /** 아직 받지 않은 AutoEQ 기기 찜: 측정치까지 받아 내 기기로 저장하고 찜 표시 */
+  async function handleWishCatalog(entry: CatalogDevice) {
+    setNotice('')
+    if (pendingName) return
+    setPendingName(entry.name)
+    try {
+      const deviceId = entry.primary
+        ? (await addFromCatalog(entry.primary, false)).deviceId
+        : await addDevice({ ...splitBrand(entry.name), category: entry.category, owned: false, notes: '' })
+      await setDeviceWishlist(deviceId, true)
+    } catch (err) {
+      setNotice(`${entry.name}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setPendingName(null)
+    }
+  }
+
   async function handleUnselect(measurementId: string) {
     setNotice('')
     if (tabId) await toggleSelection(tabId, measurementId)
   }
 
-  const nothing = !loading && catalogDevices !== null && owned.length === 0 && allItems.length === 0
+  const nothing =
+    !loading && catalogDevices !== null && owned.length === 0 && wished.length === 0 && allItems.length === 0
 
   return (
     <aside className="list-col">
@@ -126,6 +152,7 @@ export function DeviceList({ category, tabId }: Props) {
                   owned={device.owned}
                   sub={measurementLabel(measurement)}
                   colorIndex={selection.colorIndex}
+                  starred={device.wishlist}
                   onClick={() => handleUnselect(selection.measurementId)}
                   onMore={() => setDetailId(device.id)}
                 />
@@ -143,6 +170,25 @@ export function DeviceList({ category, tabId }: Props) {
                   key={d.id}
                   name={deviceName(d)}
                   sub={measurementsByDevice.has(d.id) ? undefined : '측정치 없음'}
+                  onClick={() => handleSelectMine(d)}
+                  onMore={() => setDetailId(d.id)}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {wished.length > 0 && (
+          <section className="list-section">
+            <h2>찜한 기기</h2>
+            <ul>
+              {wished.map((d) => (
+                <Row
+                  key={d.id}
+                  name={deviceName(d)}
+                  sub={measurementsByDevice.has(d.id) ? undefined : '측정치 없음'}
+                  starred
+                  onStar={() => setDeviceWishlist(d.id, false)}
                   onClick={() => handleSelectMine(d)}
                   onMore={() => setDetailId(d.id)}
                 />
@@ -170,6 +216,7 @@ export function DeviceList({ category, tabId }: Props) {
                   style={style}
                   name={item.name}
                   sub={measurementsByDevice.has(item.device.id) ? undefined : '측정치 없음'}
+                  onStar={() => setDeviceWishlist(item.device.id, true)}
                   onClick={() => handleSelectMine(item.device)}
                   onMore={() => setDetailId(item.device.id)}
                 />
@@ -179,6 +226,7 @@ export function DeviceList({ category, tabId }: Props) {
                   style={style}
                   name={item.name}
                   sub={pendingName === item.name ? '받는 중…' : item.entry.primary ? undefined : '측정치 없음'}
+                  onStar={() => handleWishCatalog(item.entry)}
                   onClick={() => handleSelectCatalog(item.entry)}
                 />
               )
@@ -200,6 +248,10 @@ interface RowProps {
   owned?: boolean
   /** 선택된 줄일 때만: 색 순번 */
   colorIndex?: number
+  /** 찜한 기기면 별을 채워서 항상 보여준다 */
+  starred?: boolean
+  /** 별(찜) 버튼을 눌렀을 때. 없으면 별 버튼을 그리지 않는다 */
+  onStar?: () => void
   /** 가상 스크롤용 한 줄 모양(높이 고정) */
   compact?: boolean
   style?: CSSProperties
@@ -208,7 +260,7 @@ interface RowProps {
   onMore?: () => void
 }
 
-function Row({ name, sub, owned, colorIndex, compact, style, onClick, onMore }: RowProps) {
+function Row({ name, sub, owned, starred, onStar, colorIndex, compact, style, onClick, onMore }: RowProps) {
   const isSelected = colorIndex !== undefined
   const className = ['device-row', isSelected && 'selected', compact && 'compact'].filter(Boolean).join(' ')
   // --c: 이 줄의 색. CSS에서 배경(연한 색)과 왼쪽 띠(진한 색)에 쓴다
@@ -220,9 +272,21 @@ function Row({ name, sub, owned, colorIndex, compact, style, onClick, onMore }: 
         <span className="device-name">
           {name}
           {isSelected && owned && <span className="tag">보유</span>}
+          {isSelected && starred && <span className="tag">찜</span>}
         </span>
         {sub && <span className="device-sub muted">{sub}</span>}
       </button>
+      {onStar && (
+        <button
+          className={starred ? 'star-btn on' : 'star-btn'}
+          onClick={onStar}
+          aria-pressed={starred ?? false}
+          title={starred ? '찜 해제' : '찜하기'}
+          aria-label={starred ? '찜 해제' : '찜하기'}
+        >
+          {starred ? '★' : '☆'}
+        </button>
+      )}
       {onMore && (
         <button className="more-btn" onClick={onMore} title="기기 정보·측정치 관리" aria-label="기기 정보">
           ⋯

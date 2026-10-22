@@ -26,7 +26,7 @@
 
 ## 데이터 구조 (`src/types.ts`, `src/db.ts`)
 
-- `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), wishlist(찜, 선택 필드: 예전 데이터엔 없음), notes, createdAt
+- `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), wishlist(찜), 주요 특징 connection(`wired` | `wireless` | `both`)·acoustic(`open` | `semi-open` | `closed`)·codecs(블루투스 코덱 목록)·anc, notes, createdAt. wishlist와 특징 필드는 선택 필드(예전 데이터엔 없음, AutoEQ에도 없어 사용자가 기기 상세 팝업에서 입력)
 - `Measurement`: 측정치. deviceId로 기기를 가리킴. variant(이어팁·패드 등 구성), rig(`5128` | `711` | `gras` | `other`), source(`local` 또는 출처명), channel(`L` | `R` | `avg`), curve
 - `Target`: 타깃 커브(Harman OE/IE 등). category, rig, isCustom, curve. 측정치와 같은 곡선 형식이라 불러오기 코드를 재사용한다.
 - `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId, diffRef(차이 곡선 기준: 'target' 또는 측정치 id, 선택 필드)
@@ -91,6 +91,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 - [x] 기기 삭제 시 연결된 측정치도 함께 삭제 (`deleteDevice`)
 - [x] JSON 내보내기/가져오기 백업 (왼쪽 아래 설정 버튼 → `SettingsDialog.tsx`. 형식·검사는 `src/backup.ts`, 버전 필드로 나중 형식 변경 대비. 가져오기는 합치기/모두 바꾸기. AutoEQ 목록 보관본은 제외) + `navigator.storage.persist()` 요청
 - [ ] PWA 적용과 배포 — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 남음
+- [x] 기기 주요 특징(유선/무선, 오픈/세미 오픈/밀폐, 코덱, ANC) 입력과 목록·추천 결과 태그 표시 (`labels.ts`의 `specTags`)
 
 ### 3단계 (나중에)
 - [ ] 두 곡선 차이로 PEQ 계산 → Wavelet, Poweramp 등에 넣을 수 있게 내보내기 (앱 안 실시간 재생은 보류)
@@ -104,5 +105,6 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 
 1. 추천용 데이터 받기: AutoEQ 카테고리 전체 추천 측정치를 백그라운드로 받아 요약값만 저장, 추천 후보에 포함 (설계는 "추천 기능 설계")
 2. 취향 기반 추천·조절 슬라이더
+   - 추천 결과를 특징(무선만, 밀폐형만 등)으로 거르는 필터도 검토. 단, AutoEQ 후보에는 특징 정보가 없어 사용자가 입력한 기기에만 적용됨
 3. 배포 (위치를 정한 뒤)
 4. 모바일 반응형은 맨 마지막: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로

@@ -2,7 +2,7 @@
 // 지금 후보는 내 DB에 저장된 측정치. (AutoEQ 전체를 후보로 쓰는 "추천용 데이터 받기"는 다음 단계)
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { categoryLabels, rigLabels, sourceLabel } from '../labels'
+import { categoryLabels, rigLabels, sourceLabel, specTags } from '../labels'
 import { matchLabels, recommend, similarityLabel, type MatchLevel, type Reference } from '../recommend'
 import { listDevices, listMeasurements, toggleSelection } from '../repo'
 import { PALETTE_SIZE } from '../selection'
@@ -113,6 +113,16 @@ function RecommendBody({ tabId, selected, target }: Omit<Props, 'open' | 'onClos
                       {' '}
                       · {sourceLabel(r.measurement.source)} · {rigLabels[r.measurement.rig]}
                     </span>
+                    {specTags(r.device).length > 0 && (
+                      <span className="small">
+                        {' '}
+                        {specTags(r.device).map((t) => (
+                          <span key={t} className="tag">
+                            {t}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                     <div className="small">
                       <span className="rec-score">
                         {similarityLabel(r.distance)} ({r.distance.toFixed(1)}dB)

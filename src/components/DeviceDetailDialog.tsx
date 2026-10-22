@@ -1,8 +1,16 @@
-// 기기 상세 팝업: 보유 여부, 측정치 목록·추가·삭제, 비교에 쓸 측정치 고르기, 기기 삭제
+// 기기 상세 팝업: 보유·찜, 주요 특징(연결·구조·코덱·ANC), 측정치 목록·추가·삭제, 비교에 쓸 측정치 고르기, 기기 삭제
 // 목록에서 기기를 클릭하면 "비교 선택"이 되므로, 관리 기능은 각 줄의 ⋯ 버튼으로 여기서 한다
 import { useState, type CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { categoryLabels, channelLabels, rigLabels, sourceLabel } from '../labels'
+import {
+  acousticLabels,
+  categoryLabels,
+  channelLabels,
+  CODECS,
+  connectionLabels,
+  rigLabels,
+  sourceLabel,
+} from '../labels'
 import {
   deleteDevice,
   deleteMeasurement,
@@ -12,8 +20,10 @@ import {
   setDeviceOwned,
   setDeviceWishlist,
   toggleSelection,
+  updateDeviceSpecs,
 } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
+import type { Acoustic, Codec, Connection, Device } from '../types'
 import { MeasurementUpload } from './MeasurementUpload'
 import { Modal } from './Modal'
 
@@ -86,6 +96,8 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
       </div>
       {device.notes && <p className="muted small">{device.notes}</p>}
 
+      <SpecsEditor device={device} />
+
       <h3>측정치 {measurements.length}개</h3>
       {measurements.length > 1 && (
         <p className="muted small">
@@ -138,5 +150,75 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
         </button>
       </div>
     </div>
+  )
+}
+
+/** 주요 특징 편집. 바꾸는 즉시 저장된다(따로 저장 버튼 없음) */
+function SpecsEditor({ device }: { device: Device }) {
+  const wireless = device.connection === 'wireless' || device.connection === 'both'
+  const codecs = device.codecs ?? []
+
+  function toggleCodec(codec: Codec, on: boolean) {
+    // CODECS 순서를 유지한 채 켜고 끈다
+    const next = CODECS.filter((c) => (c === codec ? on : codecs.includes(c)))
+    void updateDeviceSpecs(device.id, { codecs: next })
+  }
+
+  return (
+    <section className="specs">
+      <h3>주요 특징</h3>
+      <div className="row">
+        <label>
+          연결{' '}
+          <select
+            value={device.connection ?? ''}
+            onChange={(e) => updateDeviceSpecs(device.id, { connection: (e.target.value || undefined) as Connection | undefined })}
+          >
+            <option value="">모름</option>
+            {Object.entries(connectionLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          구조{' '}
+          <select
+            value={device.acoustic ?? ''}
+            onChange={(e) => updateDeviceSpecs(device.id, { acoustic: (e.target.value || undefined) as Acoustic | undefined })}
+          >
+            <option value="">모름</option>
+            {Object.entries(acousticLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {wireless && (
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={device.anc ?? false}
+              onChange={(e) => updateDeviceSpecs(device.id, { anc: e.target.checked })}
+            />
+            노이즈 캔슬링(ANC)
+          </label>
+        )}
+      </div>
+      {/* 코덱은 무선(또는 유·무선)일 때만 의미가 있어서 그때만 보여준다 */}
+      {wireless && (
+        <div className="codecs">
+          <span className="muted small">지원 코덱</span>
+          {CODECS.map((codec) => (
+            <label key={codec} className="check small">
+              <input type="checkbox" checked={codecs.includes(codec)} onChange={(e) => toggleCodec(codec, e.target.checked)} />
+              {codec}
+            </label>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }

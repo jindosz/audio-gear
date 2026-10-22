@@ -2,7 +2,7 @@
 // 전체 기기 = 내가 가진 기기(보유 제외) + AutoEQ 목록의 모든 기기. 수천 개라 가상 스크롤로 그린다.
 import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
-import { measurementLabel } from '../labels'
+import { measurementLabel, specTags } from '../labels'
 import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Device, DeviceCategory } from '../types'
@@ -25,6 +25,16 @@ type ListItem = { kind: 'mine'; name: string; device: Device } | { kind: 'catalo
 const ROW_HEIGHT = 40
 
 const deviceName = (d: Device) => `${d.brand} ${d.model}`
+
+/**
+ * 이름 옆(아래)에 보일 설명: 측정치가 없으면 그 사실, 있으면 입력해 둔 특징 태그.
+ * 전체 기기 줄(compact)은 한 줄이라 태그를 앞의 2개만 보여준다
+ */
+function deviceSub(d: Device, hasMeasurement: boolean, compact = false): string | undefined {
+  if (!hasMeasurement) return '측정치 없음'
+  const tags = specTags(d)
+  return (compact ? tags.slice(0, 2) : tags).join(' · ') || undefined
+}
 
 export function DeviceList({ category, tabId }: Props) {
   const { loading, devices, measurementsByDevice, selected } = useCompareData(tabId)
@@ -169,7 +179,7 @@ export function DeviceList({ category, tabId }: Props) {
                 <Row
                   key={d.id}
                   name={deviceName(d)}
-                  sub={measurementsByDevice.has(d.id) ? undefined : '측정치 없음'}
+                  sub={deviceSub(d, measurementsByDevice.has(d.id))}
                   onClick={() => handleSelectMine(d)}
                   onMore={() => setDetailId(d.id)}
                 />
@@ -186,7 +196,7 @@ export function DeviceList({ category, tabId }: Props) {
                 <Row
                   key={d.id}
                   name={deviceName(d)}
-                  sub={measurementsByDevice.has(d.id) ? undefined : '측정치 없음'}
+                  sub={deviceSub(d, measurementsByDevice.has(d.id))}
                   starred
                   onStar={() => setDeviceWishlist(d.id, false)}
                   onClick={() => handleSelectMine(d)}
@@ -215,7 +225,7 @@ export function DeviceList({ category, tabId }: Props) {
                   compact
                   style={style}
                   name={item.name}
-                  sub={measurementsByDevice.has(item.device.id) ? undefined : '측정치 없음'}
+                  sub={deviceSub(item.device, measurementsByDevice.has(item.device.id), true)}
                   onStar={() => setDeviceWishlist(item.device.id, true)}
                   onClick={() => handleSelectMine(item.device)}
                   onMore={() => setDetailId(item.device.id)}

@@ -10,6 +10,15 @@ export type Rig = '5128' | '711' | 'gras' | 'other'
 
 export type Channel = 'L' | 'R' | 'avg'
 
+/** 연결 방식. both는 유선·무선 둘 다 되는 기기(블루투스 헤드폰에 케이블 단자가 있는 경우 등) */
+export type Connection = 'wired' | 'wireless' | 'both'
+
+/** 하우징 구조: 오픈형 / 세미 오픈형 / 밀폐형 */
+export type Acoustic = 'open' | 'semi-open' | 'closed'
+
+/** 블루투스 코덱 */
+export type Codec = 'SBC' | 'AAC' | 'aptX' | 'aptX HD' | 'aptX Adaptive' | 'aptX Lossless' | 'LDAC' | 'LHDC' | 'LC3'
+
 /** 기기 하나 */
 export interface Device {
   id: string
@@ -19,6 +28,13 @@ export interface Device {
   owned: boolean
   /** 찜(관심 기기). 이 필드가 생기기 전에 저장된 기기에는 없을 수 있어서 선택(?) 필드 */
   wishlist?: boolean
+  // ---- 주요 특징. AutoEQ 목록에는 이런 정보가 없어서 사용자가 직접 입력한다(모르면 비워 둠) ----
+  connection?: Connection
+  acoustic?: Acoustic
+  /** 지원 코덱. 무선(또는 유·무선)일 때만 의미가 있다 */
+  codecs?: Codec[]
+  /** 노이즈 캔슬링(ANC) 지원 여부 */
+  anc?: boolean
   notes: string
   createdAt: number
 }

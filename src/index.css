@@ -853,3 +853,19 @@ button.small {
 .rec-score {
   font-weight: 600;
 }
+
+/* 기기 상세 팝업의 주요 특징 */
+.specs .row {
+  padding-block: 4px;
+}
+
+.codecs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.rec-main .tag {
+  margin-left: 4px;
+}

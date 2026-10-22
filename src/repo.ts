@@ -81,6 +81,14 @@ export async function setDeviceOwned(id: string, owned: boolean): Promise<void> 
   await db.devices.update(id, { owned })
 }
 
+/** 기기 특징(연결·구조·코덱·ANC)을 고친다. 넘긴 항목만 바뀐다 */
+export async function updateDeviceSpecs(
+  id: string,
+  specs: Partial<Pick<Device, 'connection' | 'acoustic' | 'codecs' | 'anc'>>,
+): Promise<void> {
+  await db.devices.update(id, specs)
+}
+
 export async function setDeviceWishlist(id: string, wishlist: boolean): Promise<void> {
   await db.devices.update(id, { wishlist })
 }

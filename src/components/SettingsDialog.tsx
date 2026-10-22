@@ -129,14 +129,17 @@ function BackupSection() {
               <span className="muted"> · {new Date(pending.data.exportedAt).toLocaleString()}에 내보냄</span>
             )}
           </p>
-          <label className="check small">
-            <input type="radio" name="import-mode" checked={mode === 'merge'} onChange={() => setMode('merge')} />
-            지금 데이터에 합치기 (같은 항목은 백업 내용으로 바뀜)
-          </label>
-          <label className="check small">
-            <input type="radio" name="import-mode" checked={mode === 'replace'} onChange={() => setMode('replace')} />
-            모두 지우고 백업으로 바꾸기
-          </label>
+          <div className="segmented" role="group" aria-label="가져오는 방식">
+            <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
+              지금 데이터에 합치기
+            </button>
+            <button type="button" className={mode === 'replace' ? 'active' : undefined} aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
+              모두 지우고 바꾸기
+            </button>
+          </div>
+          <p className="muted small">
+            {mode === 'merge' ? '지금 데이터는 두고, 같은 항목은 백업 내용으로 바뀝니다.' : '지금 있는 기기·측정치·타깃·탭을 모두 지우고 백업으로 바꿉니다.'}
+          </p>
           <div className="row">
             <button type="button" className="primary" onClick={handleImport}>
               가져오기

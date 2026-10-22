@@ -26,6 +26,7 @@ import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Acoustic, Codec, Connection, Device } from '../types'
 import { MeasurementUpload } from './MeasurementUpload'
 import { Modal } from './Modal'
+import { ToggleButton } from './ToggleButton'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -81,18 +82,12 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
     <div className="detail">
       <div className="row">
         <span className="tag">{categoryLabels[device.category]}</span>
-        <label className="check">
-          <input type="checkbox" checked={device.owned} onChange={(e) => setDeviceOwned(deviceId, e.target.checked)} />
+        <ToggleButton on={device.owned} onChange={(on) => setDeviceOwned(deviceId, on)}>
           보유
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={device.wishlist ?? false}
-            onChange={(e) => setDeviceWishlist(deviceId, e.target.checked)}
-          />
+        </ToggleButton>
+        <ToggleButton on={device.wishlist ?? false} onChange={(on) => setDeviceWishlist(deviceId, on)}>
           찜
-        </label>
+        </ToggleButton>
       </div>
       {device.notes && <p className="muted small">{device.notes}</p>}
 
@@ -197,14 +192,9 @@ function SpecsEditor({ device }: { device: Device }) {
           </select>
         </label>
         {wireless && (
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={device.anc ?? false}
-              onChange={(e) => updateDeviceSpecs(device.id, { anc: e.target.checked })}
-            />
+          <ToggleButton on={device.anc ?? false} onChange={(on) => updateDeviceSpecs(device.id, { anc: on })}>
             노이즈 캔슬링(ANC)
-          </label>
+          </ToggleButton>
         )}
       </div>
       {/* 코덱은 무선(또는 유·무선)일 때만 의미가 있어서 그때만 보여준다 */}
@@ -212,10 +202,9 @@ function SpecsEditor({ device }: { device: Device }) {
         <div className="codecs">
           <span className="muted small">지원 코덱</span>
           {CODECS.map((codec) => (
-            <label key={codec} className="check small">
-              <input type="checkbox" checked={codecs.includes(codec)} onChange={(e) => toggleCodec(codec, e.target.checked)} />
+            <ToggleButton key={codec} small on={codecs.includes(codec)} onChange={(on) => toggleCodec(codec, on)}>
               {codec}
-            </label>
+            </ToggleButton>
           ))}
         </div>
       )}

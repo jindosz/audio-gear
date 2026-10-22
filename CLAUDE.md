@@ -62,6 +62,8 @@
 
 다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환. 다크 색은 `@media (prefers-color-scheme: dark)` 안(`:root:not([data-theme=light])`)과 `:root[data-theme=dark]` 두 곳에 같은 값으로 적는다. 그래프처럼 색을 직접 읽는 화면은 `useResolvedTheme()`으로 테마 변화를 구독한다.
 
+켜고 끄는 선택은 체크박스 대신 `ToggleButton`(켜지면 버튼 전체가 강조색으로 칠해짐), 여러 개 중 하나 고르기는 `.segmented` 버튼 묶음을 쓴다.
+
 ## 추천 기능 설계
 
 AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있고 서버·비용이 필요 없음). 계산 함수는 `src/similarity.ts`(순수 함수).

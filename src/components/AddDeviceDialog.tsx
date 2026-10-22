@@ -12,6 +12,7 @@ import { categoryLabels } from '../labels'
 import { listDevices } from '../repo'
 import { DeviceForm } from './DeviceForm'
 import { Modal } from './Modal'
+import { ToggleButton } from './ToggleButton'
 
 interface Props {
   open: boolean
@@ -83,10 +84,9 @@ function AddDeviceBody() {
           data-autofocus
           onChange={(e) => setQuery(e.target.value)}
         />
-        <label className="check">
-          <input type="checkbox" checked={owned} onChange={(e) => setOwned(e.target.checked)} />
+        <ToggleButton on={owned} onChange={setOwned}>
           보유 기기로 추가
-        </label>
+        </ToggleButton>
       </div>
 
       {message && <p className="small notice">{message}</p>}

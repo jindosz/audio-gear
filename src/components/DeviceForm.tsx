@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { categoryLabels } from '../labels'
 import { addDevice } from '../repo'
 import type { DeviceCategory } from '../types'
+import { ToggleButton } from './ToggleButton'
 
 interface Props {
   /** 등록이 끝나면 부를 함수(선택). 등록한 기기 이름을 넘겨준다 */
@@ -41,10 +42,9 @@ export function DeviceForm({ onAdded }: Props) {
             </option>
           ))}
         </select>
-        <label className="check">
-          <input type="checkbox" checked={owned} onChange={(e) => setOwned(e.target.checked)} />
+        <ToggleButton on={owned} onChange={setOwned}>
           보유
-        </label>
+        </ToggleButton>
       </div>
       <input placeholder="메모 (선택)" value={notes} onChange={(e) => setNotes(e.target.value)} />
       <button type="submit">등록</button>

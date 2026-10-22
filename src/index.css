@@ -451,12 +451,6 @@ button.link {
   min-width: 0;
 }
 
-.check {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .muted {
   color: var(--muted);
 }
@@ -863,9 +857,39 @@ button.small {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
+  gap: 6px;
 }
 
 .rec-main .tag {
   margin-left: 4px;
+}
+
+/* ---- 토글 버튼(체크박스 대신) ----
+   꺼짐: 테두리만 있는 버튼 / 켜짐: 버튼 전체가 강조색으로 칠해짐 */
+button.toggle {
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+button.toggle.small {
+  font-size: 13px;
+  padding: 2px 10px;
+}
+
+button.toggle:hover {
+  border-color: var(--accent);
+}
+
+button.toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.import-box .segmented {
+  align-self: flex-start;
+}
+
+.import-box p {
+  margin: 0;
 }

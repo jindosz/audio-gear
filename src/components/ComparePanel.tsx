@@ -1,13 +1,15 @@
-// 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준) + 범례 + FR 그래프
+// 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃) + 리그 경고 + 범례 + FR 그래프
 import type { CSSProperties } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { logGrid, normalizeAt, resample } from '../curve'
-import { measurementLabel, sourceLabel } from '../labels'
-import { setNormalizeHz } from '../repo'
+import { measurementLabel, rigLabels, sourceLabel } from '../labels'
+import { getTarget, setNormalizeHz } from '../repo'
 import { seriesColor } from '../selection'
-import type { CompareTab } from '../types'
+import type { CompareTab, DeviceCategory } from '../types'
 import { useCompareData, type SelectedItem } from '../useCompareData'
 import { FrChart, type ChartSeries } from './FrChart'
 import { TabBar } from './TabBar'
+import { TargetSelect } from './TargetSelect'
 
 // 모든 곡선을 같은 주파수 위치로 맞춰 그린다(한 번만 계산)
 const GRID = logGrid()
@@ -17,11 +19,15 @@ interface Props {
   tabs: CompareTab[]
   activeId: string | undefined
   onSelectTab: (id: string) => void
+  /** 왼쪽 메뉴에서 고른 카테고리. 타깃 목록 순서에 쓴다 */
+  category: DeviceCategory
 }
 
-export function ComparePanel({ tabs, activeId, onSelectTab }: Props) {
+export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
   const { selected, tab } = useCompareData(activeId)
   const normalizeHz = tab?.normalizeHz ?? null
+  const targetId = tab?.targetId ?? null
+  const target = useLiveQuery(() => (targetId ? getTarget(targetId) : undefined), [targetId])
 
   // 같은 기기가 여러 번 선택됐는지 센다(그러면 이름 뒤에 구성/출처를 붙여 구분)
   const deviceCount = new Map<string, number>()
@@ -36,6 +42,18 @@ export function ComparePanel({ tabs, activeId, onSelectTab }: Props) {
     colorIndex: item.selection.colorIndex,
     values: normalizeAt(resample(item.measurement.curve, GRID), item.measurement.curve, normalizeHz),
   }))
+  if (target) {
+    // 타깃도 같은 기준으로 정규화해야 기기 곡선과 겹쳐 비교할 수 있다
+    series.push({
+      label: `타깃: ${target.name}`,
+      colorIndex: null,
+      values: normalizeAt(resample(target.curve, GRID), target.curve, normalizeHz),
+    })
+  }
+
+  // 리그 불일치: 리그를 아는 측정치 중 타깃과 리그가 다른 것. '기타'(모름)는 따로 안내만 한다
+  const mismatched = target ? selected.filter((s) => s.measurement.rig !== 'other' && s.measurement.rig !== target.rig) : []
+  const unknownRig = target ? selected.filter((s) => s.measurement.rig === 'other') : []
 
   const tabBar = <TabBar tabs={tabs} activeId={activeId} onSelect={onSelectTab} />
 
@@ -68,7 +86,19 @@ export function ComparePanel({ tabs, activeId, onSelectTab }: Props) {
             ))}
           </select>
         </label>
+        <TargetSelect tabId={tab.id} targetId={targetId} category={category} />
       </div>
+
+      {target && mismatched.length > 0 && (
+        <p className="warning small" role="status">
+          ⚠ 리그 불일치: 타깃은 {rigLabels[target.rig]} 기준인데{' '}
+          {mismatched.map((s) => `${labelOf(s)}(${rigLabels[s.measurement.rig]})`).join(', ')}는 다른 리그로 측정됐습니다.
+          리그가 다르면 같은 소리도 곡선이 달라서 타깃과의 차이를 그대로 믿기 어렵습니다.
+        </p>
+      )}
+      {target && unknownRig.length > 0 && (
+        <p className="muted small">리그 정보가 없는 측정치 {unknownRig.length}개는 타깃과 리그가 같은지 알 수 없습니다.</p>
+      )}
 
       <ul className="legend">
         {selected.map((item) => (
@@ -81,6 +111,12 @@ export function ComparePanel({ tabs, activeId, onSelectTab }: Props) {
             )}
           </li>
         ))}
+        {target && (
+          <li>
+            <span className="swatch target" aria-hidden="true" />
+            타깃: {target.name}
+          </li>
+        )}
       </ul>
 
       <FrChart grid={GRID} series={series} yTitle={yTitle} />

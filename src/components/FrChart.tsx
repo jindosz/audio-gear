@@ -17,7 +17,8 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, Logarithm
 
 export interface ChartSeries {
   label: string
-  colorIndex: number
+  /** 팔레트 색 순번. null이면 타깃 곡선(회색 점선) */
+  colorIndex: number | null
   /** grid와 같은 길이의 dB 값. 값이 없는 칸은 null */
   values: (number | null)[]
 }
@@ -116,8 +117,11 @@ export function FrChart({ grid, series, yTitle }: Props) {
       (s): ChartDataset<'line', XY[]> => ({
         label: s.label,
         data: grid.map((x, i) => ({ x, y: s.values[i] })),
-        borderColor: cssVar(`--series-${s.colorIndex}`),
-        backgroundColor: cssVar(`--series-${s.colorIndex}`),
+        borderColor: s.colorIndex === null ? text : cssVar(`--series-${s.colorIndex}`),
+        backgroundColor: s.colorIndex === null ? text : cssVar(`--series-${s.colorIndex}`),
+        // 타깃은 점선([선 길이, 빈칸 길이])으로 그리고, 기기 곡선보다 뒤(order가 클수록 뒤)에 둔다
+        borderDash: s.colorIndex === null ? [6, 4] : [],
+        order: s.colorIndex === null ? 1 : 0,
       }),
     )
 

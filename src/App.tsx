@@ -15,7 +15,7 @@ function App() {
     <div className="app">
       <Sidebar category={category} onChange={setCategory} />
       <DeviceList category={category} tabId={activeId} />
-      <ComparePanel tabs={tabs} activeId={activeId} onSelectTab={setActiveId} />
+      <ComparePanel tabs={tabs} activeId={activeId} onSelectTab={setActiveId} category={category} />
     </div>
   )
 }

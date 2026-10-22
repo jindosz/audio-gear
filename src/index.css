@@ -700,3 +700,19 @@ button.small {
     visibility: visible;
   }
 }
+
+/* ---- 타깃 ---- */
+/* 범례의 타깃 표시: 회색 점선 */
+.swatch.target {
+  background: none;
+  border-top: 2px dashed var(--muted);
+  height: 0;
+}
+
+.warning {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border-left: 3px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}

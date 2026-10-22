@@ -3,7 +3,7 @@
 // 나중에 동기화(Supabase 등)를 붙일 때 이 파일만 고치면 되도록 하기 위함.
 import { db } from './db'
 import { addSelection, removeSelection } from './selection'
-import type { CompareTab, Device, Measurement, MetaRecord } from './types'
+import type { CompareTab, Device, Measurement, MetaRecord, Target } from './types'
 
 export type NewDevice = Omit<Device, 'id' | 'createdAt'>
 export type NewMeasurement = Omit<Measurement, 'id'>
@@ -37,12 +37,21 @@ export function listMeasurementsByDevice(deviceId: string): Promise<Measurement[
   return db.measurements.where('deviceId').equals(deviceId).toArray()
 }
 
+export function getTarget(id: string): Promise<Target | undefined> {
+  return db.targets.get(id)
+}
+
 /** 보관해 둔 값을 읽는다. 없으면 undefined */
 export function getMeta(key: string): Promise<MetaRecord | undefined> {
   return db.meta.get(key)
 }
 
 // ---- 쓰기 ----
+
+/** 타깃을 저장한다(같은 id가 있으면 덮어씀) */
+export async function putTarget(target: Target): Promise<void> {
+  await db.targets.put(target)
+}
 
 export async function setMeta(key: string, value: string): Promise<void> {
   await db.meta.put({ key, value, updatedAt: Date.now() })
@@ -145,6 +154,11 @@ export async function toggleSelection(tabId: string, measurementId: string): Pro
     await db.tabs.put({ ...tab, selections: next })
     return isSelected ? 'unselected' : 'selected'
   })
+}
+
+/** 비교 탭의 타깃을 바꾼다. null이면 타깃 없음 */
+export async function setTabTarget(tabId: string, targetId: string | null): Promise<void> {
+  await db.tabs.update(tabId, { targetId })
 }
 
 /** 비교 탭의 정규화 기준 주파수를 바꾼다. null이면 정규화하지 않음 */

@@ -15,6 +15,10 @@ export function listDevices(): Promise<Device[]> {
   return db.devices.orderBy('createdAt').toArray()
 }
 
+export function getDevice(id: string): Promise<Device | undefined> {
+  return db.devices.get(id)
+}
+
 export function listMeasurementsByDevice(deviceId: string): Promise<Measurement[]> {
   return db.measurements.where('deviceId').equals(deviceId).toArray()
 }

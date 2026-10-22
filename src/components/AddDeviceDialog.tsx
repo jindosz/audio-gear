@@ -1,5 +1,5 @@
 // "기기 추가" 팝업: AutoEQ 카탈로그에서 검색해 추가하고, 없으면 직접 입력한다
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   addFromCatalog,
@@ -11,6 +11,7 @@ import {
 import { categoryLabels } from '../labels'
 import { listDevices } from '../repo'
 import { DeviceForm } from './DeviceForm'
+import { Modal } from './Modal'
 
 interface Props {
   open: boolean
@@ -25,9 +26,15 @@ const resultMessages: Record<AddResult, string> = {
 }
 
 export function AddDeviceDialog({ open, onClose }: Props) {
-  // useRef: 화면의 실제 HTML 요소(<dialog>)를 가리키는 손잡이
-  const dialogRef = useRef<HTMLDialogElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
+  return (
+    <Modal open={open} onClose={onClose} title="기기 추가">
+      <AddDeviceBody />
+    </Modal>
+  )
+}
+
+// 팝업 내용. 팝업이 열릴 때마다 새로 만들어져서 검색어 등이 초기화된다
+function AddDeviceBody() {
   const [catalog, setCatalog] = useState<CatalogEntry[] | null>(null)
   const [loadError, setLoadError] = useState('')
   const [query, setQuery] = useState('')
@@ -39,28 +46,16 @@ export function AddDeviceDialog({ open, onClose }: Props) {
   // 내 기기 이름 목록. 검색 결과에 "추가됨" 표시를 하는 데 쓴다
   const myNames = useLiveQuery(async () => new Set((await listDevices()).map((d) => `${d.brand} ${d.model}`)))
 
-  // useEffect: 화면이 그려진 뒤 실행할 일. [open]이 바뀔 때마다 다시 실행된다
+  // 팝업이 열리면 카탈로그를 받는다(한 번 받은 뒤에는 catalog.ts가 기억해 둔 것을 바로 돌려줌)
   useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (open && !dialog.open) {
-      dialog.showModal()
-      // showModal()은 첫 번째 버튼(✕)에 포커스를 주므로, 바로 입력할 수 있게 검색창으로 옮긴다
-      searchRef.current?.focus()
-    }
-    if (!open && dialog.open) dialog.close()
-  }, [open])
-
-  // 팝업이 처음 열릴 때 카탈로그를 받는다
-  useEffect(() => {
-    if (!open || catalog) return
+    if (catalog) return
     loadCatalog()
       .then((entries) => {
         setLoadError('')
         setCatalog(entries)
       })
       .catch((err: unknown) => setLoadError(err instanceof Error ? err.message : String(err)))
-  }, [open, catalog])
+  }, [catalog])
 
   async function handleAdd(entry: CatalogEntry) {
     setBusyPath(entry.path)
@@ -78,21 +73,14 @@ export function AddDeviceDialog({ open, onClose }: Props) {
   const groups = catalog ? searchCatalog(catalog, query) : []
 
   return (
-    // onClose: Esc 키로 닫을 때도 부모의 open 상태를 false로 맞춘다
-    <dialog ref={dialogRef} className="dialog" onClose={onClose}>
-      <div className="dialog-head">
-        <h2>기기 추가</h2>
-        <button className="link" onClick={onClose} aria-label="닫기">
-          ✕
-        </button>
-      </div>
-
+    // <>...</>: Fragment. 여러 요소를 감싸는 껍데기로, 실제 HTML 태그는 만들지 않는다
+    <>
       <div className="row">
         <input
           className="search"
           placeholder="기기 검색 (예: hd600, blessing 2)"
           value={query}
-          ref={searchRef}
+          data-autofocus
           onChange={(e) => setQuery(e.target.value)}
         />
         <label className="check">
@@ -155,6 +143,6 @@ export function AddDeviceDialog({ open, onClose }: Props) {
           . 측정치의 권리는 각 측정자에게 있습니다.
         </p>
       </div>
-    </dialog>
+    </>
   )
 }

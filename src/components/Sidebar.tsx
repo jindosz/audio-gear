@@ -6,6 +6,7 @@ import { EarphoneIcon, HeadphoneIcon, SettingsIcon } from './Icons'
 interface Props {
   category: DeviceCategory
   onChange: (category: DeviceCategory) => void
+  onOpenSettings: () => void
 }
 
 const icons: Record<DeviceCategory, () => React.JSX.Element> = {
@@ -13,7 +14,7 @@ const icons: Record<DeviceCategory, () => React.JSX.Element> = {
   iem: EarphoneIcon,
 }
 
-export function Sidebar({ category, onChange }: Props) {
+export function Sidebar({ category, onChange, onOpenSettings }: Props) {
   return (
     <nav className="sidebar">
       {(Object.keys(categoryLabels) as DeviceCategory[]).map((c) => {
@@ -30,8 +31,7 @@ export function Sidebar({ category, onChange }: Props) {
           </button>
         )
       })}
-      {/* 설정 화면은 아직 없다(다크/라이트 전환, 백업 등이 들어갈 자리) */}
-      <button className="nav-item settings" disabled title="설정 (준비 중)">
+      <button className="nav-item settings" onClick={onOpenSettings} title="설정 (백업 등)" aria-label="설정">
         <SettingsIcon />
       </button>
     </nav>

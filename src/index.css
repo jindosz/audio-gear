@@ -729,3 +729,42 @@ button.small {
   padding-top: 8px;
   border-top: 1px solid var(--border);
 }
+
+/* ---- 설정 팝업 ---- */
+.settings section + section {
+  margin-top: 16px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.settings p {
+  margin: 6px 0;
+}
+
+/* 파일 선택 칸을 숨기고 버튼처럼 보이게 한 label */
+.file-button {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  cursor: pointer;
+}
+
+.file-button:hover {
+  border-color: var(--accent);
+}
+
+.import-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.import-box .row {
+  padding-block: 4px 0;
+}

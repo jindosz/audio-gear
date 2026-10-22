@@ -2,6 +2,7 @@
 // 화면 코드는 db를 직접 건드리지 않고 이 함수들을 부른다.
 // 나중에 동기화(Supabase 등)를 붙일 때 이 파일만 고치면 되도록 하기 위함.
 import { db } from './db'
+import { BACKUP_APP, BACKUP_VERSION, type BackupData } from './backup'
 import { addSelection, removeSelection } from './selection'
 import type { CompareTab, Device, Measurement, MetaRecord, Target } from './types'
 
@@ -191,5 +192,40 @@ export async function setNormalizeHz(tabId: string, normalizeHz: number | null):
 async function unselectEverywhere(measurementIds: string[]): Promise<void> {
   await db.tabs.toCollection().modify((tab) => {
     tab.selections = removeSelection(tab.selections, measurementIds)
+  })
+}
+
+// ---- 백업 ----
+
+/** 백업에 넣을 데이터를 모두 읽는다(AutoEQ 목록 보관본은 제외) */
+export async function exportAll(): Promise<BackupData> {
+  // 'r': 읽기 전용 transaction. 읽는 도중에 다른 곳에서 바뀌어도 한 시점의 모습으로 읽힌다
+  return db.transaction('r', db.devices, db.measurements, db.targets, db.tabs, async () => ({
+    app: BACKUP_APP,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    devices: await db.devices.toArray(),
+    measurements: await db.measurements.toArray(),
+    targets: await db.targets.toArray(),
+    tabs: await db.tabs.toArray(),
+  }))
+}
+
+/**
+ * 백업을 DB에 넣는다.
+ * - 'merge': 지금 데이터는 두고, 같은 id는 백업 내용으로 덮어쓴다
+ * - 'replace': 지금 데이터(기기·측정치·타깃·탭)를 모두 지우고 백업으로 바꾼다
+ * 중간에 실패하면 transaction 덕분에 아무것도 바뀌지 않는다.
+ */
+export async function importAll(data: BackupData, mode: 'merge' | 'replace'): Promise<void> {
+  await db.transaction('rw', db.devices, db.measurements, db.targets, db.tabs, async () => {
+    if (mode === 'replace') {
+      await Promise.all([db.devices.clear(), db.measurements.clear(), db.targets.clear(), db.tabs.clear()])
+    }
+    // bulkPut: 여러 개를 한 번에 저장(같은 id가 있으면 덮어씀)
+    await db.devices.bulkPut(data.devices)
+    await db.measurements.bulkPut(data.measurements)
+    await db.targets.bulkPut(data.targets)
+    await db.tabs.bulkPut(data.tabs)
   })
 }

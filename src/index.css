@@ -918,3 +918,36 @@ button.toggle.on {
 .data-box p {
   margin: 0;
 }
+
+/* 취향 조절 슬라이더 */
+.sliders {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  margin: 4px 0 6px;
+}
+
+.sliders label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sliders input[type='range'] {
+  width: 110px;
+  padding: 0;
+  border: none;
+  accent-color: var(--accent);
+}
+
+.slider-name {
+  font-size: 14px;
+}
+
+/* 값이 바뀌어도 글자 폭이 흔들리지 않게 고정 폭 숫자 */
+.slider-value {
+  min-width: 52px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}

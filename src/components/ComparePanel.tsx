@@ -126,6 +126,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
         tabId={tab.id}
         selected={selected}
         target={target}
+        category={category}
       />
 
       {target && mismatched.length > 0 && (

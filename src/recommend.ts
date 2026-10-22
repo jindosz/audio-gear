@@ -5,17 +5,19 @@
 // 출처가 다른 후보끼리 거리를 그대로 비교하면 "소리 차이"보다 "측정 환경 차이"를 재게 된다.
 import type { CatalogEntry } from './catalog'
 import { distance, explain, prepare, SUMMARY_GRID, type Values } from './similarity'
-import type { CatalogSummary, Device, DeviceCategory, FrCurve, Measurement, Rig } from './types'
+import type { CatalogSummary, Device, DeviceCategory, Measurement, Rig } from './types'
 
-/** 기준: 선택한 측정치 또는 타깃 */
+/** 기준: 선택한 측정치, 타깃, 또는 취향 곡선(여러 기기 평균 + 조절) */
 export interface Reference {
-  curve: FrCurve
+  /** prepare(곡선, SUMMARY_GRID)를 거친 값. 취향 곡선은 taste.ts로 만든다 */
+  values: Values
   category: DeviceCategory
+  /** 기준의 리그. 여러 기기 평균인데 리그가 섞였으면 'other'(같은 리그 묶음 없음) */
   rig: Rig
-  /** 측정자(측정치의 source, 예: "AutoEQ · oratory1990"). 타깃이면 없음 */
+  /** 측정자(측정치의 source, 예: "AutoEQ · oratory1990"). 타깃이거나 측정자가 섞였으면 없음 */
   source?: string
-  /** 기준 기기 이름("브랜드 모델"). 같은 기기는 후보에서 뺀다 */
-  name?: string
+  /** 후보에서 뺄 기기 이름들("브랜드 모델"). 기준 기기 자신 */
+  excludeNames?: string[]
 }
 
 /**
@@ -115,11 +117,12 @@ function better(a: Recommendation, b: Recommendation): boolean {
  *   (후보가 수천 개면 "같은 측정자" 묶음만으로 목록이 차 버려서 묶음마다 따로 자른다)
  */
 export function recommend(ref: Reference, candidates: Candidate[], perLevel = 15): Recommendation[] {
-  const refValues = prepare(ref.curve, SUMMARY_GRID)
+  const refValues = ref.values
+  const exclude = new Set(ref.excludeNames ?? [])
   const best = new Map<string, Recommendation>()
 
   for (const candidate of candidates) {
-    if (candidate.category !== ref.category || candidate.name === ref.name) continue
+    if (candidate.category !== ref.category || exclude.has(candidate.name)) continue
     const d = distance(candidate.values, refValues, SUMMARY_GRID)
     if (d === null) continue
     const rec: Recommendation = {

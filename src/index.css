@@ -951,3 +951,27 @@ button.toggle.on {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- EQ로 들어보기 ---- */
+.eq-chart {
+  display: flex;
+  flex-direction: column;
+  height: 220px;
+  margin: 6px 0;
+}
+
+.eq-text {
+  width: 100%;
+  box-sizing: border-box;
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  resize: vertical;
+}
+
+.howto {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+
+.eq .segmented {
+  flex-wrap: wrap;
+}

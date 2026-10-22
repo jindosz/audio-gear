@@ -9,6 +9,16 @@
   --accent: #2f7de1;
   --danger: #c43d3d;
 
+  /* 비교 색 팔레트(색각 이상 친화, 8색). 순서대로 배정하고 순번(colorIndex)만 저장한다 */
+  --series-0: #2a78d6;
+  --series-1: #eb6834;
+  --series-2: #1baf7a;
+  --series-3: #eda100;
+  --series-4: #e87ba4;
+  --series-5: #008300;
+  --series-6: #6250d6;
+  --series-7: #e34948;
+
   font: 15px/1.5 system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
   color-scheme: light dark;
   color: var(--text);
@@ -25,6 +35,15 @@
     --hover: rgb(255 255 255 / 0.05);
     --accent: #5aa2f5;
     --danger: #ff7a7a;
+
+    --series-0: #3987e5;
+    --series-1: #d95926;
+    --series-2: #199e70;
+    --series-3: #c98500;
+    --series-4: #d55181;
+    --series-5: #008300;
+    --series-6: #9085e9;
+    --series-7: #e66767;
   }
 }
 
@@ -131,8 +150,51 @@ body {
 .device-row {
   display: flex;
   align-items: center;
-  padding: 0 6px 0 16px;
+  padding-right: 6px;
   min-height: 40px;
+}
+
+/* 줄 전체가 클릭 영역인 버튼. 버튼 기본 모양은 지운다 */
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px 0 6px 16px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+}
+
+/* 선택된 줄: 같은 색의 연한 배경 + 왼쪽 진한 띠. 글자는 기본 글자색 그대로 */
+.device-row.selected {
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  box-shadow: inset 4px 0 0 var(--c);
+}
+
+.device-row.selected:hover {
+  background: color-mix(in srgb, var(--c) 24%, transparent);
+}
+
+.device-name .tag {
+  margin-left: 6px;
+}
+
+.device-sub {
+  font-size: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-notice {
+  margin: 0;
+  padding: 8px 16px;
+  color: var(--danger);
+  border-bottom: 1px solid var(--border);
 }
 
 .device-row:hover {
@@ -140,7 +202,7 @@ body {
 }
 
 .device-name {
-  flex: 1;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -168,9 +230,40 @@ body {
 
 .main-col {
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px;
+}
+
+.main-col.empty {
   align-items: center;
   justify-content: center;
-  min-width: 0;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+.placeholder {
+  margin: auto;
 }
 
 /* ---- 공통 요소 ---- */

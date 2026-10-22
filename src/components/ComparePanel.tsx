@@ -1,5 +1,5 @@
 // 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃, 차이 기준) + 리그 경고 + 범례 + FR 그래프 + 차이 그래프
-import { lazy, Suspense, type CSSProperties } from 'react'
+import { lazy, Suspense, useState, type CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { diffValues, logGrid, normalizeAt, resample } from '../curve'
 import { measurementLabel, rigLabels, sourceLabel } from '../labels'
@@ -8,6 +8,7 @@ import { seriesColor } from '../selection'
 import type { CompareTab, DeviceCategory } from '../types'
 import { useCompareData, type SelectedItem } from '../useCompareData'
 import type { ChartSeries } from './FrChart'
+import { RecommendDialog } from './RecommendDialog'
 import { TabBar } from './TabBar'
 import { TargetSelect } from './TargetSelect'
 
@@ -32,6 +33,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
   const normalizeHz = tab?.normalizeHz ?? null
   const targetId = tab?.targetId ?? null
   const target = useLiveQuery(() => (targetId ? getTarget(targetId) : undefined), [targetId])
+  const [recommendOpen, setRecommendOpen] = useState(false)
 
   // 같은 기기가 여러 번 선택됐는지 센다(그러면 이름 뒤에 구성/출처를 붙여 구분)
   const deviceCount = new Map<string, number>()
@@ -114,7 +116,17 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
             ))}
           </select>
         </label>
+        <button type="button" onClick={() => setRecommendOpen(true)}>
+          비슷한 기기 찾기
+        </button>
       </div>
+      <RecommendDialog
+        open={recommendOpen}
+        onClose={() => setRecommendOpen(false)}
+        tabId={tab.id}
+        selected={selected}
+        target={target}
+      />
 
       {target && mismatched.length > 0 && (
         <p className="warning small" role="status">

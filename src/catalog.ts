@@ -4,6 +4,7 @@
 import { dbAt } from './curve'
 import { parseFrCsv } from './csv'
 import { addDevice, addMeasurement, findDeviceByName, getMeta, listMeasurementsByDevice, setMeta } from './repo'
+import { cleanName } from './nameClean'
 import { loadSquigCatalog } from './squig'
 import { normalize } from './text'
 import type { DeviceCategory, FrCurve, Rig } from './types'
@@ -61,7 +62,8 @@ export function parseAutoEqIndex(text: string, recommendedText = ''): CatalogEnt
     const formDir = path.split('/')[1] ?? '' // 예: "GRAS 43AG-7 over-ear", "in-ear"
     entries.push({
       provider: 'autoeq',
-      name,
+      // AutoEQ 이름도 겹친 공백·괄호 짝 같은 표기만 squig.link와 같은 규칙으로 맞춘다
+      name: cleanName(name) ?? name,
       source,
       rigName,
       rig: toRig(rigName),
@@ -157,6 +159,26 @@ export function groupCatalog(entries: CatalogEntry[]): CatalogDevice[] {
     else byKey.set(key, [e])
   }
 
+  // 브랜드 표기 맞추기: 사이트마다 "Hifiman" / "HIFIMAN"처럼 대소문자를 다르게 적어서,
+  // 이름의 첫 단어(대부분 브랜드)를 가장 많이 쓰인 표기로 바꿔 보여준다.
+  // AutoEQ 표기를 우선하도록 AutoEQ는 10표, squig.link 사이트는 1표씩 센다
+  const firstWord = (name: string) => name.split(' ')[0]
+  const wordCounts = new Map<string, Map<string, number>>()
+  for (const e of entries) {
+    const word = firstWord(e.name)
+    const key = word.toLowerCase()
+    const counts = wordCounts.get(key) ?? new Map<string, number>()
+    counts.set(word, (counts.get(word) ?? 0) + (e.provider === 'autoeq' ? 10 : 1))
+    wordCounts.set(key, counts)
+  }
+  const canonicalWord = new Map(
+    [...wordCounts.entries()].map(([key, counts]) => [key, [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]]),
+  )
+  const displayName = (e: CatalogEntry) => {
+    const word = firstWord(e.name)
+    return (canonicalWord.get(word.toLowerCase()) ?? word) + e.name.slice(word.length)
+  }
+
   const collator = new Intl.Collator('en')
   return [...byKey.entries()]
     .map(([searchKey, list]) => {
@@ -167,7 +189,7 @@ export function groupCatalog(entries: CatalogEntry[]): CatalogDevice[] {
       // 카테고리: AutoEQ에 있으면 AutoEQ 분류, 없으면 여러 사이트의 다수결
       // (헤드폰 목록에 이어폰을 섞어 둔 사이트가 있어도, 다른 사이트들이 이어폰으로 분류했으면 이어폰으로 본다)
       const category = autoeq.length ? main.category : majorityCategory(list)
-      return { name: main.name, category, searchKey, primary }
+      return { name: displayName(main), category, searchKey, primary }
     })
     .sort((a, b) => collator.compare(a.name, b.name))
 }

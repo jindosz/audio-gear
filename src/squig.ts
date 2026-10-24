@@ -6,6 +6,7 @@
 // 모두 CORS를 허용해서 브라우저에서 바로 받을 수 있다.
 // 측정치의 권리는 각 리뷰어에게 있으므로 AutoEQ처럼 고를 때만 받고, 출처(사이트 이름)를 붙여 저장한다.
 import type { CatalogEntry } from './catalog'
+import { cleanName, cleanPart } from './nameClean'
 import { getMeta, setMeta } from './repo'
 import type { DeviceCategory, Rig } from './types'
 
@@ -156,17 +157,14 @@ function toEntries(dbs: StoredDb[]): CatalogEntry[] {
       // 사이트마다 목록을 손으로 만들어서, 이름이 숫자로 적혀 있는 경우도 있다 → 모두 글자로 바꿔 쓴다
       const b = stripTag(String(rawBrand ?? ''))
       const m = stripTag(String(rawModel ?? ''))
-      const brand = b.text
-      const model = m.text
+      const brand = cleanPart(b.text)
+      const model = cleanPart(m.text)
       const file = String(rawFile ?? '')
-      const variant = String(rawVariant ?? '')
+      const variant = cleanName(String(rawVariant ?? '')) ?? ''
       if (!model || !file) continue
-      // 모델 이름에 브랜드가 이미 들어 있는 사이트도 있다
-      // 이름 뒤쪽의 [설명]은 AutoEQ처럼 (설명)으로 바꿔 표기를 맞춘다. 예) "HE400se [Bass Mod]" → "HE400se (Bass Mod)"
-      const name = (!brand || model.toLowerCase().startsWith(brand.toLowerCase()) ? model : `${brand} ${model}`).replace(
-        /\[([^\]]*)\]/g,
-        '($1)',
-      )
+      // 모델 이름에 브랜드가 이미 들어 있는 사이트도 있다. 표기 정리와 기기가 아닌 줄 걸러 내기는 nameClean.ts
+      const name = cleanName(!brand || model.toLowerCase().startsWith(brand.toLowerCase()) ? model : `${brand} ${model}`)
+      if (!name) continue
       // 분류: 이름 태그 → 이름 속 표시 → 사이트 목록 종류 순으로 믿는다
       const category = m.category ?? b.category ?? (IEM_IN_NAME.test(name) ? 'iem' : db.category)
       entries.push({

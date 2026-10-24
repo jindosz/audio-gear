@@ -86,7 +86,15 @@ export function DeviceList({ category, tabId }: Props) {
     const myKeys = new Set(devices.map((d) => normalize(deviceName(d))))
     const queryWords = query.split(/\s+/).map(normalize).filter(Boolean)
     return (catalogDevices ?? [])
-      .filter((e) => e.category === category && !myKeys.has(e.searchKey) && queryWords.every((w) => e.searchKey.includes(w)))
+      // 받을 수 있는 측정치가 없는 기기(crinacle 측정만 있는 경우 등)는 눌러도 그릴 수 없어 숨긴다.
+      // 그런 기기도 + 팝업 검색에서는 보여서 기기만 등록하고 CSV를 직접 올릴 수 있다
+      .filter(
+        (e) =>
+          e.primary &&
+          e.category === category &&
+          !myKeys.has(e.searchKey) &&
+          queryWords.every((w) => e.searchKey.includes(w)),
+      )
       .map((e): ListItem => ({ kind: 'catalog', name: e.name, entry: e }))
   }, [catalogDevices, devices, category, query])
   const mineItems = mine

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
 import { measurementLabel, specTags } from '../labels'
+import { EMPTY_FILTER, activeCount, brandOptions, filterInfo, matchesFilter, type FilterInfo, type ListFilter } from '../listFilter'
 import { displaySpecs, specHint } from '../specHints'
 import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
@@ -11,6 +12,7 @@ import { useCatalogDevices } from '../useCatalogDevices'
 import { useCompareData } from '../useCompareData'
 import { AddDeviceDialog } from './AddDeviceDialog'
 import { DeviceDetailDialog } from './DeviceDetailDialog'
+import { ListFilterBar } from './ListFilterBar'
 import { VirtualList } from './VirtualList'
 
 interface Props {
@@ -71,6 +73,17 @@ export function DeviceList({ category, tabId }: Props) {
   // 측정치를 받는 중인 AutoEQ 기기 이름
   const [pendingName, setPendingName] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // 필터는 카테고리마다 따로 기억한다(헤드폰 브랜드를 고른 채 이어폰으로 가도 빈 목록이 되지 않게)
+  const [filters, setFilters] = useState<Record<DeviceCategory, ListFilter>>({ headphone: EMPTY_FILTER, iem: EMPTY_FILTER })
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filter = filters[category]
+  const setFilter = (f: ListFilter) => setFilters((all) => ({ ...all, [category]: f }))
+
+  // 카탈로그 기기마다 필터 정보(브랜드, 특징 추정값)를 목록이 바뀔 때 한 번만 계산해 둔다
+  const catalogInfo = useMemo(
+    () => new Map((catalogDevices ?? []).map((e): [CatalogDevice, FilterInfo] => [e, filterInfo(e.name, e.category)])),
+    [catalogDevices],
+  )
 
   // 이름 → AutoEQ 기기. 측정치 없는 내 기기를 클릭했을 때 AutoEQ에서 받아올 수 있는지 찾는 데 쓴다.
   // 목록(6천 개)이 바뀔 때만 다시 만든다
@@ -85,7 +98,11 @@ export function DeviceList({ category, tabId }: Props) {
   const matches = (searchKey: string) => words.every((w) => searchKey.includes(w))
 
   const mine = devices.filter(
-    (d) => d.category === category && !selectedDeviceIds.has(d.id) && matches(normalize(deviceName(d))),
+    (d) =>
+      d.category === category &&
+      !selectedDeviceIds.has(d.id) &&
+      matches(normalize(deviceName(d))) &&
+      matchesFilter(filterInfo(deviceName(d), d.category, d), filter),
   )
   // owned·wishlist는 인덱스가 없어서 JS의 filter로 나눈다. 보유 > 찜 > 전체 순으로 한 곳에만 보인다
   const owned = mine.filter((d) => d.owned)
@@ -104,10 +121,22 @@ export function DeviceList({ category, tabId }: Props) {
           e.primary &&
           e.category === category &&
           !myKeys.has(e.searchKey) &&
-          queryWords.every((w) => e.searchKey.includes(w)),
+          queryWords.every((w) => e.searchKey.includes(w)) &&
+          matchesFilter(catalogInfo.get(e)!, filter),
       )
       .map((e): ListItem => ({ kind: 'catalog', name: e.name, entry: e }))
-  }, [catalogDevices, devices, category, query])
+  }, [catalogDevices, catalogInfo, devices, category, query, filter])
+
+  // 브랜드 선택지: 지금 카테고리의 내 기기 + 목록에 보이는 카탈로그 기기
+  const brands = useMemo(
+    () =>
+      brandOptions([
+        ...devices.filter((d) => d.category === category).map(deviceName),
+        ...(catalogDevices ?? []).filter((e) => e.primary && e.category === category).map((e) => e.name),
+      ]),
+    [catalogDevices, devices, category],
+  )
+  const filterCount = activeCount(filter)
   const mineItems = mine
     .filter((d) => !d.owned && !d.wishlist)
     .map((d): ListItem => ({ kind: 'mine', name: deviceName(d), device: d }))
@@ -181,10 +210,20 @@ export function DeviceList({ category, tabId }: Props) {
     <aside className="list-col">
       <div className="list-search">
         <input type="search" placeholder="기기 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <button
+          className={filterCount > 0 ? 'filter-btn toggle on' : 'filter-btn toggle'}
+          onClick={() => setFilterOpen((o) => !o)}
+          aria-expanded={filterOpen}
+          title="브랜드·특징으로 거르기"
+        >
+          필터{filterCount > 0 && <span className="badge">{filterCount}</span>}
+        </button>
         <button className="icon-btn" onClick={() => setAddOpen(true)} title="기기 추가" aria-label="기기 추가">
           +
         </button>
       </div>
+
+      {filterOpen && <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} />}
 
       <div className="list-scroll" ref={scrollRef}>
         {notice && <p className="list-notice small">{notice}</p>}
@@ -259,7 +298,7 @@ export function DeviceList({ category, tabId }: Props) {
             </p>
           )}
           {squigError && <p className="list-empty error small">squig.link 목록을 불러오지 못했습니다: {squigError}</p>}
-          {nothing && <p className="list-empty muted">{query ? '검색 결과가 없습니다.' : '기기가 없습니다.'}</p>}
+          {nothing && <p className="list-empty muted">{query || filterCount ? '조건에 맞는 기기가 없습니다.' : '기기가 없습니다.'}</p>}
           <VirtualList
             items={allItems}
             rowHeight={ROW_HEIGHT}

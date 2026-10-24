@@ -1007,3 +1007,38 @@ button.toggle.on {
   color: var(--text);
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
 }
+
+/* 기기 목록 필터 칸(검색창 아래, 필터 버튼으로 열고 닫음) */
+.list-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-filter .row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.list-filter p {
+  margin: 0;
+}
+
+.segmented.small button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.filter-reset {
+  align-self: flex-start;
+  font-size: 13px;
+}
+
+/* 필터 버튼에 켜진 필터 개수 표시 */
+.filter-btn .badge {
+  margin-left: 4px;
+  font-size: 12px;
+}

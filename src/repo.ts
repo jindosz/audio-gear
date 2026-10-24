@@ -3,6 +3,7 @@
 // 나중에 동기화(Supabase 등)를 붙일 때 이 파일만 고치면 되도록 하기 위함.
 import { db } from './db'
 import { BACKUP_APP, BACKUP_VERSION, type BackupData } from './backup'
+import { planDeviceCleanup } from './deviceCleanup'
 import { addSelection, removeSelection } from './selection'
 import { normalize } from './text'
 import type { CatalogSummary, CompareTab, Device, DeviceCategory, Measurement, MetaRecord, Target } from './types'
@@ -257,5 +258,57 @@ export async function importAll(data: BackupData, mode: 'merge' | 'replace'): Pr
     await db.measurements.bulkPut(data.measurements)
     await db.targets.bulkPut(data.targets)
     await db.tabs.bulkPut(data.tabs)
+  })
+}
+
+// ---- 저장된 기기 정리 ----
+
+export interface CleanupResult {
+  renamed: number
+  deleted: number
+  merged: number
+  /** 합치면서 지운 중복 측정치(같은 출처·같은 구성) */
+  duplicateMeasurements: number
+}
+
+/**
+ * 이름 정리 규칙을 만들기 전에 저장된 기기들을 지금 규칙으로 정리한다(deviceCleanup.ts의 계획대로).
+ * transaction 안에서 한꺼번에 바꿔서, 중간에 실패하면 아무것도 바뀌지 않는다
+ */
+export async function cleanupStoredDevices(): Promise<CleanupResult> {
+  return db.transaction('rw', db.devices, db.measurements, db.tabs, async () => {
+    const plan = planDeviceCleanup(await db.devices.toArray())
+    const result: CleanupResult = { renamed: 0, deleted: 0, merged: 0, duplicateMeasurements: 0 }
+
+    for (const u of plan.updates) {
+      await db.devices.update(u.id, { brand: u.brand, model: u.model, category: u.category })
+      result.renamed++
+    }
+    for (const id of plan.deletes) {
+      const measurementIds = (await db.measurements.where('deviceId').equals(id).primaryKeys()) as string[]
+      await db.measurements.bulkDelete(measurementIds)
+      await db.devices.delete(id)
+      await unselectEverywhere(measurementIds)
+      result.deleted++
+    }
+    for (const m of plan.merges) {
+      // 측정치를 남길 기기로 옮기고, 합친 값 저장, 나머지 기기 삭제
+      await db.measurements.where('deviceId').anyOf(m.removeIds).modify({ deviceId: m.keepId })
+      await db.devices.update(m.keepId, m.patch)
+      await db.devices.bulkDelete(m.removeIds)
+      result.merged += m.removeIds.length
+      // 합친 결과 같은 출처·같은 구성의 측정치가 둘 이상이면 하나만 남긴다
+      const seen = new Set<string>()
+      const duplicates: string[] = []
+      for (const ms of await db.measurements.where('deviceId').equals(m.keepId).toArray()) {
+        const key = `${ms.source}|${ms.variant}|${ms.channel}`
+        if (seen.has(key)) duplicates.push(ms.id)
+        else seen.add(key)
+      }
+      await db.measurements.bulkDelete(duplicates)
+      await unselectEverywhere(duplicates)
+      result.duplicateMeasurements += duplicates.length
+    }
+    return result
   })
 }

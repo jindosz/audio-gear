@@ -1,7 +1,8 @@
 // 설정 팝업: 화면 테마, 백업 내보내기/가져오기, 브라우저 저장소 영구 보존
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { backupFileName, parseBackup, summarize, type BackupData } from '../backup'
-import { exportAll, importAll } from '../repo'
+import { cleanupStoredDevices, exportAll, importAll } from '../repo'
+import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 
@@ -16,6 +17,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       <div className="detail settings">
         <ThemeSection />
         <BackupSection />
+        <CleanupSection />
         <StorageSection />
       </div>
     </Modal>
@@ -153,6 +155,38 @@ function BackupSection() {
 
       {message && <p className="notice small">{message}</p>}
       {error && <p className="error small">{error}</p>}
+    </section>
+  )
+}
+
+/** 저장된 기기 이름 정리. 앱을 처음 열 때 한 번 자동으로 하지만, 백업을 가져온 뒤 등에 다시 할 수 있게 둔다 */
+function CleanupSection() {
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function handleCleanup() {
+    if (!confirm('이름을 정리하고, 같은 기기는 하나로 합치고, 기기가 아닌 항목(구분선 등)은 지웁니다. 계속할까요?')) return
+    setBusy(true)
+    try {
+      setMessage(describeCleanup(await cleanupStoredDevices()))
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section>
+      <h3>기기 정리</h3>
+      <p className="muted small">
+        저장된 기기 이름을 목록과 같은 규칙으로 정리합니다. 이름이 같아진 기기는 먼저 저장한 기기로 합치고(보유·찜·메모·측정치
+        유지), 기기가 아닌 항목은 지웁니다.
+      </p>
+      <button type="button" onClick={handleCleanup} disabled={busy}>
+        {busy ? '정리 중…' : '저장된 기기 정리'}
+      </button>
+      {message && <p className="notice small">{message}</p>}
     </section>
   )
 }

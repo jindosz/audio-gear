@@ -1,5 +1,28 @@
 // 기기 이름 정리. squig.link 목록은 리뷰어들이 손으로 만들어서 표기가 제각각이라,
 // 목록에 보여주기 전에 모양을 맞추고 기기가 아닌 줄(구분선, 메모)은 걸러 낸다. 순수 함수.
+import type { DeviceCategory } from './types'
+
+/**
+ * 이름 앞의 [태그]를 떼고, 태그가 종류를 알려주면 카테고리로 쓴다.
+ * 예) "[IEMs] Moondrop Space Travel 2" → 이어폰, "[Unbranded]" → "Unbranded"
+ * 헤드폰 목록 안에 이어폰을 섞어 두고 태그로만 표시하는 사이트가 있어서 필요하다
+ */
+export function stripTag(text: string): { text: string; category?: DeviceCategory } {
+  const match = text.match(/^\s*\[([^\]]*)\]\s*/)
+  if (!match) return { text: text.trim() }
+  const tag = match[1]
+  const rest = text.slice(match[0].length).trim()
+  const category: DeviceCategory | undefined = /iem|in-?ear|earphone|earbud|tws/i.test(tag)
+    ? 'iem'
+    : /headphone|over-?ear|on-?ear/i.test(tag)
+      ? 'headphone'
+      : undefined
+  // 종류를 알려주는 태그는 떼어 내고, 그 밖의 태그(예: Unbranded)는 괄호만 지워 이름으로 남긴다
+  return { text: category ? rest : `${tag} ${rest}`.trim(), category }
+}
+
+/** 이름 안에 이어폰이라는 표시가 있는지(예: "Something (IEM)") */
+export const IEM_IN_NAME = /\b(IEMs?|TWS|in-?ear monitor)\b/i
 
 /** 브랜드·모델 칸 앞에 붙은 표시(*, _, ~, #, -)와 앞뒤 공백을 지운다. 예) "_DIY" → "DIY", "*" → "" */
 export function cleanPart(text: string): string {
@@ -55,4 +78,17 @@ export function cleanName(raw: string): string | null {
   if (alnum.length < 2) return null
   if (/^\(.*\)$/.test(name)) return null
   return name
+}
+
+// 여러 단어로 된 브랜드. 나머지는 첫 단어를 브랜드로 본다.
+// 화면에는 "브랜드 + 모델"을 이어 붙여 보여주므로 나눔이 틀려도 표시는 원래 이름과 같다.
+const MULTI_WORD_BRANDS = [
+  '64 Audio', 'Bang & Olufsen', 'Bowers & Wilkins', 'Campfire Audio', 'Dan Clark Audio',
+  'Empire Ears', 'Final Audio', 'Master & Dynamic', 'Meze Audio', 'Noble Audio',
+  'Tin HiFi', 'Ultimate Ears', 'Unique Melody',
+]
+
+export function splitBrand(name: string): { brand: string; model: string } {
+  const brand = MULTI_WORD_BRANDS.find((b) => name.startsWith(`${b} `)) ?? name.split(' ')[0]
+  return { brand, model: name.slice(brand.length).trim() }
 }

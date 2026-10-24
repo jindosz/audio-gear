@@ -988,3 +988,22 @@ button.toggle.on {
 .spec-hint {
   margin: 0 0 6px;
 }
+
+/* 화면 아래쪽에 잠깐 띄우는 안내(예: 저장된 기기 정리 결과) */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+}

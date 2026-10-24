@@ -4,7 +4,7 @@
 import { dbAt } from './curve'
 import { parseFrCsv } from './csv'
 import { addDevice, addMeasurement, findDeviceByName, getMeta, listMeasurementsByDevice, setMeta } from './repo'
-import { cleanName } from './nameClean'
+import { cleanName, splitBrand } from './nameClean'
 import { loadSquigCatalog } from './squig'
 import { normalize } from './text'
 import type { DeviceCategory, FrCurve, Rig } from './types'
@@ -268,18 +268,8 @@ export async function fetchCatalogCurve(entry: CatalogEntry): Promise<FrCurve> {
   return parseFrCsv(await res.text()).curve
 }
 
-// 여러 단어로 된 브랜드. 나머지는 첫 단어를 브랜드로 본다.
-// 화면에는 "브랜드 + 모델"을 이어 붙여 보여주므로 나눔이 틀려도 표시는 원래 이름과 같다.
-const MULTI_WORD_BRANDS = [
-  '64 Audio', 'Bang & Olufsen', 'Bowers & Wilkins', 'Campfire Audio', 'Dan Clark Audio',
-  'Empire Ears', 'Final Audio', 'Master & Dynamic', 'Meze Audio', 'Noble Audio',
-  'Tin HiFi', 'Ultimate Ears', 'Unique Melody',
-]
-
-export function splitBrand(name: string): { brand: string; model: string } {
-  const brand = MULTI_WORD_BRANDS.find((b) => name.startsWith(`${b} `)) ?? name.split(' ')[0]
-  return { brand, model: name.slice(brand.length).trim() }
-}
+// splitBrand는 저장된 기기 정리(deviceCleanup.ts)에서도 쓰여서 nameClean.ts로 옮겼다
+export { splitBrand }
 
 export type AddResult = 'added' | 'deviceOnly' | 'measurementAdded' | 'alreadyExists'
 

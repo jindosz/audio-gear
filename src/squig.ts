@@ -6,7 +6,7 @@
 // 모두 CORS를 허용해서 브라우저에서 바로 받을 수 있다.
 // 측정치의 권리는 각 리뷰어에게 있으므로 AutoEQ처럼 고를 때만 받고, 출처(사이트 이름)를 붙여 저장한다.
 import type { CatalogEntry } from './catalog'
-import { cleanName, cleanPart } from './nameClean'
+import { cleanName, cleanPart, IEM_IN_NAME, stripTag } from './nameClean'
 import { getMeta, setMeta } from './repo'
 import type { DeviceCategory, Rig } from './types'
 
@@ -126,28 +126,6 @@ async function downloadAll(onProgress?: (p: SquigProgress) => void): Promise<Sto
   await Promise.all(Array.from({ length: CONCURRENCY }, worker))
   return result
 }
-
-/**
- * 이름 앞의 [태그]를 떼고, 태그가 종류를 알려주면 카테고리로 쓴다.
- * 예) "[IEMs] Moondrop Space Travel 2" → 이어폰, "[Unbranded]" → "Unbranded"
- * 헤드폰 목록 안에 이어폰을 섞어 두고 태그로만 표시하는 사이트가 있어서 필요하다
- */
-function stripTag(text: string): { text: string; category?: DeviceCategory } {
-  const match = text.match(/^\s*\[([^\]]*)\]\s*/)
-  if (!match) return { text: text.trim() }
-  const tag = match[1]
-  const rest = text.slice(match[0].length).trim()
-  const category: DeviceCategory | undefined = /iem|in-?ear|earphone|earbud|tws/i.test(tag)
-    ? 'iem'
-    : /headphone|over-?ear|on-?ear/i.test(tag)
-      ? 'headphone'
-      : undefined
-  // 종류를 알려주는 태그는 떼어 내고, 그 밖의 태그(예: Unbranded)는 괄호만 지워 이름으로 남긴다
-  return { text: category ? rest : `${tag} ${rest}`.trim(), category }
-}
-
-/** 이름 안에 이어폰이라는 표시가 있는지(예: "Something (IEM)") */
-const IEM_IN_NAME = /\b(IEMs?|TWS|in-?ear monitor)\b/i
 
 /** 보관본 → 카탈로그 항목 */
 function toEntries(dbs: StoredDb[]): CatalogEntry[] {

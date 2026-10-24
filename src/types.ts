@@ -106,3 +106,26 @@ export interface CompareTab {
   diffRef?: string | null
   createdAt: number
 }
+
+/** EQ 밴드 하나(파라메트릭 EQ의 피크 필터) */
+export interface PeakFilter {
+  /** 중심 주파수(Hz) */
+  freq: number
+  /** 올리거나 내리는 양(dB) */
+  gain: number
+  /** 폭. 클수록 좁은 범위만 바뀐다 */
+  q: number
+}
+
+/** 저장해 둔 EQ 하나(EQ 화면의 목록) */
+export interface EqPreset {
+  id: string
+  name: string
+  /** 이 EQ를 걸 기기의 측정치(지금 쓰는 기기). 측정치가 지워졌으면 없는 id일 수 있다 */
+  measurementId: string
+  /** 자동 계산 목표: '' (없음) | 'm:측정치 id' | 't:타깃 id' */
+  goal: string
+  filters: PeakFilter[]
+  createdAt: number
+  updatedAt: number
+}

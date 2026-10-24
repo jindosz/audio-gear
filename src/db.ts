@@ -1,7 +1,7 @@
 // IndexedDB(브라우저 안의 데이터베이스)를 Dexie로 정의하는 파일.
 // 화면 코드는 이 파일의 db만 사용하고, 저장 방식은 여기서만 신경 쓴다.
 import Dexie, { type EntityTable } from 'dexie'
-import type { CatalogSummary, CompareTab, Device, Measurement, MetaRecord, Target } from './types'
+import type { CatalogSummary, CompareTab, Device, EqPreset, Measurement, MetaRecord, Target } from './types'
 
 export const db = new Dexie('audio-gear') as Dexie & {
   devices: EntityTable<Device, 'id'>
@@ -10,6 +10,7 @@ export const db = new Dexie('audio-gear') as Dexie & {
   tabs: EntityTable<CompareTab, 'id'>
   meta: EntityTable<MetaRecord, 'key'>
   summaries: EntityTable<CatalogSummary, 'path'>
+  eqPresets: EntityTable<EqPreset, 'id'>
 }
 
 // 문자열은 "기본 키, 인덱스1, 인덱스2..." 순서.
@@ -31,4 +32,9 @@ db.version(2).stores({
 // 버전 3: 추천용 요약값 테이블. 카테고리별로 세고 읽을 수 있게 category 인덱스
 db.version(3).stores({
   summaries: 'path, category',
+})
+
+// 버전 4: 저장해 둔 EQ(EQ 화면의 목록). 만든 순서로 보여주려고 createdAt 인덱스
+db.version(4).stores({
+  eqPresets: 'id, createdAt',
 })

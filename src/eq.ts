@@ -7,17 +7,9 @@
 // 3) PEQ 맞추기: 피크 필터를 하나씩 놓아 목표 EQ를 따라가게 한다(남은 오차가 가장 큰 곳부터)
 // 4) 프리앰프: EQ로 가장 많이 올라가는 만큼 전체 음량을 미리 낮춰 소리가 깨지지 않게 한다
 import { FINE_GRID, prepare, type Values } from './similarity'
-import type { FrCurve } from './types'
+import type { FrCurve, PeakFilter } from './types'
 
-/** 피크 필터 하나(파라메트릭 EQ의 한 밴드) */
-export interface PeakFilter {
-  /** 중심 주파수(Hz) */
-  freq: number
-  /** 올리거나 내리는 양(dB) */
-  gain: number
-  /** 폭. 클수록 좁은 범위만 바뀐다 */
-  q: number
-}
+export type { PeakFilter }
 
 export interface EqResult {
   /** 목표 EQ(FINE_GRID 위의 dB) */
@@ -96,7 +88,8 @@ function cost(target: Values, response: number[], grid: number[]): number {
   return sum
 }
 
-function totalResponse(filters: PeakFilter[], grid: number[]): number[] {
+/** 필터들을 모두 걸었을 때의 EQ 곡선(dB) */
+export function totalResponse(filters: PeakFilter[], grid: number[]): number[] {
   const total = grid.map(() => 0)
   for (const filter of filters) peakResponse(filter, grid).forEach((v, i) => (total[i] += v))
   return total
@@ -140,6 +133,12 @@ function refine(filter: PeakFilter, others: number[], target: Values, grid: numb
   return best
 }
 
+/** 가장 많이 올라가는 곳만큼 전체 음량을 미리 낮춘다(소수 첫째 자리에서 올림해 여유를 둠) */
+export function autoPreamp(response: number[], grid: number[]): number {
+  const peak = Math.max(0, ...response.filter((_, i) => grid[i] >= 20 && grid[i] <= 20000))
+  return -Math.ceil(peak * 10) / 10
+}
+
 /** 목표 EQ를 피크 필터 maxFilters개 이하로 따라간다 */
 export function fitPeq(target: Values, grid: number[] = FINE_GRID, maxFilters = 10): EqResult {
   let filters: PeakFilter[] = []
@@ -177,9 +176,7 @@ export function fitPeq(target: Values, grid: number[] = FINE_GRID, maxFilters = 
   const response = totalResponse(filters, grid)
   const weightSum = grid.reduce((s, f, i) => (target[i] === null ? s : s + weight(f)), 0)
   const error = Math.sqrt(cost(target, response, grid) / weightSum)
-  // 가장 많이 올라가는 곳만큼 미리 낮춘다(소수 첫째 자리에서 올림해 여유를 둠)
-  const peak = Math.max(0, ...response.filter((_, i) => grid[i] >= 20 && grid[i] <= 20000))
-  const preamp = -Math.ceil(peak * 10) / 10
+  const preamp = autoPreamp(response, grid)
 
   return {
     target,

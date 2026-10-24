@@ -32,6 +32,18 @@ export function EarphoneIcon() {
   )
 }
 
+/** EQ: 높이가 다른 슬라이더 세 개 */
+export function EqIcon() {
+  return (
+    <svg {...common}>
+      <path d="M6 4v16M12 4v16M18 4v16" />
+      <circle cx="6" cy="14" r="2" fill="var(--bg)" />
+      <circle cx="12" cy="8" r="2" fill="var(--bg)" />
+      <circle cx="18" cy="16" r="2" fill="var(--bg)" />
+    </svg>
+  )
+}
+
 export function SettingsIcon() {
   return (
     <svg {...common}>

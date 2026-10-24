@@ -1,8 +1,9 @@
 // 백업 파일(JSON) 형식과 검사. 화면·DB와 상관없는 순수 함수라 따로 테스트할 수 있다.
 //
-// 백업에 넣는 것: 기기, 측정치, 타깃, 비교 탭.
+// 백업에 넣는 것: 기기, 측정치, 타깃, 비교 탭, 저장해 둔 EQ.
+// (EQ는 나중에 추가해서 옛 백업에는 없다. 없으면 빈 목록으로 읽는다. 더하기만 한 변경이라 형식 버전은 그대로)
 // 넣지 않는 것: AutoEQ 목록 보관본(meta) — 언제든 다시 받을 수 있고 크기만 크다.
-import type { CompareTab, Device, Measurement, Target } from './types'
+import type { CompareTab, Device, EqPreset, Measurement, Target } from './types'
 
 export const BACKUP_APP = 'audio-gear'
 /** 백업 형식 버전. 나중에 형식을 바꾸면 올리고, 가져올 때 옛 버전을 변환한다 */
@@ -16,6 +17,7 @@ export interface BackupData {
   measurements: Measurement[]
   targets: Target[]
   tabs: CompareTab[]
+  eqPresets: EqPreset[]
 }
 
 export interface BackupSummary {
@@ -23,6 +25,7 @@ export interface BackupSummary {
   measurements: number
   targets: number
   tabs: number
+  eqPresets: number
 }
 
 export function summarize(data: BackupData): BackupSummary {
@@ -31,6 +34,7 @@ export function summarize(data: BackupData): BackupSummary {
     measurements: data.measurements.length,
     targets: data.targets.length,
     tabs: data.tabs.length,
+    eqPresets: data.eqPresets.length,
   }
 }
 
@@ -68,6 +72,19 @@ function isTarget(v: unknown): v is Target {
 
 function isTab(v: unknown): v is CompareTab {
   return isObject(v) && isString(v.id) && isString(v.name) && Array.isArray(v.selections) && isNumber(v.createdAt)
+}
+
+function isEqPreset(v: unknown): v is EqPreset {
+  return (
+    isObject(v) &&
+    isString(v.id) &&
+    isString(v.name) &&
+    isString(v.measurementId) &&
+    isString(v.goal) &&
+    Array.isArray(v.filters) &&
+    v.filters.every((f) => isObject(f) && isNumber(f.freq) && isNumber(f.gain) && isNumber(f.q)) &&
+    isNumber(v.createdAt)
+  )
 }
 
 /** 모든 항목이 검사를 통과하는지. 하나라도 틀리면 몇 번째가 틀렸는지 알려준다 */
@@ -111,6 +128,7 @@ export function parseBackup(text: string): BackupData {
     measurements,
     targets,
     tabs,
+    eqPresets: raw.eqPresets === undefined ? [] : checkAll(raw.eqPresets, isEqPreset, 'EQ'),
   }
 }
 

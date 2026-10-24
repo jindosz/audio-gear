@@ -91,7 +91,7 @@ body {
    grid: 칸을 나눠 배치하는 CSS 기능. 왼쪽부터 메뉴 72px, 목록 260px, 나머지(1fr)는 메인 */
 .app {
   display: grid;
-  grid-template-columns: 72px 260px 1fr;
+  grid-template-columns: 72px var(--list-width, 260px) minmax(0, 1fr);
   /* minmax(0, 1fr): 칸 높이를 화면 높이로 고정. 안 하면 내용(그래프)이 칸을 밀어 늘린다 */
   grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
@@ -132,6 +132,7 @@ body {
 }
 
 .list-col {
+  position: relative; /* 맨 위로 버튼의 기준 */
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1041,4 +1042,227 @@ button.toggle.on {
 .filter-btn .badge {
   margin-left: 4px;
   font-size: 12px;
+}
+
+/* 기기 목록 칸 오른쪽 경계(끌어서 폭 조절). 목록 칸과 같은 격자 칸에 겹쳐 오른쪽 끝에 붙인다 */
+.resize-handle {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  width: 8px;
+  margin-right: -4px; /* 경계선 양쪽으로 4px씩 잡히게 */
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible {
+  background: var(--accent);
+  opacity: 0.4;
+  outline: none;
+}
+
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* 경계선(.resize-handle)이 목록 칸과 같은 격자 칸을 쓰므로, 세 칸의 자리를 직접 정해 둔다
+   (안 정하면 자동 배치가 겹친 칸을 건너뛰어 목록이 세 번째 칸으로 밀린다) */
+.sidebar {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.list-col {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.main-col {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* 구역 제목(누르면 접고 폄). 제목 줄 전체가 버튼 */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.section-toggle:hover {
+  color: var(--text);
+}
+
+.section-toggle .chevron {
+  width: 12px;
+}
+
+/* 목록 칸 오른쪽 아래에 떠 있는 "맨 위로" 버튼 */
+.to-top {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  font-size: 16px;
+}
+
+/* ---- EQ 화면: 목록 칸과 메인 칸을 합쳐 넓게 쓴다 ---- */
+.eq-page {
+  grid-column: 2 / 4;
+  grid-row: 1;
+  overflow-y: auto;
+  padding: 16px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eq-page > * {
+  max-width: 1340px;
+}
+
+.eq-page h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.eq-page header p {
+  margin: 4px 0 0;
+}
+
+.eq-page .row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.eq-pickers select {
+  max-width: 420px;
+}
+
+.eq-page .eq-chart {
+  height: 340px;
+}
+
+.eq-page .eq-chart.small-chart {
+  height: 180px;
+}
+
+.eq-bands table {
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.eq-bands th,
+.eq-bands td {
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.eq-bands th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.eq-bands .gain-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eq-bands input[type='range'] {
+  width: 160px;
+}
+
+.num-input {
+  width: 80px;
+}
+
+.icon-btn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+/* EQ 화면: 왼쪽 저장한 EQ 목록 + 오른쪽 편집 칸 */
+.eq-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  max-width: 1340px;
+}
+
+.eq-list {
+  position: sticky; /* 편집 칸을 내려도 목록은 보이게 */
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eq-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eq-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  background: none;
+  text-align: left;
+}
+
+.eq-item:hover {
+  background: var(--hover);
+}
+
+.eq-item.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.eq-item-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.eq-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.eq-name {
+  flex: 1 1 240px;
+  max-width: 420px;
+  font-size: 16px;
 }

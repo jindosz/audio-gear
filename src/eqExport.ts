@@ -58,7 +58,10 @@ export function defaultApp(platform: Platform): EqApp {
 }
 
 /** Equalizer APO 형식(파라메트릭). 다른 PEQ 앱도 대부분 같은 표기를 쓴다 */
-export function toParametricText(eq: EqResult): string {
+/** 내보내기에 필요한 값: 필터와 프리앰프 */
+export type EqSettings = Pick<EqResult, 'filters' | 'preamp'>
+
+export function toParametricText(eq: EqSettings): string {
   const lines = [`Preamp: ${eq.preamp.toFixed(1)} dB`]
   eq.filters.forEach((f, i) => {
     lines.push(`Filter ${i + 1}: ON PK Fc ${f.freq} Hz Gain ${f.gain.toFixed(1)} dB Q ${f.q.toFixed(2)}`)
@@ -70,13 +73,13 @@ export function toParametricText(eq: EqResult): string {
  * AutoEq GraphicEQ 형식: "GraphicEQ: 주파수 dB; 주파수 dB; ..." 한 줄.
  * 필터를 모두 건 결과를 1/12옥타브 간격으로 적고, 프리앰프를 미리 더해 둔다(가장 큰 값이 0dB 이하)
  */
-export function toGraphicText(eq: EqResult): string {
+export function toGraphicText(eq: EqSettings): string {
   const freqs = logGrid(20, 20000, 12).map((f) => Math.round(f))
   const total = freqs.map(() => eq.preamp)
   for (const filter of eq.filters) peakResponse(filter, freqs).forEach((v, i) => (total[i] += v))
   return 'GraphicEQ: ' + freqs.map((f, i) => `${f} ${total[i].toFixed(1)}`).join('; ') + '\n'
 }
 
-export function eqText(app: EqApp, eq: EqResult): string {
+export function eqText(app: EqApp, eq: EqSettings): string {
   return app === 'wavelet' ? toGraphicText(eq) : toParametricText(eq)
 }

@@ -33,20 +33,22 @@
 - `Measurement`: 측정치. deviceId로 기기를 가리킴. variant(이어팁·패드 등 구성), rig(`5128` | `711` | `gras` | `other`), source(`local` 또는 출처명), channel(`L` | `R` | `avg`), curve
 - `Target`: 타깃 커브(Harman OE/IE 등). category, rig, isCustom, curve. 측정치와 같은 곡선 형식이라 불러오기 코드를 재사용한다.
 - `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId, diffRef(차이 곡선 기준: 'target' 또는 측정치 id, 선택 필드)
+- `EqPreset`: 저장한 EQ. name, measurementId(EQ를 걸 기기 측정치), goal(''/'m:측정치 id'/'t:타깃 id'), filters(`PeakFilter` = freq·gain·q), createdAt, updatedAt
 - `FrCurve`는 `{ freq: number; db: number }[]`
 - 탭은 기기가 아니라 측정치를 선택한다(같은 기기의 구성별 비교 가능). 목록 클릭은 첫 번째 측정치를 선택하고, 다른/여러 측정치는 기기 상세 팝업의 "비교에 추가"로 고른다. 같은 기기가 여러 번 선택되면 그래프 이름 뒤에 구성/출처를 붙인다.
 - 색은 실제 색 값이 아니라 팔레트 순번(colorIndex)만 저장한다. 라이트/다크 모드별 실제 색은 팔레트에서 정한다.
-- Dexie 인덱스: `devices: 'id, category, createdAt'`, `measurements: 'id, deviceId, rig'`, `targets: 'id, category, rig'`, `tabs: 'id, createdAt'`, 버전 2에서 `meta: 'key'`, 버전 3에서 `summaries: 'path, category'`(추천용 요약값) 추가(테이블 구조를 바꿀 때는 기존 version을 고치지 않고 새 version을 추가). IndexedDB는 boolean을 인덱스로 쓸 수 없어서 owned는 인덱스에서 뺐고 JS의 filter로 나눈다.
+- Dexie 인덱스: `devices: 'id, category, createdAt'`, `measurements: 'id, deviceId, rig'`, `targets: 'id, category, rig'`, `tabs: 'id, createdAt'`, 버전 2에서 `meta: 'key'`, 버전 3에서 `summaries: 'path, category'`(추천용 요약값), 버전 4에서 `eqPresets: 'id, createdAt'` 추가(테이블 구조를 바꿀 때는 기존 version을 고치지 않고 새 version을 추가). IndexedDB는 boolean을 인덱스로 쓸 수 없어서 owned는 인덱스에서 뺐고 JS의 filter로 나눈다.
 
 ## 화면 설계
 
 데스크톱 기준 3단 구성.
 
-1. 왼쪽 메뉴: 카테고리(헤드폰, 이어폰)와 설정
+1. 왼쪽 메뉴: 카테고리(헤드폰, 이어폰), EQ 화면, 설정
 2. 기기 목록: 위에 검색창, 그 아래 "선택됨 → 보유 기기 → 찜한 기기 → 전체 기기" 순서
    - 선택된 기기는 "선택됨" 구역으로 올라가고 원래 구역에서는 빠진다. 보유 기기면 "보유" 표시를 붙인다.
    - 각 줄의 별(☆/★)로 찜한다. 한 기기는 보유 > 찜 > 전체 중 한 곳에만 보인다. 아직 받지 않은 AutoEQ 기기를 찜하면 추천 측정치까지 받아 저장한다. 측정치 없는 내 기기를 클릭하면 AutoEQ에 있으면 받아온다.
    - "전체 기기" = 내 기기(보유 제외) + AutoEQ 목록 전체(현재 카테고리, 이름순). 수천 개라 가상 스크롤(`VirtualList.tsx`, 줄 높이 40px 고정)로 그린다.
+   - 목록 칸 폭은 오른쪽 경계를 끌어서 200~640px로 조절(`ResizeHandle.tsx`, 두 번 누르면 260px, ←/→ 키도 됨, localStorage `listWidth`). 선택됨·보유·찜 구역은 제목을 눌러 접고 폄(localStorage `list.collapsed`). 많이 내려가면 오른쪽 아래 "맨 위로"(↑) 버튼. 브라우저별 화면 설정은 `src/localPrefs.ts`로 읽고 씀.
    - 검색창 옆 "필터" 버튼: 브랜드(선택 상자, 기기 수 표시)·유선/무선·ANC·오픈/밀폐(헤드폰만)로 거르기(`src/listFilter.ts` 순수 함수 + `ListFilterBar.tsx`). 특징은 입력값, 없으면 추정값 기준이라 정보가 없는 기기는 빠짐. 유·무선 겸용은 둘 다에 걸리고 오픈은 세미 오픈 포함. 필터는 카테고리마다 따로 기억(앱을 다시 열면 초기화), 선택됨 구역에는 적용하지 않음.
    - 목록 위 검색창 옆 `+` 버튼은 다른 출처 측정치 추가·직접 입력용 팝업을 연다. "전체 기기"에는 보유 기기를 다시 넣지 않는다.
    - 기기 클릭은 비교 선택에 쓰므로, 보유 토글·측정치 관리·삭제는 각 줄의 `⋯` 버튼으로 여는 기기 상세 팝업에서 한다.
@@ -85,6 +87,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 - 목적: 지금 쓰는 기기에 EQ를 걸어 들어볼 기기와 비슷한 음색으로 미리 듣기. 스트리밍으로 듣는 게 기본이라, 웹앱은 다른 앱 소리를 바꿀 수 없음 → **앱 안 재생 대신 기기 전체 EQ 앱용 설정을 내보내고, 그 앱에서 켜고 끄며 비교**(임시 적용).
 - 계산(`src/eq.ts`, 순수 함수): 목표 EQ = 들어볼 곡선 − 지금 곡선(1/3옥타브 스무딩, 300Hz~3kHz 평균 정규화). 부스트 최대 +6dB, 컷 최대 −12dB, 8kHz 위는 점점 덜 따라가 12kHz부터 0. 피크 필터(RBJ 쿡북 공식, 48kHz 기준)를 오차가 가장 큰 곳부터 최대 10개 놓고 좌표 하강으로 다듬음(Q ≤ 4). 프리앰프 = −(최대 부스트). 검증: HD 600 → HD 650/HD 800 S/LCD-2 오차 0.07~0.42dB.
 - 내보내기(`src/eqExport.ts`): Equalizer APO(Windows, ParametricEQ "Preamp/Filter: ON PK" 형식), Wavelet(Android, AutoEq GraphicEQ 형식, 프리앰프 포함), 직접 입력(PEQ 값). OS를 userAgent로 감지해 기본 앱을 고르고 사용자가 바꿀 수 있음. iPhone은 기기 전체 EQ가 불가해 안내만.
+- EQ 화면(왼쪽 메뉴 "EQ", `EqPage.tsx`, 목록·메인 칸을 합쳐 넓게 씀): 지금 쓰는 기기(DB의 모든 측정치, 보유 먼저) + 목표(없음/기기 측정치/내 타깃/기본 타깃). "목표에 맞춰 자동 계산"으로 밴드를 채우고 `EqBandTable.tsx`에서 주파수·게인(슬라이더+숫자)·Q를 직접 고치거나 밴드 추가·삭제(최대 20개). 프리앰프는 `autoPreamp`로 자동. 그래프는 원래/EQ 적용 후/목표(위)와 만든 EQ/필요한 EQ(아래). EQ는 여러 개 저장(DB `eqPresets`, 백업 포함)해 왼쪽 목록에서 눌러 바꾸고, 새로 만들기·복제·삭제·이름 바꾸기. 고친 내용은 0.3초 멈추면 자동 저장(다른 EQ로 바꾸면 바로 저장). 고른 EQ id는 localStorage `eq.active`. 자동 계산 때 이름이 "새 EQ n"이면 "기기 → 목표"로 이름을 붙임. 웹앱은 다른 앱(스트리밍) 소리에 EQ를 걸 수 없어서 실제 적용은 EQ 앱으로 내보내서 한다. 내보내기 칸은 `EqExport.tsx`로 팝업과 공유.
 - 화면: 그래프 툴바의 "EQ로 들어보기"(`EqDialog.tsx`). 지금 쓰는 기기 = 보유 기기 측정치(+비교 중), 들어볼 소리 = 비교 중인 측정치 또는 타깃. 측정자가 다르거나 카테고리가 다르면 경고. 복사(막히면 글 선택 후 Ctrl+C 안내)·파일로 저장.
 
 ## 기능 로드맵

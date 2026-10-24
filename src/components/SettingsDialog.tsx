@@ -73,7 +73,7 @@ function BackupSection() {
     a.click()
     URL.revokeObjectURL(url)
     const s = summarize(data)
-    setMessage(`내보냈습니다: 기기 ${s.devices}개, 측정치 ${s.measurements}개, 타깃 ${s.targets}개, 탭 ${s.tabs}개`)
+    setMessage(`내보냈습니다: 기기 ${s.devices}개, 측정치 ${s.measurements}개, 타깃 ${s.targets}개, 탭 ${s.tabs}개, EQ ${s.eqPresets}개`)
   }
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
@@ -92,7 +92,7 @@ function BackupSection() {
 
   async function handleImport() {
     if (!pending) return
-    if (mode === 'replace' && !confirm('지금 있는 기기·측정치·타깃·탭을 모두 지우고 백업으로 바꿉니다. 계속할까요?')) return
+    if (mode === 'replace' && !confirm('지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿉니다. 계속할까요?')) return
     try {
       await importAll(pending.data, mode)
       setMessage(`${pending.fileName}을(를) 가져왔습니다.`)
@@ -108,7 +108,7 @@ function BackupSection() {
     <section>
       <h3>백업</h3>
       <p className="muted small">
-        기기·측정치·타깃·비교 탭을 JSON 파일로 저장하거나 불러옵니다. 브라우저 데이터가 지워질 때를 대비해 가끔
+        기기·측정치·타깃·비교 탭·저장한 EQ를 JSON 파일로 저장하거나 불러옵니다. 브라우저 데이터가 지워질 때를 대비해 가끔
         내보내 두세요. (AutoEQ 목록은 다시 받을 수 있어서 백업에 넣지 않습니다.)
       </p>
       <div className="row">
@@ -126,7 +126,7 @@ function BackupSection() {
         <div className="import-box">
           <p className="small">
             <strong>{pending.fileName}</strong>: 기기 {summary.devices}개, 측정치 {summary.measurements}개, 타깃{' '}
-            {summary.targets}개, 탭 {summary.tabs}개
+            {summary.targets}개, 탭 {summary.tabs}개, EQ {summary.eqPresets}개
             {pending.data.exportedAt && (
               <span className="muted"> · {new Date(pending.data.exportedAt).toLocaleString()}에 내보냄</span>
             )}
@@ -140,7 +140,7 @@ function BackupSection() {
             </button>
           </div>
           <p className="muted small">
-            {mode === 'merge' ? '지금 데이터는 두고, 같은 항목은 백업 내용으로 바뀝니다.' : '지금 있는 기기·측정치·타깃·탭을 모두 지우고 백업으로 바꿉니다.'}
+            {mode === 'merge' ? '지금 데이터는 두고, 같은 항목은 백업 내용으로 바뀝니다.' : '지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿉니다.'}
           </p>
           <div className="row">
             <button type="button" className="primary" onClick={handleImport}>

@@ -1,9 +1,10 @@
 // 가운데 목록 열: 검색창, 기기 추가 버튼, "선택됨 → 보유 기기 → 찜한 기기 → 전체 기기" 목록
 // 전체 기기 = 내가 가진 기기(보유 제외) + AutoEQ 목록의 모든 기기. 수천 개라 가상 스크롤로 그린다.
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
 import { measurementLabel, specTags } from '../labels'
 import { EMPTY_FILTER, activeCount, brandOptions, filterInfo, matchesFilter, type FilterInfo, type ListFilter } from '../listFilter'
+import { readPref, writePref } from '../localPrefs'
 import { displaySpecs, specHint } from '../specHints'
 import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
@@ -76,6 +77,17 @@ export function DeviceList({ category, tabId }: Props) {
   // 필터는 카테고리마다 따로 기억한다(헤드폰 브랜드를 고른 채 이어폰으로 가도 빈 목록이 되지 않게)
   const [filters, setFilters] = useState<Record<DeviceCategory, ListFilter>>({ headphone: EMPTY_FILTER, iem: EMPTY_FILTER })
   const [filterOpen, setFilterOpen] = useState(false)
+  // 접어 둔 구역(selected/owned/wished). 이 브라우저에 기억한다
+  const [collapsed, setCollapsed] = useState(() => new Set(readPref<string[]>('list.collapsed', [])))
+  function toggleSection(id: SectionId) {
+    const next = new Set(collapsed)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setCollapsed(next)
+    writePref('list.collapsed', [...next])
+  }
+  // 어느 정도 내려가면 "맨 위로" 버튼을 보여준다
+  const [showTop, setShowTop] = useState(false)
   const filter = filters[category]
   const setFilter = (f: ListFilter) => setFilters((all) => ({ ...all, [category]: f }))
 
@@ -225,63 +237,75 @@ export function DeviceList({ category, tabId }: Props) {
 
       {filterOpen && <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} />}
 
-      <div className="list-scroll" ref={scrollRef}>
+      <div className="list-scroll" ref={scrollRef} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 600)}>
         {notice && <p className="list-notice small">{notice}</p>}
 
         {/* 선택됨: 그래프에 무엇이 그려지는지 항상 보이도록 카테고리·검색과 상관없이 모두 표시 */}
         {selected.length > 0 && (
           <section className="list-section">
-            <h2>선택됨 {selected.length}</h2>
-            <ul>
-              {selected.map(({ selection, measurement, device }) => (
-                <Row
-                  key={selection.measurementId}
-                  name={deviceName(device)}
-                  owned={device.owned}
-                  sub={measurementLabel(measurement)}
-                  colorIndex={selection.colorIndex}
-                  starred={device.wishlist}
-                  onClick={() => handleUnselect(selection.measurementId)}
-                  onMore={() => setDetailId(device.id)}
-                />
-              ))}
-            </ul>
+            <SectionTitle id="selected" collapsed={collapsed} onToggle={toggleSection}>
+              선택됨 <span className="count">{selected.length}</span>
+            </SectionTitle>
+            {!collapsed.has('selected') && (
+              <ul>
+                {selected.map(({ selection, measurement, device }) => (
+                  <Row
+                    key={selection.measurementId}
+                    name={deviceName(device)}
+                    owned={device.owned}
+                    sub={measurementLabel(measurement)}
+                    colorIndex={selection.colorIndex}
+                    starred={device.wishlist}
+                    onClick={() => handleUnselect(selection.measurementId)}
+                    onMore={() => setDetailId(device.id)}
+                  />
+                ))}
+              </ul>
+            )}
           </section>
         )}
 
         {owned.length > 0 && (
           <section className="list-section">
-            <h2>보유 기기</h2>
-            <ul>
-              {owned.map((d) => (
-                <Row
-                  key={d.id}
-                  name={deviceName(d)}
-                  {...deviceSub(d, measurementsByDevice.has(d.id))}
-                  onClick={() => handleSelectMine(d)}
-                  onMore={() => setDetailId(d.id)}
-                />
-              ))}
-            </ul>
+            <SectionTitle id="owned" collapsed={collapsed} onToggle={toggleSection}>
+              보유 기기 <span className="count">{owned.length}</span>
+            </SectionTitle>
+            {!collapsed.has('owned') && (
+              <ul>
+                {owned.map((d) => (
+                  <Row
+                    key={d.id}
+                    name={deviceName(d)}
+                    {...deviceSub(d, measurementsByDevice.has(d.id))}
+                    onClick={() => handleSelectMine(d)}
+                    onMore={() => setDetailId(d.id)}
+                  />
+                ))}
+              </ul>
+            )}
           </section>
         )}
 
         {wished.length > 0 && (
           <section className="list-section">
-            <h2>찜한 기기</h2>
-            <ul>
-              {wished.map((d) => (
-                <Row
-                  key={d.id}
-                  name={deviceName(d)}
-                  {...deviceSub(d, measurementsByDevice.has(d.id))}
-                  starred
-                  onStar={() => setDeviceWishlist(d.id, false)}
-                  onClick={() => handleSelectMine(d)}
-                  onMore={() => setDetailId(d.id)}
-                />
-              ))}
-            </ul>
+            <SectionTitle id="wished" collapsed={collapsed} onToggle={toggleSection}>
+              찜한 기기 <span className="count">{wished.length}</span>
+            </SectionTitle>
+            {!collapsed.has('wished') && (
+              <ul>
+                {wished.map((d) => (
+                  <Row
+                    key={d.id}
+                    name={deviceName(d)}
+                    {...deviceSub(d, measurementsByDevice.has(d.id))}
+                    starred
+                    onStar={() => setDeviceWishlist(d.id, false)}
+                    onClick={() => handleSelectMine(d)}
+                    onMore={() => setDetailId(d.id)}
+                  />
+                ))}
+              </ul>
+            )}
           </section>
         )}
 
@@ -330,9 +354,47 @@ export function DeviceList({ category, tabId }: Props) {
         </section>
       </div>
 
+      {showTop && (
+        <button
+          className="to-top"
+          onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          title="맨 위로"
+          aria-label="맨 위로"
+        >
+          ↑
+        </button>
+      )}
+
       <AddDeviceDialog open={addOpen} onClose={() => setAddOpen(false)} />
       <DeviceDetailDialog deviceId={detailId} tabId={tabId} onClose={() => setDetailId(null)} />
     </aside>
+  )
+}
+
+type SectionId = 'selected' | 'owned' | 'wished'
+
+/** 눌러서 접고 펴는 구역 제목. ▾(펼침) / ▸(접힘) */
+function SectionTitle({
+  id,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  id: SectionId
+  collapsed: Set<string>
+  onToggle: (id: SectionId) => void
+  children: ReactNode
+}) {
+  const open = !collapsed.has(id)
+  return (
+    <h2>
+      <button type="button" className="section-toggle" aria-expanded={open} onClick={() => onToggle(id)}>
+        <span className="chevron" aria-hidden>
+          {open ? '▾' : '▸'}
+        </span>
+        {children}
+      </button>
+    </h2>
   )
 }
 

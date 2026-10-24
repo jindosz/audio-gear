@@ -6,7 +6,7 @@ import { BACKUP_APP, BACKUP_VERSION, type BackupData } from './backup'
 import { planDeviceCleanup } from './deviceCleanup'
 import { addSelection, removeSelection } from './selection'
 import { normalize } from './text'
-import type { CatalogSummary, CompareTab, Device, DeviceCategory, Measurement, MetaRecord, Target } from './types'
+import type { CatalogSummary, CompareTab, Device, DeviceCategory, EqPreset, Measurement, MetaRecord, Target } from './types'
 
 export type NewDevice = Omit<Device, 'id' | 'createdAt'>
 export type NewMeasurement = Omit<Measurement, 'id'>
@@ -229,9 +229,32 @@ async function unselectEverywhere(measurementIds: string[]): Promise<void> {
 // ---- 백업 ----
 
 /** 백업에 넣을 데이터를 모두 읽는다(AutoEQ 목록 보관본은 제외) */
+// ---- 저장해 둔 EQ ----
+
+/** 만든 순서대로 */
+export function listEqPresets(): Promise<EqPreset[]> {
+  return db.eqPresets.orderBy('createdAt').toArray()
+}
+
+/** 새 EQ를 저장하고 id를 돌려준다 */
+export async function addEqPreset(preset: Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'>): Promise<string> {
+  const id = crypto.randomUUID()
+  const now = Date.now()
+  await db.eqPresets.add({ ...preset, id, createdAt: now, updatedAt: now })
+  return id
+}
+
+export async function updateEqPreset(id: string, patch: Partial<Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'>>): Promise<void> {
+  await db.eqPresets.update(id, { ...patch, updatedAt: Date.now() })
+}
+
+export async function deleteEqPreset(id: string): Promise<void> {
+  await db.eqPresets.delete(id)
+}
+
 export async function exportAll(): Promise<BackupData> {
   // 'r': 읽기 전용 transaction. 읽는 도중에 다른 곳에서 바뀌어도 한 시점의 모습으로 읽힌다
-  return db.transaction('r', db.devices, db.measurements, db.targets, db.tabs, async () => ({
+  return db.transaction('r', [db.devices, db.measurements, db.targets, db.tabs, db.eqPresets], async () => ({
     app: BACKUP_APP,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
@@ -239,6 +262,7 @@ export async function exportAll(): Promise<BackupData> {
     measurements: await db.measurements.toArray(),
     targets: await db.targets.toArray(),
     tabs: await db.tabs.toArray(),
+    eqPresets: await db.eqPresets.toArray(),
   }))
 }
 
@@ -249,15 +273,16 @@ export async function exportAll(): Promise<BackupData> {
  * 중간에 실패하면 transaction 덕분에 아무것도 바뀌지 않는다.
  */
 export async function importAll(data: BackupData, mode: 'merge' | 'replace'): Promise<void> {
-  await db.transaction('rw', db.devices, db.measurements, db.targets, db.tabs, async () => {
+  await db.transaction('rw', [db.devices, db.measurements, db.targets, db.tabs, db.eqPresets], async () => {
     if (mode === 'replace') {
-      await Promise.all([db.devices.clear(), db.measurements.clear(), db.targets.clear(), db.tabs.clear()])
+      await Promise.all([db.devices.clear(), db.measurements.clear(), db.targets.clear(), db.tabs.clear(), db.eqPresets.clear()])
     }
     // bulkPut: 여러 개를 한 번에 저장(같은 id가 있으면 덮어씀)
     await db.devices.bulkPut(data.devices)
     await db.measurements.bulkPut(data.measurements)
     await db.targets.bulkPut(data.targets)
     await db.tabs.bulkPut(data.tabs)
+    await db.eqPresets.bulkPut(data.eqPresets)
   })
 }
 

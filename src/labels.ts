@@ -34,16 +34,22 @@ export const acousticLabels: Record<Acoustic, string> = {
 /** 코덱 목록(선택지 순서: 기본 → 고음질) */
 export const CODECS: Codec[] = ['SBC', 'AAC', 'aptX', 'aptX HD', 'aptX Adaptive', 'aptX Lossless', 'LDAC', 'LHDC', 'LC3']
 
-/** 기기 특징을 짧은 태그 목록으로. 예: ["무선", "밀폐형", "ANC", "LDAC"] */
-export function specTags(d: Device): string[] {
+/** 특징 값 묶음(기기에 저장된 값이나 추정값) */
+export type Specs = Pick<Device, 'connection' | 'acoustic' | 'anc' | 'codecs'>
+
+/** 기기 특징을 짧은 태그 목록으로. 예: ["무선", "밀폐형", "ANC", "SBC/AAC/LDAC"] */
+export function specTags(d: Specs): string[] {
   const tags: string[] = []
   if (d.connection) tags.push(connectionLabels[d.connection])
   if (d.acoustic) tags.push(acousticLabels[d.acoustic])
-  if (d.connection && d.connection !== 'wired') {
-    if (d.anc) tags.push('ANC')
-    if (d.codecs?.length) tags.push(d.codecs.join('/'))
-  }
+  if (d.anc) tags.push('ANC') // 유선 ANC 헤드폰도 있다(예: Bose QC15)
+  if (d.connection && d.connection !== 'wired' && d.codecs?.length) tags.push(d.codecs.join('/'))
   return tags
+}
+
+/** 기기에 특징이 하나라도 입력돼 있는지 */
+export function hasSpecs(d: Specs): boolean {
+  return !!(d.connection || d.acoustic || d.anc || d.codecs?.length)
 }
 
 /** 측정치 출처를 사람이 읽기 좋게. 'local'은 "직접 업로드" */

@@ -10,6 +10,7 @@ import {
   connectionLabels,
   rigLabels,
   sourceLabel,
+  specTags,
 } from '../labels'
 import {
   deleteDevice,
@@ -23,6 +24,7 @@ import {
   updateDeviceSpecs,
 } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
+import { specHint } from '../specHints'
 import type { Acoustic, Codec, Connection, Device } from '../types'
 import { MeasurementUpload } from './MeasurementUpload'
 import { Modal } from './Modal'
@@ -162,6 +164,7 @@ function SpecsEditor({ device }: { device: Device }) {
   return (
     <section className="specs">
       <h3>주요 특징</h3>
+      <SpecHintLine device={device} />
       <div className="row">
         <label>
           연결{' '}
@@ -209,5 +212,25 @@ function SpecsEditor({ device }: { device: Device }) {
         </div>
       )}
     </section>
+  )
+}
+
+/**
+ * 이름으로 추정한 특징 안내. 아직 아무것도 입력하지 않았고 추정값이 있을 때만 보인다.
+ * "추정값 적용"을 누르면 그때 기기에 저장된다(누르기 전에는 저장하지 않음)
+ */
+function SpecHintLine({ device }: { device: Device }) {
+  const hint = specHint(`${device.brand} ${device.model}`, device.category)
+  const hasAny = device.connection || device.acoustic || device.anc || device.codecs?.length
+  if (!hint || hasAny) return null
+  return (
+    <p className="small spec-hint">
+      <span className="muted">추정: </span>
+      <span className="estimated">{specTags(hint).join(' · ')}</span>{' '}
+      <button type="button" className="small" onClick={() => updateDeviceSpecs(device.id, hint)}>
+        추정값 적용
+      </button>
+      <span className="muted"> · 이름으로 추정한 값이라 틀릴 수 있습니다. 적용한 뒤 고칠 수 있어요.</span>
+    </p>
   )
 }

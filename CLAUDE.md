@@ -28,7 +28,7 @@
 
 ## 데이터 구조 (`src/types.ts`, `src/db.ts`)
 
-- `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), wishlist(찜), 주요 특징 connection(`wired` | `wireless` | `both`)·acoustic(`open` | `semi-open` | `closed`)·codecs(블루투스 코덱 목록)·anc, notes, createdAt. wishlist와 특징 필드는 선택 필드(예전 데이터엔 없음, AutoEQ에도 없어 사용자가 기기 상세 팝업에서 입력)
+- `Device`: 기기. id, brand, model, category(`headphone` | `iem`), owned(보유 여부), wishlist(찜), 주요 특징 connection(`wired` | `wireless` | `both`)·acoustic(`open` | `semi-open` | `closed`)·codecs(블루투스 코덱 목록)·anc, notes, createdAt. wishlist와 특징 필드는 선택 필드(예전 데이터엔 없음, AutoEQ에도 없어 사용자가 기기 상세 팝업에서 입력) 입력값이 없으면 이름으로 추정한 값(`src/specHints.ts`)을 흐리게(기울임) 보여주고, 기기 상세 팝업의 "추정값 적용"을 눌러야 저장된다.
 - `Measurement`: 측정치. deviceId로 기기를 가리킴. variant(이어팁·패드 등 구성), rig(`5128` | `711` | `gras` | `other`), source(`local` 또는 출처명), channel(`L` | `R` | `avg`), curve
 - `Target`: 타깃 커브(Harman OE/IE 등). category, rig, isCustom, curve. 측정치와 같은 곡선 형식이라 불러오기 코드를 재사용한다.
 - `CompareTab`: 비교 탭. selections(측정치 id + colorIndex 목록), normalizeHz(정규화 기준 주파수), targetId, diffRef(차이 곡선 기준: 'target' 또는 측정치 id, 선택 필드)
@@ -103,6 +103,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 - [x] JSON 내보내기/가져오기 백업 (왼쪽 아래 설정 버튼 → `SettingsDialog.tsx`. 형식·검사는 `src/backup.ts`, 버전 필드로 나중 형식 변경 대비. 가져오기는 합치기/모두 바꾸기. AutoEQ 목록 보관본은 제외) + `navigator.storage.persist()` 요청
 - [ ] PWA 적용과 배포 — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 남음
 - [x] 기기 주요 특징(유선/무선, 오픈/세미 오픈/밀폐, 코덱, ANC) 입력과 목록·추천 결과 태그 표시 (`labels.ts`의 `specTags`)
+- [x] 특징 추정값: 헤드폰은 Claude가 확실히 아는 시리즈만 규칙으로(`src/data/headphoneHints.ts`, 키 = 이름 앞부분, 가장 긴 키가 이김, `{}`는 일부러 비움), 이어폰은 이름에 무선 단서(AirPods, Galaxy Buds, Sony WF-, TWS 등)가 있을 때만. 이어폰 "대부분 유선" 같은 기본값은 넣지 않음. 적용 범위: 헤드폰 3,037개 중 1,759개, 이어폰 260개(2026-10-24). 무작위 40개 점검과 확신이 덜한 6개 웹 확인에서 오류 없음
 
 ### 3단계 (나중에)
 - [x] 두 곡선 차이로 PEQ 계산 → EQ 앱용 내보내기 ("EQ로 들어보기", 위 "EQ로 들어보기 설계" 참고)

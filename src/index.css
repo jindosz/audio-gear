@@ -695,12 +695,15 @@ button.small {
   padding-block: 0;
 }
 
+/* 한 줄 목록에서는 이름이 먼저: 자리가 모자라면 설명(태그)이 훨씬 빨리 줄어들고 ...으로 잘린다 */
 .device-row.compact .device-name {
   flex: 0 1 auto;
+  min-width: 0;
 }
 
 .device-row.compact .device-sub {
-  flex-shrink: 0;
+  flex: 0 20 auto;
+  min-width: 0;
 }
 
 /* 찜(별) 버튼: 찜한 기기는 항상, 나머지는 마우스를 올렸을 때만 보인다 */
@@ -974,4 +977,14 @@ button.toggle.on {
 
 .eq .segmented {
   flex-wrap: wrap;
+}
+
+/* 추정값(이름으로 추정한 특징): 흐리고 기울여서 입력값과 구분한다 */
+.estimated {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.spec-hint {
+  margin: 0 0 6px;
 }

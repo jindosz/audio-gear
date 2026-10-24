@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react'
 import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
 import { measurementLabel, specTags } from '../labels'
+import { displaySpecs, specHint } from '../specHints'
 import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Device, DeviceCategory } from '../types'
@@ -43,10 +44,20 @@ function mergeSorted(a: ListItem[], b: ListItem[]): ListItem[] {
  * 이름 옆(아래)에 보일 설명: 측정치가 없으면 그 사실, 있으면 입력해 둔 특징 태그.
  * 전체 기기 줄(compact)은 한 줄이라 태그를 앞의 2개만 보여준다
  */
-function deviceSub(d: Device, hasMeasurement: boolean, compact = false): string | undefined {
-  if (!hasMeasurement) return '측정치 없음'
-  const tags = specTags(d)
-  return (compact ? tags.slice(0, 2) : tags).join(' · ') || undefined
+function deviceSub(d: Device, hasMeasurement: boolean, compact = false): Pick<RowProps, 'sub' | 'subEstimated'> {
+  if (!hasMeasurement) return { sub: '측정치 없음' }
+  // 입력한 특징이 없으면 추정값을 흐리게 보여준다(specHints.ts)
+  const { tags, estimated } = displaySpecs(d)
+  // 한 줄 목록(compact)은 폭이 좁아 첫 태그(연결 방식)만
+  return { sub: (compact ? tags.slice(0, 1) : tags).join(' · ') || undefined, subEstimated: estimated }
+}
+
+/** 아직 받지 않은 카탈로그 기기 줄의 설명: 받는 중 / 측정치 없음 / 추정 특징 */
+function catalogSub(entry: CatalogDevice, pending: boolean): Pick<RowProps, 'sub' | 'subEstimated'> {
+  if (pending) return { sub: '받는 중…' }
+  if (!entry.primary) return { sub: '측정치 없음' }
+  const hint = specHint(entry.name, entry.category)
+  return hint ? { sub: specTags(hint)[0], subEstimated: true } : {}
 }
 
 export function DeviceList({ category, tabId }: Props) {
@@ -207,7 +218,7 @@ export function DeviceList({ category, tabId }: Props) {
                 <Row
                   key={d.id}
                   name={deviceName(d)}
-                  sub={deviceSub(d, measurementsByDevice.has(d.id))}
+                  {...deviceSub(d, measurementsByDevice.has(d.id))}
                   onClick={() => handleSelectMine(d)}
                   onMore={() => setDetailId(d.id)}
                 />
@@ -224,7 +235,7 @@ export function DeviceList({ category, tabId }: Props) {
                 <Row
                   key={d.id}
                   name={deviceName(d)}
-                  sub={deviceSub(d, measurementsByDevice.has(d.id))}
+                  {...deviceSub(d, measurementsByDevice.has(d.id))}
                   starred
                   onStar={() => setDeviceWishlist(d.id, false)}
                   onClick={() => handleSelectMine(d)}
@@ -260,7 +271,7 @@ export function DeviceList({ category, tabId }: Props) {
                   compact
                   style={style}
                   name={item.name}
-                  sub={deviceSub(item.device, measurementsByDevice.has(item.device.id), true)}
+                  {...deviceSub(item.device, measurementsByDevice.has(item.device.id), true)}
                   onStar={() => setDeviceWishlist(item.device.id, true)}
                   onClick={() => handleSelectMine(item.device)}
                   onMore={() => setDetailId(item.device.id)}
@@ -270,7 +281,7 @@ export function DeviceList({ category, tabId }: Props) {
                   compact
                   style={style}
                   name={item.name}
-                  sub={pendingName === item.name ? '받는 중…' : item.entry.primary ? undefined : '측정치 없음'}
+                  {...catalogSub(item.entry, pendingName === item.name)}
                   onStar={() => handleWishCatalog(item.entry)}
                   onClick={() => handleSelectCatalog(item.entry)}
                 />
@@ -288,6 +299,8 @@ export function DeviceList({ category, tabId }: Props) {
 
 interface RowProps {
   name: string
+  /** sub가 추정값이면 true(흐리게, 기울여 표시) */
+  subEstimated?: boolean
   /** 이름 아래(compact면 오른쪽)에 작게 보일 설명 */
   sub?: string
   owned?: boolean
@@ -305,7 +318,7 @@ interface RowProps {
   onMore?: () => void
 }
 
-function Row({ name, sub, owned, starred, onStar, colorIndex, compact, style, onClick, onMore }: RowProps) {
+function Row({ name, sub, subEstimated, owned, starred, onStar, colorIndex, compact, style, onClick, onMore }: RowProps) {
   const isSelected = colorIndex !== undefined
   const className = ['device-row', isSelected && 'selected', compact && 'compact'].filter(Boolean).join(' ')
   // --c: 이 줄의 색. CSS에서 배경(연한 색)과 왼쪽 띠(진한 색)에 쓴다
@@ -313,13 +326,17 @@ function Row({ name, sub, owned, starred, onStar, colorIndex, compact, style, on
 
   return (
     <li className={className} style={rowStyle}>
-      <button className="row-main" onClick={onClick} aria-pressed={isSelected}>
+      <button className="row-main" onClick={onClick} aria-pressed={isSelected} title={name}>
         <span className="device-name">
           {name}
           {isSelected && owned && <span className="tag">보유</span>}
           {isSelected && starred && <span className="tag">찜</span>}
         </span>
-        {sub && <span className="device-sub muted">{sub}</span>}
+        {sub && (
+          <span className={subEstimated ? 'device-sub muted estimated' : 'device-sub muted'} title={subEstimated ? '추정값(이름으로 추정, 확인되지 않음)' : undefined}>
+            {sub}
+          </span>
+        )}
       </button>
       {onStar && (
         <button

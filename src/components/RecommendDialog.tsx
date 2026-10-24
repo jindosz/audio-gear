@@ -21,6 +21,7 @@ import { prepare, SUMMARY_GRID } from '../similarity'
 import { startSummaryJob, stopSummaryJob, useSummaryJob } from '../summaryJob'
 import { applyAdjustments, averageValues, NO_ADJUSTMENTS, toCurve, type Adjustments } from '../taste'
 import type { Device, DeviceCategory, Measurement, Target } from '../types'
+import { displaySpecs, specHint } from '../specHints'
 import { useCatalogDevices } from '../useCatalogDevices'
 import type { SelectedItem } from '../useCompareData'
 import { Modal } from './Modal'
@@ -308,7 +309,13 @@ function RecommendRow({
   onAdd: () => void
 }) {
   const { candidate } = r
-  const tags = candidate.device ? specTags(candidate.device) : []
+  // 내 기기면 입력값(없으면 추정값), AutoEQ 후보면 추정값
+  const { tags, estimated } = candidate.device
+    ? displaySpecs(candidate.device)
+    : (() => {
+        const hint = specHint(candidate.name, candidate.category)
+        return { tags: hint ? specTags(hint) : [], estimated: true }
+      })()
   return (
     <li>
       <div className="rec-main">
@@ -320,7 +327,7 @@ function RecommendRow({
         {/* 내 기기 목록에 없는 AutoEQ 후보 표시 */}
         {!candidate.device && <span className="tag">새 기기</span>}
         {tags.map((t) => (
-          <span key={t} className="tag">
+          <span key={t} className={estimated ? 'tag estimated' : 'tag'} title={estimated ? '추정값(이름으로 추정, 확인되지 않음)' : undefined}>
             {t}
           </span>
         ))}

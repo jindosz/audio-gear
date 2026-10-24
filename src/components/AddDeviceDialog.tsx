@@ -1,9 +1,9 @@
-// "기기 추가" 팝업: AutoEQ 카탈로그에서 검색해 추가하고, 없으면 직접 입력한다
+// "기기 추가" 팝업: 카탈로그(AutoEQ + squig.link)에서 검색해 추가하고, 없으면 직접 입력한다
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   addFromCatalog,
-  loadCatalog,
+  loadAllCatalogEntries,
   searchCatalog,
   type AddResult,
   type CatalogEntry,
@@ -50,7 +50,7 @@ function AddDeviceBody() {
   // 팝업이 열리면 카탈로그를 받는다(한 번 받은 뒤에는 catalog.ts가 기억해 둔 것을 바로 돌려줌)
   useEffect(() => {
     if (catalog) return
-    loadCatalog()
+    loadAllCatalogEntries()
       .then((entries) => {
         setLoadError('')
         setCatalog(entries)
@@ -117,6 +117,8 @@ function AddDeviceBody() {
                     title={entry.hasCurve ? '이 출처의 측정치와 함께 추가' : '측정치 비공개: 기기만 추가'}
                   >
                     {busyPath === entry.path ? '추가 중…' : entry.source}
+                    {entry.provider === 'squig' && <span className="muted"> · squig</span>}
+                    {entry.variant && <span className="muted"> · {entry.variant}</span>}
                     {entry.rigName && <span className="muted"> · {entry.rigName}</span>}
                     {!entry.hasCurve && <span className="muted"> (측정치 없음)</span>}
                   </button>
@@ -140,7 +142,11 @@ function AddDeviceBody() {
           <a href="https://github.com/jaakkopasanen/AutoEq" target="_blank" rel="noreferrer">
             AutoEQ
           </a>
-          . 측정치의 권리는 각 측정자에게 있습니다.
+          ,{' '}
+          <a href="https://squig.link" target="_blank" rel="noreferrer">
+            squig.link
+          </a>
+          (리뷰어별 사이트). 측정치의 권리는 각 측정자에게 있습니다.
         </p>
       </div>
     </>

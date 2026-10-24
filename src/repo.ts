@@ -4,6 +4,7 @@
 import { db } from './db'
 import { BACKUP_APP, BACKUP_VERSION, type BackupData } from './backup'
 import { addSelection, removeSelection } from './selection'
+import { normalize } from './text'
 import type { CatalogSummary, CompareTab, Device, DeviceCategory, Measurement, MetaRecord, Target } from './types'
 
 export type NewDevice = Omit<Device, 'id' | 'createdAt'>
@@ -92,8 +93,10 @@ export async function addDevice(input: NewDevice): Promise<string> {
 
 /** 화면에 보이는 이름("브랜드 모델")이 같은 기기를 찾는다. 카탈로그에서 중복 추가를 막는 데 쓴다 */
 export async function findDeviceByName(name: string): Promise<Device | undefined> {
+  // 출처마다 표기가 조금 달라서("HD600" / "HD 600") 공백·기호를 지운 이름으로 비교한다
+  const key = normalize(name)
   const devices = await db.devices.toArray()
-  return devices.find((d) => `${d.brand} ${d.model}` === name)
+  return devices.find((d) => normalize(`${d.brand} ${d.model}`) === key)
 }
 
 export async function setDeviceOwned(id: string, owned: boolean): Promise<void> {

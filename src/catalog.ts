@@ -1,23 +1,36 @@
-// AutoEQ 공개 목록을 "전체 기기 카탈로그"로 쓰는 코드.
+// "전체 기기 카탈로그": AutoEQ 공개 목록 + squig.link 목록(squig.ts).
 // https://github.com/jaakkopasanen/AutoEq (코드는 MIT 라이선스, 측정치 저작권은 각 측정자에게 있음)
-// 측정치는 앱에 넣어 배포하지 않고, 사용자가 고를 때만 GitHub에서 받아 출처를 붙여 저장한다.
+// 측정치는 앱에 넣어 배포하지 않고, 사용자가 고를 때만 받아 출처를 붙여 저장한다.
+import { dbAt } from './curve'
 import { parseFrCsv } from './csv'
 import { addDevice, addMeasurement, findDeviceByName, getMeta, listMeasurementsByDevice, setMeta } from './repo'
+import { loadSquigCatalog } from './squig'
+import { normalize } from './text'
 import type { DeviceCategory, FrCurve, Rig } from './types'
+
+export { normalize }
 
 const RAW_BASE = 'https://raw.githubusercontent.com/jaakkopasanen/AutoEq/master/results'
 
 /** 카탈로그 항목 하나 = 기기 하나의 측정 결과 하나(같은 기기라도 출처가 다르면 따로 있음) */
 export interface CatalogEntry {
+  /** 어디 목록에서 왔는지 */
+  provider: 'autoeq' | 'squig'
   name: string
+  /** 브랜드를 따로 알 때(squig.link). 없으면 이름에서 추정한다(splitBrand) */
+  brand?: string
+  /** 같은 기기의 측정 구성(팁·패드·ANC 등). 측정치의 variant로 저장된다 */
+  variant?: string
   /** 측정자. 예: oratory1990, crinacle */
   source: string
   /** 측정 리그 원래 이름. 예: "GRAS 43AG-7", 없으면 빈 문자열 */
   rigName: string
   rig: Rig
   category: DeviceCategory
-  /** results 폴더 기준 경로. 예: "oratory1990/over-ear/Sennheiser HD 600" */
+  /** 측정치 하나를 가리키는 고유 이름. AutoEQ는 results 폴더 기준 경로(예: "oratory1990/over-ear/Sennheiser HD 600") */
   path: string
+  /** squig.link: 받을 파일 주소(왼쪽·오른쪽). 받은 뒤 평균 낸다 */
+  files?: string[]
   /** crinacle은 측정치 CSV가 공개되어 있지 않다 */
   hasCurve: boolean
   /** AutoEQ가 이 기기의 측정치 중 가장 정확하다고 고른 것 */
@@ -47,6 +60,7 @@ export function parseAutoEqIndex(text: string, recommendedText = ''): CatalogEnt
     const path = decodeURIComponent(encodedPath)
     const formDir = path.split('/')[1] ?? '' // 예: "GRAS 43AG-7 over-ear", "in-ear"
     entries.push({
+      provider: 'autoeq',
       name,
       source,
       rigName,
@@ -121,15 +135,41 @@ export interface CatalogDevice {
   primary: CatalogEntry | undefined
 }
 
-export function groupCatalog(entries: CatalogEntry[]): CatalogDevice[] {
-  const byName = new Map<string, CatalogEntry[]>()
-  for (const e of entries) byName.set(e.name, [...(byName.get(e.name) ?? []), e])
+/**
+ * 같은 기기의 항목들을 하나로 묶는다. 출처마다 이름 표기가 조금씩 달라서("HD600" / "HD 600")
+ * 공백·기호를 지운 이름(normalize)이 같으면 같은 기기로 본다.
+ * - 보여줄 이름과 카테고리는 AutoEQ 쪽을 우선(AutoEQ는 이름이 정리돼 있음)
+ * - 클릭했을 때 받을 측정치: AutoEQ 추천 → AutoEQ 공개 측정치 → squig.link 첫 번째
+ * - 결과는 이름순(목록을 매번 다시 정렬하지 않게 미리 정렬해 둔다)
+ */
+/** 항목들 중 더 많은 쪽 카테고리. 같으면 이어폰(squig.link는 이어폰 측정이 훨씬 많다) */
+function majorityCategory(list: CatalogEntry[]): DeviceCategory {
+  const headphones = list.filter((e) => e.category === 'headphone').length
+  return headphones > list.length - headphones ? 'headphone' : 'iem'
+}
 
-  return [...byName.entries()].map(([name, list]) => {
-    const primary = list.find((e) => e.recommended && e.hasCurve) ?? list.find((e) => e.hasCurve)
-    const category = (list.find((e) => e.recommended) ?? list[0]).category
-    return { name, category, searchKey: normalize(name), primary }
-  })
+export function groupCatalog(entries: CatalogEntry[]): CatalogDevice[] {
+  const byKey = new Map<string, CatalogEntry[]>()
+  for (const e of entries) {
+    const key = normalize(e.name)
+    const list = byKey.get(key)
+    if (list) list.push(e)
+    else byKey.set(key, [e])
+  }
+
+  const collator = new Intl.Collator('en')
+  return [...byKey.entries()]
+    .map(([searchKey, list]) => {
+      const autoeq = list.filter((e) => e.provider === 'autoeq')
+      const main = autoeq.find((e) => e.recommended) ?? autoeq[0] ?? list[0]
+      const primary =
+        autoeq.find((e) => e.recommended && e.hasCurve) ?? autoeq.find((e) => e.hasCurve) ?? list.find((e) => e.hasCurve)
+      // 카테고리: AutoEQ에 있으면 AutoEQ 분류, 없으면 여러 사이트의 다수결
+      // (헤드폰 목록에 이어폰을 섞어 둔 사이트가 있어도, 다른 사이트들이 이어폰으로 분류했으면 이어폰으로 본다)
+      const category = autoeq.length ? main.category : majorityCategory(list)
+      return { name: main.name, category, searchKey, primary }
+    })
+    .sort((a, b) => collator.compare(a.name, b.name))
 }
 
 let devicesPromise: Promise<CatalogDevice[]> | null = null
@@ -142,11 +182,6 @@ export function loadCatalogDevices(): Promise<CatalogDevice[]> {
       throw err
     })
   return devicesPromise
-}
-
-/** 검색어 비교용: 소문자로 바꾸고 공백·기호를 지운다 ("HD600"과 "HD 600"이 같게 됨) */
-export function normalize(s: string): string {
-  return s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
 }
 
 /** 검색 결과 한 줄: 같은 이름의 항목(출처별 측정)을 묶은 것 */
@@ -165,19 +200,45 @@ export function searchCatalog(entries: CatalogEntry[], query: string, limit = 30
   for (const entry of entries) {
     const target = normalize(entry.name)
     if (!words.every((w) => target.includes(w))) continue
-    const group = groups.get(entry.name)
+    // 표기가 조금 달라도(공백·기호) 같은 기기로 묶는다
+    const group = groups.get(target)
     if (group) {
       group.entries.push(entry)
     } else {
       if (groups.size >= limit) continue
-      groups.set(entry.name, { name: entry.name, category: entry.category, entries: [entry] })
+      groups.set(target, { name: entry.name, category: entry.category, entries: [entry] })
     }
   }
   return [...groups.values()]
 }
 
-/** 고른 항목의 측정치 CSV를 받아 곡선으로 바꾼다 */
+/** 여러 채널(왼쪽·오른쪽) 곡선의 평균. 첫 곡선의 주파수 위치에서 나머지 값을 보간해 더한다 */
+function averageChannels(curves: FrCurve[]): FrCurve {
+  const [first, ...rest] = curves
+  if (rest.length === 0) return first
+  return first.flatMap(({ freq, db }) => {
+    const others = rest.map((c) => dbAt(c, freq))
+    if (others.some((v) => v === null)) return []
+    const sum = others.reduce<number>((a, b) => a + (b ?? 0), db)
+    return [{ freq, db: sum / curves.length }]
+  })
+}
+
+/** 고른 항목의 측정치를 받아 곡선으로 바꾼다 */
 export async function fetchCatalogCurve(entry: CatalogEntry): Promise<FrCurve> {
+  if (entry.provider === 'squig') {
+    // 왼쪽·오른쪽 파일을 받아 받아진 것만 평균 낸다(한쪽만 올린 사이트도 있다)
+    const results = await Promise.all(
+      (entry.files ?? []).map((url) =>
+        fetch(url)
+          .then(async (r) => (r.ok ? parseFrCsv(await r.text()).curve : null))
+          .catch(() => null),
+      ),
+    )
+    const curves = results.filter((c): c is FrCurve => c !== null)
+    if (curves.length === 0) throw new Error('측정치를 받지 못했습니다')
+    return averageChannels(curves)
+  }
   const fileName = entry.path.split('/').pop()
   const url = `${RAW_BASE}/${encodeURI(entry.path)}/${encodeURIComponent(`${fileName}.csv`)}`
   const res = await fetch(url)
@@ -213,10 +274,13 @@ export interface AddOutcome {
  * - 같은 출처의 측정치가 이미 있으면 새로 받지 않고 그 측정치를 돌려준다
  */
 export async function addFromCatalog(entry: CatalogEntry, owned: boolean): Promise<AddOutcome> {
-  const source = `AutoEQ · ${entry.source}`
+  const source = `${entry.provider === 'squig' ? 'squig.link' : 'AutoEQ'} · ${entry.source}`
+  const variant = entry.variant ?? ''
   const existing = await findDeviceByName(entry.name)
   if (existing) {
-    const same = (await listMeasurementsByDevice(existing.id)).find((m) => m.source === source)
+    const same = (await listMeasurementsByDevice(existing.id)).find(
+      (m) => m.source === source && m.variant === variant,
+    )
     if (same || !entry.hasCurve) return { result: 'alreadyExists', deviceId: existing.id, measurementId: same?.id }
   }
 
@@ -224,9 +288,23 @@ export async function addFromCatalog(entry: CatalogEntry, owned: boolean): Promi
   const curve = entry.hasCurve ? await fetchCatalogCurve(entry) : null
 
   const deviceId =
-    existing?.id ?? (await addDevice({ ...splitBrand(entry.name), category: entry.category, owned, notes: '' }))
+    existing?.id ?? (await addDevice({ ...brandAndModel(entry), category: entry.category, owned, notes: '' }))
   if (!curve) return { result: 'deviceOnly', deviceId }
 
-  const measurementId = await addMeasurement({ deviceId, variant: '', rig: entry.rig, source, channel: 'avg', curve })
+  const measurementId = await addMeasurement({ deviceId, variant, rig: entry.rig, source, channel: 'avg', curve })
   return { result: existing ? 'measurementAdded' : 'added', deviceId, measurementId }
+}
+
+/** 항목의 브랜드·모델. 브랜드를 따로 아는 항목(squig.link)은 그대로, 아니면 이름에서 추정 */
+function brandAndModel(entry: CatalogEntry): { brand: string; model: string } {
+  if (entry.brand && entry.name.toLowerCase().startsWith(entry.brand.toLowerCase())) {
+    return { brand: entry.brand, model: entry.name.slice(entry.brand.length).trim() }
+  }
+  return splitBrand(entry.name)
+}
+
+/** AutoEQ + squig.link 전체 항목. squig.link를 못 받아도 AutoEQ만으로 돌려준다 */
+export async function loadAllCatalogEntries(): Promise<CatalogEntry[]> {
+  const [autoeq, squig] = await Promise.all([loadCatalog(), loadSquigCatalog().catch(() => [])])
+  return [...autoeq, ...squig]
 }

@@ -25,6 +25,19 @@ type ListItem = { kind: 'mine'; name: string; device: Device } | { kind: 'catalo
 const ROW_HEIGHT = 40
 
 const deviceName = (d: Device) => `${d.brand} ${d.model}`
+const collator = new Intl.Collator('en')
+
+/** 이름순으로 정렬된 두 목록을 이름순을 유지하며 합친다(이미 정렬된 수만 개를 다시 정렬하지 않으려고) */
+function mergeSorted(a: ListItem[], b: ListItem[]): ListItem[] {
+  const result: ListItem[] = []
+  let i = 0
+  let j = 0
+  while (i < a.length || j < b.length) {
+    if (j >= b.length || (i < a.length && collator.compare(a[i].name, b[j].name) <= 0)) result.push(a[i++])
+    else result.push(b[j++])
+  }
+  return result
+}
 
 /**
  * 이름 옆(아래)에 보일 설명: 측정치가 없으면 그 사실, 있으면 입력해 둔 특징 태그.
@@ -38,7 +51,7 @@ function deviceSub(d: Device, hasMeasurement: boolean, compact = false): string 
 
 export function DeviceList({ category, tabId }: Props) {
   const { loading, devices, measurementsByDevice, selected } = useCompareData(tabId)
-  const { catalogDevices, catalogError } = useCatalogDevices()
+  const { catalogDevices, catalogError, squigReady, squigError, squigProgress } = useCatalogDevices()
   const [query, setQuery] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   // 상세 팝업에 보여줄 기기 id (null이면 닫힘)
@@ -50,7 +63,8 @@ export function DeviceList({ category, tabId }: Props) {
 
   // 이름 → AutoEQ 기기. 측정치 없는 내 기기를 클릭했을 때 AutoEQ에서 받아올 수 있는지 찾는 데 쓴다.
   // 목록(6천 개)이 바뀔 때만 다시 만든다
-  const catalogByName = useMemo(() => new Map((catalogDevices ?? []).map((e) => [e.name, e])), [catalogDevices])
+  // 키는 공백·기호를 지운 이름(normalize): 출처마다 표기가 조금 달라도 같은 기기로 찾는다
+  const catalogByName = useMemo(() => new Map((catalogDevices ?? []).map((e) => [e.searchKey, e])), [catalogDevices])
 
   // 선택된 기기는 "선택됨"으로 올라가고 원래 구역에서는 빠진다
   const selectedDeviceIds = new Set(selected.map((s) => s.device.id))
@@ -66,14 +80,20 @@ export function DeviceList({ category, tabId }: Props) {
   const owned = mine.filter((d) => d.owned)
   const wished = mine.filter((d) => !d.owned && d.wishlist)
 
-  // 내 DB에 이미 있는 이름은 AutoEQ 쪽에서 빼서 한 번만 보이게 한다
-  const myNames = new Set(devices.map(deviceName))
-  const allItems: ListItem[] = [
-    ...mine.filter((d) => !d.owned && !d.wishlist).map((d): ListItem => ({ kind: 'mine', name: deviceName(d), device: d })),
-    ...(catalogDevices ?? [])
-      .filter((e) => e.category === category && !myNames.has(e.name) && matches(e.searchKey))
-      .map((e): ListItem => ({ kind: 'catalog', name: e.name, entry: e })),
-  ].sort((a, b) => a.name.localeCompare(b.name))
+  // 카탈로그 쪽(수만 개)은 걸러 내는 데 시간이 걸려서 목록·카테고리·검색어·내 기기가 바뀔 때만 다시 한다.
+  // 내 DB에 이미 있는 기기는 카탈로그 쪽에서 빼서 한 번만 보이게 한다
+  const catalogItems = useMemo(() => {
+    const myKeys = new Set(devices.map((d) => normalize(deviceName(d))))
+    const queryWords = query.split(/\s+/).map(normalize).filter(Boolean)
+    return (catalogDevices ?? [])
+      .filter((e) => e.category === category && !myKeys.has(e.searchKey) && queryWords.every((w) => e.searchKey.includes(w)))
+      .map((e): ListItem => ({ kind: 'catalog', name: e.name, entry: e }))
+  }, [catalogDevices, devices, category, query])
+  const mineItems = mine
+    .filter((d) => !d.owned && !d.wishlist)
+    .map((d): ListItem => ({ kind: 'mine', name: deviceName(d), device: d }))
+    .sort((a, b) => collator.compare(a.name, b.name))
+  const allItems = mergeSorted(mineItems, catalogItems)
 
   function full() {
     setNotice(`최대 ${PALETTE_SIZE}개까지 비교할 수 있습니다. 하나를 해제한 뒤 선택하세요.`)
@@ -84,7 +104,7 @@ export function DeviceList({ category, tabId }: Props) {
     const first = measurementsByDevice.get(device.id)?.[0]
     if (!first) {
       // 측정치가 없을 때: AutoEQ에 있으면 받아오고(찜만 해 둔 기기 등), 없으면 측정치를 추가할 상세 팝업을 연다
-      const catalogEntry = catalogByName.get(deviceName(device))
+      const catalogEntry = catalogByName.get(normalize(deviceName(device)))
       if (catalogEntry?.primary) return handleSelectCatalog(catalogEntry)
       setDetailId(device.id)
       return
@@ -213,6 +233,13 @@ export function DeviceList({ category, tabId }: Props) {
           </h2>
           {catalogDevices === null && !catalogError && <p className="list-empty muted small">AutoEQ 목록을 불러오는 중…</p>}
           {catalogError && <p className="list-empty error small">AutoEQ 목록을 불러오지 못했습니다: {catalogError}</p>}
+          {!squigReady && !squigError && (
+            <p className="list-empty muted small">
+              squig.link 목록을 불러오는 중…
+              {squigProgress && ` (사이트 ${squigProgress.done}/${squigProgress.total}, 처음 한 번만)`}
+            </p>
+          )}
+          {squigError && <p className="list-empty error small">squig.link 목록을 불러오지 못했습니다: {squigError}</p>}
           {nothing && <p className="list-empty muted">{query ? '검색 결과가 없습니다.' : '기기가 없습니다.'}</p>}
           <VirtualList
             items={allItems}

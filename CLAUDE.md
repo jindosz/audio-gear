@@ -23,6 +23,7 @@
 - 폰에서는 PWA로 설치해서 사용. iOS 저장소 삭제에 대비해 `navigator.storage.persist()` 요청과 JSON 내보내기/가져오기 백업 기능을 넣는다.
 - PC↔폰 동기화는 나중에 필요해지면 추가한다(Supabase/Firebase 등). 그때도 로컬 DB를 기본 저장소로 두고 서버는 동기화 대상으로만 쓴다. 데이터 접근 코드를 화면 코드와 분리해 두어 나중에 동기화를 붙이기 쉽게 한다. 화면 코드는 `db`를 직접 쓰지 않고 `src/repo.ts`의 함수를 통해 읽고 쓴다.
 - AutoEQ(github.com/jaakkopasanen/AutoEq) 공개 목록을 "전체 기기" 카탈로그로 쓴다(`src/catalog.ts`). `results/INDEX.md`(전체 측정 결과)와 `results/README.md`(기기별 추천 측정치)를 받아 DB `meta` 테이블에 보관하고, 7일이 지나면 뒤에서 새로 받는다. 목록 기기를 클릭하면 그때 추천 측정치 CSV 하나만 받아 `source: "AutoEQ · 측정자"`로 저장하고 선택한다(전부 미리 받으면 수백 MB라 불가). raw.githubusercontent.com은 CORS를 허용한다. 측정치는 앱에 넣어 배포하지 않는다(권리는 각 측정자). crinacle 측정치는 CSV가 공개되어 있지 않아 crinacle 측정만 있는 기기는 "측정치 없음"으로 보인다. 다른 출처 추가와 카탈로그에 없는 기기 직접 입력은 `+` 팝업에서 한다. 다른 외부 DB가 CORS에 막히면 Cloudflare Workers 프록시를 검토한다.
+- squig.link(리뷰어 120여 곳의 측정 사이트 모음)도 카탈로그에 합친다(`src/squig.ts`). `squig.link/squigsites.json` → 사이트별 `data/phone_book.json`(+ `config.js`의 `rig_description`으로 리그 추정, 대부분 없음)을 받아 줄인 형태로 `meta`(`squig.catalog`, 약 2.4MB)에 보관하고 7일마다 갱신. 처음 받기는 약 30초, 진행 상황은 `onSquigProgress`로 목록에 표시. 측정치는 클릭할 때 `<파일> L.txt`/`R.txt`(REW 형식, `parseFrCsv`로 읽힘)를 받아 평균 내 `source: "squig.link · 사이트 이름"`, 구성 설명은 variant로 저장. CORS 허용. crinacle(graph.hangout.audio)은 측정치 재사용을 원하지 않아 제외. 같은 기기는 공백·기호를 지운 이름(`src/text.ts`의 `normalize`)이 같으면 묶고, 이름·카테고리·클릭 시 받을 측정치는 AutoEQ를 우선한다. 추천용 데이터 받기는 AutoEQ만(squig.link는 수가 너무 많음).
 
 ## 데이터 구조 (`src/types.ts`, `src/db.ts`)
 
@@ -104,7 +105,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 
 ### 3단계 (나중에)
 - [x] 두 곡선 차이로 PEQ 계산 → EQ 앱용 내보내기 ("EQ로 들어보기", 위 "EQ로 들어보기 설계" 참고)
-- [ ] 외부 공개 FR DB 추가 연동(AutoEQ 외 squig.link 등. 출처·이용 조건 확인, 출처 태깅 필수)
+- [x] 외부 공개 FR DB 추가 연동: squig.link (목록 약 4만 3천 개, 묶은 뒤 헤드폰 3,159·이어폰 10,881 기기. 이름 앞 [IEMs] 같은 태그로 분류를 보정하고, AutoEQ에 없는 기기는 여러 사이트 분류의 다수결. 남은 것: 출처마다 이름 표기가 크게 다른 기기는 따로 보임, 예: "Moondrop x Crinacle Blessing2 Dusk" / "Moondrop Blessing 2 Dusk")
 - [x] 측정치 기반 새 기기 추천(곡선 간 거리 계산) — "추천 기능 설계" 참고. 남은 선택 항목: Harman 선호도 점수, 특징(무선·밀폐 등) 필터
 - [ ] FR에서 성향 지표 자동 추출(저음 셸프 양, 3kHz 대역, 5~8kHz 피크 등)과 태그 — 추천 계산기의 성향 지표와 같이 만든다
 - [ ] 듣는 노래 기반 추천: 데이터 출처와 근거가 약해 실험 기능으로 보류. 장르 태그를 직접 고르는 가벼운 버전부터 검토

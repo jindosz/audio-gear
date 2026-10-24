@@ -58,6 +58,7 @@ export function fromSummary(s: CatalogSummary): Candidate {
     rig: s.rig,
     values: s.values,
     catalog: {
+      provider: 'autoeq',
       name: s.name,
       source: s.measurer,
       rigName: '',

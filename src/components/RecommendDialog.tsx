@@ -347,7 +347,8 @@ function CatalogDataBox({ category, saved }: { category: DeviceCategory; saved: 
   const job = useSummaryJob()
   const { catalogDevices } = useCatalogDevices()
   // 이 카테고리에서 측정치가 공개된 AutoEQ 기기 수 = 받을 수 있는 최대 개수
-  const available = catalogDevices?.filter((d) => d.category === category && d.primary).length
+  // 추천용 데이터는 AutoEQ 측정치만 받는다(squig.link는 수가 너무 많아 제외)
+  const available = catalogDevices?.filter((d) => d.category === category && d.primary?.provider === 'autoeq').length
   const running = job.status === 'running' || job.status === 'stopping'
   const thisJob = job.category === category
   const total = available ?? (thisJob ? job.total : 0)

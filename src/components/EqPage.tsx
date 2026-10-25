@@ -6,7 +6,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties } from 
 import { useLiveQuery } from 'dexie-react-hooks'
 import { autoPreamp, fitPeq, targetEq, totalResponse } from '../eq'
 import { categoryLabels, rigLabels, sourceLabel } from '../labels'
-import { readPref, writePref } from '../localPrefs'
+import { EQ_ACTIVE_KEY, readPref, writePref } from '../localPrefs'
 import {
   addEqPreset,
   deleteEqPreset,
@@ -26,8 +26,6 @@ import { EqExport } from './EqExport'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
-/** 지금 고른 EQ id는 이 브라우저에 기억한다 */
-const ACTIVE_KEY = 'eq.active'
 /** 목록이 생기기 전, 편집 중이던 EQ 하나를 localStorage에 두던 자리(처음 한 번 목록으로 옮긴다) */
 const OLD_KEY = 'eq.page'
 
@@ -59,8 +57,9 @@ export function EqPage() {
   const presets = useLiveQuery(listEqPresets)
   const devices = useLiveQuery(listDevices)
   const measurements = useLiveQuery(listMeasurements)
-  const [activeId, setActiveId] = useState<string>(() => readPref(ACTIVE_KEY, ''))
-  useEffect(() => writePref(ACTIVE_KEY, activeId), [activeId])
+  // 지금 고른 EQ id는 이 브라우저에 기억한다
+  const [activeId, setActiveId] = useState<string>(() => readPref(EQ_ACTIVE_KEY, ''))
+  useEffect(() => writePref(EQ_ACTIVE_KEY, activeId), [activeId])
 
   // 예전 방식(EQ 하나를 localStorage에 기억)으로 만들던 EQ가 있으면 목록의 첫 EQ로 옮긴다
   const migrated = useRef(false)

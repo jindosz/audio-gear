@@ -9,6 +9,9 @@ export function readPref<T>(key: string, fallback: T): T {
   }
 }
 
+/** EQ 화면에서 고른 EQ id. 다른 화면에서 "이 EQ를 열기"로 넘어갈 때도 쓴다 */
+export const EQ_ACTIVE_KEY = 'eq.active'
+
 export function writePref(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))

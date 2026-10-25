@@ -27,9 +27,11 @@ interface Props {
   onSelectTab: (id: string) => void
   /** 왼쪽 메뉴에서 고른 카테고리. 타깃 목록 순서에 쓴다 */
   category: DeviceCategory
+  /** 저장한 EQ를 EQ 화면에서 열기 */
+  onOpenEqPreset: (id: string) => void
 }
 
-export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
+export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPreset }: Props) {
   const { selected, tab } = useCompareData(activeId)
   const normalizeHz = tab?.normalizeHz ?? null
   const targetId = tab?.targetId ?? null
@@ -133,7 +135,17 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category }: Props) {
         target={target}
         category={category}
       />
-      <EqDialog open={eqOpen} onClose={() => setEqOpen(false)} selected={selected} target={target} category={category} />
+      <EqDialog
+        open={eqOpen}
+        onClose={() => setEqOpen(false)}
+        selected={selected}
+        target={target}
+        category={category}
+        onOpenPreset={(id) => {
+          setEqOpen(false)
+          onOpenEqPreset(id)
+        }}
+      />
 
       {target && mismatched.length > 0 && (
         <p className="warning small" role="status">

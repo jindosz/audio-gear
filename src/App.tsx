@@ -6,7 +6,7 @@ import { EqPage } from './components/EqPage'
 import { ResizeHandle } from './components/ResizeHandle'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar, type Page } from './components/Sidebar'
-import { readPref, writePref } from './localPrefs'
+import { EQ_ACTIVE_KEY, readPref, writePref } from './localPrefs'
 import type { DeviceCategory } from './types'
 import { describeCleanup, useStartupCleanup } from './useStartupCleanup'
 import { useTabs } from './useTabs'
@@ -58,7 +58,17 @@ function App() {
             defaultWidth={LIST_WIDTH.default}
             onChange={setListWidth}
           />
-          <ComparePanel tabs={tabs} activeId={activeId} onSelectTab={setActiveId} category={category} />
+          <ComparePanel
+            tabs={tabs}
+            activeId={activeId}
+            onSelectTab={setActiveId}
+            category={category}
+            onOpenEqPreset={(id) => {
+              // EQ 화면은 열릴 때 기억된 EQ id를 읽으므로, 먼저 적어 두고 화면을 바꾼다
+              writePref(EQ_ACTIVE_KEY, id)
+              setPage('eq')
+            }}
+          />
         </>
       )}
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />

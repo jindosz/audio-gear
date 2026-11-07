@@ -14,7 +14,7 @@
 
 - React + TypeScript + Vite (템플릿 `react-ts`)
 - 저장: 브라우저 IndexedDB, Dexie.js(`dexie`, `dexie-react-hooks`)로 접근
-- Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 Cloudflare Pages 또는 GitHub Pages 예정(아직 안 정함. GitHub Pages면 `vite.config.ts`에 `base: '/audio-gear/'` 필요)
+- Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 GitHub Pages(2026-11-07 결정, 주소 https://jindosz.github.io/audio-gear/). `vite.config.ts`의 `base`는 빌드·`npm run preview`일 때만 `/audio-gear/`, 개발 서버는 `/`(Vite는 preview도 command가 `serve`라 `isPreview`로 구분). main에 푸시하면 `.github/workflows/deploy.yml`이 빌드해서 올림(저장소 Settings → Pages → Source = GitHub Actions). 무료 플랜은 공개 저장소만 Pages 가능. 배포한 사이트는 localhost와 출처(origin)가 달라 IndexedDB·localStorage가 따로라, 기존 데이터는 설정의 JSON 백업 내보내기 → 가져오기로 옮김
 - 저장소: https://github.com/jindosz/audio-gear (main 브랜치)
 
 ## 아키텍처 결정
@@ -107,7 +107,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 - [x] 타깃 선택 드롭다운과 리그 불일치 경고, 커스텀 타깃 CSV 불러오기 (기본 타깃 `src/targets.ts`, 커스텀은 드롭다운의 "+ CSV 불러오기…" → `CustomTargetDialog.tsx`, `isCustom: true`로 저장·삭제 가능)
 - [x] 기기 삭제 시 연결된 측정치도 함께 삭제 (`deleteDevice`)
 - [x] JSON 내보내기/가져오기 백업 (왼쪽 아래 설정 버튼 → `SettingsDialog.tsx`. 형식·검사는 `src/backup.ts`, 버전 필드로 나중 형식 변경 대비. 가져오기는 합치기/모두 바꾸기. AutoEQ 목록 보관본은 제외) + `navigator.storage.persist()` 요청
-- [ ] PWA 적용과 배포 — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 남음
+- [ ] PWA 적용과 배포 — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인, 주소는 http://localhost:4173/audio-gear/. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 설정 완료(GitHub Pages, 위 기술 스택 참고). 남은 것: 저장소 공개·Pages 설정 후 첫 배포, 배포 사이트에서 서비스 워커(오프라인)·설치 확인(앱 안 미리보기 창에서는 서비스 워커 등록이 "unknown error"로 실패해 확인 못 함)
 - [x] 기기 주요 특징(유선/무선, 오픈/세미 오픈/밀폐, 코덱, ANC) 입력과 목록·추천 결과 태그 표시 (`labels.ts`의 `specTags`)
 - [x] 특징 추정값: 헤드폰은 Claude가 확실히 아는 시리즈만 규칙으로(`src/data/headphoneHints.ts`, 키 = 이름 앞부분, 가장 긴 키가 이김, `{}`는 일부러 비움), 이어폰은 이름에 무선 단서(AirPods, Galaxy Buds, Sony WF-, TWS 등)가 있을 때만. 이어폰 "대부분 유선" 같은 기본값은 넣지 않음. 적용 범위: 헤드폰 3,037개 중 1,759개, 이어폰 260개(2026-10-24). 무작위 40개 점검과 확신이 덜한 6개 웹 확인에서 오류 없음
 
@@ -139,5 +139,5 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 (2026-10-24 기준, 사용자가 다음에 하기로 한 것부터)
 
 1. (선택) 추천 결과 특징 필터, Harman 선호도 점수 — 필요해지면
-2. 배포 (위치를 정한 뒤)
+2. 배포 마무리: 저장소 공개 + Settings → Pages → Source를 GitHub Actions로 → 푸시 → 배포 사이트에서 동작·오프라인·설치 확인, 데이터는 JSON 백업으로 옮기기
 3. 모바일 반응형은 맨 마지막: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로

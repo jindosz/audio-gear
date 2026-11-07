@@ -3,7 +3,10 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command, isPreview }) => ({
+  // GitHub Pages는 https://jindosz.github.io/audio-gear/ 처럼 저장소 이름 폴더 아래에서 열린다.
+  // 빌드와 빌드 결과 미리보기(npm run preview)는 그 폴더 기준으로, 개발 서버는 그대로 / 에서 연다
+  base: command === 'build' || isPreview ? '/audio-gear/' : '/',
   plugins: [
     react(),
     // PWA: 폰·PC에 앱처럼 설치하고, 한 번 연 뒤에는 인터넷 없이도 열리게 한다.
@@ -34,4 +37,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

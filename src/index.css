@@ -127,8 +127,8 @@ body {
   color: var(--accent);
 }
 
-.nav-item.settings {
-  margin-top: auto; /* 남는 공간을 위쪽에 몰아 설정 버튼을 맨 아래로 */
+.nav-item.theme {
+  margin-top: auto; /* 남는 공간을 위쪽에 몰아 테마·설정 버튼을 맨 아래로 */
 }
 
 .list-col {
@@ -1306,7 +1306,7 @@ body.resizing {
     display: flex;
   }
 
-  .nav-item.settings {
+  .nav-item.theme {
     margin-top: 0;
   }
 

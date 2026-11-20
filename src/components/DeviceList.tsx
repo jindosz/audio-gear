@@ -69,6 +69,8 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   const { loading, devices, measurementsByDevice, selected } = useCompareData(tabId)
   const { catalogDevices, catalogError, squigReady, squigError, squigProgress } = useCatalogDevices()
   const [query, setQuery] = useState('')
+  // 폰 화면에서 목록을 위로 크게 펼쳤는지. 기억하지 않아서 다시 열면 반반으로 시작
+  const [expanded, setExpanded] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   // 상세 팝업에 보여줄 기기 id (null이면 닫힘)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -221,7 +223,16 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
     !loading && catalogDevices !== null && owned.length === 0 && wished.length === 0 && allItems.length === 0
 
   return (
-    <aside className="list-col">
+    <aside className={expanded ? 'list-col expanded' : 'list-col'}>
+      {/* 폰에서만 보임: 누르면 목록을 위로 크게 펼치거나 다시 접는 손잡이 */}
+      <button
+        className="list-grip mobile-only"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+        aria-label={expanded ? '목록 접기' : '목록 펼치기'}
+      >
+        {expanded ? '▼' : '▲'}
+      </button>
       {/* 폰에서만 보임: 왼쪽 메뉴 대신 목록 위에서 헤드폰/이어폰 전환 */}
       <div className="list-category segmented mobile-only">
         {(Object.keys(categoryLabels) as DeviceCategory[]).map((c) => (

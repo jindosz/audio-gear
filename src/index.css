@@ -1310,16 +1310,36 @@ body.resizing {
     margin-top: 0;
   }
 
+  /* 목록을 펼치면 그래프 칸이 줄어드는데, 내용이 칸 밖으로 넘쳐 목록과 겹치지 않게 칸 안에서 스크롤 */
   .main-col {
     grid-area: main;
+    overflow-y: auto;
   }
 
   /* 목록은 아래쪽, 화면 높이의 45%. dvh: 주소창이 나타나고 사라질 때 바뀌는 실제 화면 높이 기준 */
   .list-col {
     grid-area: list;
     height: 45dvh;
+    background: var(--bg);
     border-right: none;
     border-top: 1px solid var(--border);
+  }
+
+  /* 펼치면 화면 높이의 80%. 그래프는 남은 위쪽에 작게 보인다 */
+  .list-col.expanded {
+    height: 80dvh;
+  }
+
+  /* 목록 맨 위 손잡이: 폭 전체가 누르는 곳 */
+  .list-grip.mobile-only {
+    display: block;
+    width: 100%;
+    padding: 2px 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    color: var(--muted);
+    font-size: 12px;
   }
 
   .list-category.mobile-only {

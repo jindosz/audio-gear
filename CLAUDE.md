@@ -64,9 +64,9 @@
 - 목록 항목 배경은 같은 색의 연한 버전 + 왼쪽에 진한 색 띠. 다크 모드용 색은 따로 정의한다.
 - 팔레트 개수가 동시 비교 최대 개수가 된다.
 
-모바일: 왼쪽 두 칸은 햄버거 메뉴로 접고 그래프를 전체 폭으로 쓰는 반응형 레이아웃.
+모바일(화면 폭 768px 이하, `index.css` 끝의 `@media` 블록, 2026-11-20): 위에서부터 메뉴 줄(그래프·EQ·테마·설정) → 비교 탭·그래프 → 기기 목록(화면 높이 45%). 목록 맨 위 ▲/▼ 손잡이로 80%까지 펼치고 접음(기억 안 함). 헤드폰/이어폰은 목록 맨 위 `[헤드폰 | 이어폰]`으로 바꿈. 폰에서만 보이는 부품은 `.mobile-only`. 목록 폭 조절은 폰에서 숨김. 그래프 칸은 펼친 목록과 겹치지 않게 칸 안에서 스크롤. 설계는 `docs/superpowers/specs/2026-11-20-mobile-layout-design.md`.
 
-다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환. 다크 색은 `@media (prefers-color-scheme: dark)` 안(`:root:not([data-theme=light])`)과 `:root[data-theme=dark]` 두 곳에 같은 값으로 적는다. 그래프처럼 색을 직접 읽는 화면은 `useResolvedTheme()`으로 테마 변화를 구독한다.
+다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환. 메뉴의 테마 버튼(해/달)은 지금 보이는 테마의 반대로 바로 바꾸고, "시스템 설정 따르기"는 설정 팝업에서 고른다. 설정 버튼은 톱니바퀴. 다크 색은 `@media (prefers-color-scheme: dark)` 안(`:root:not([data-theme=light])`)과 `:root[data-theme=dark]` 두 곳에 같은 값으로 적는다. 그래프처럼 색을 직접 읽는 화면은 `useResolvedTheme()`으로 테마 변화를 구독한다.
 
 켜고 끄는 선택은 체크박스 대신 `ToggleButton`(켜지면 버튼 전체가 강조색으로 칠해짐), 여러 개 중 하나 고르기는 `.segmented` 버튼 묶음을 쓴다.
 
@@ -122,6 +122,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
   - 흐름: Last.fm `user.getRecentTracks`로 지금 곡 감지 → 제목 정리·커버/라이브 등은 제외 목록 → iTunes Search API로 30초 미리듣기(.m4a) 받아 대역 에너지·Crest Factor 분석 → 문제 있을 때만 필터 3개(5.5kHz 피로도 컷, 250Hz 중저역 컷, 105Hz 로우 셸프 부스트) → Layer 1(헤드폰 보정 = 이 앱의 EQ 프리셋) + Layer 2(곡별 필터)를 합쳐 APO가 `Include`하는 파일을 File System Access API로 덮어씀. 캐시·제외 목록은 DB에
   - 확인됨: iTunes 검색·미리듣기 음원·noembed 모두 CORS 허용(`Access-Control-Allow-Origin: *`). 선형 파워 합산 방식은 맞음. V1의 "핑크 노이즈로 평탄화"는 곡의 의도를 깎아서 버림
   - 위험(먼저 실험): ① APO 설정 폴더가 `C:\Program Files\...`라 관리자 권한·Chrome 시스템 폴더 차단 → `Include: <사용자 폴더 절대 경로>`로 우회하고 그 파일을 고쳐도 APO가 자동으로 다시 읽는지 확인 ② 파일 핸들은 IndexedDB에 저장되지만 브라우저를 다시 열면 권한 재허용 클릭이 필요할 수 있음 ③ 뒤에 있는 탭은 타이머가 늦어지고 Last.fm 반영도 몇 초 걸려 곡 바뀐 뒤 수 초~수십 초 늦게 적용
+  - **보류(2026-11-20)**: APO가 이 PC에서 동작하지 않는 문제가 풀릴 때까지 미룸. 폰에서는 Wavelet으로 EQ가 걸리는 것을 확인함
   - 실험 결과(2026-10-30, 미해결): 사용자 PC에 APO 1.4.2가 `C:\Program Files\EqualizerAPO`에 설치되어 있고, `config.txt`는 `Include: C:\Users\dojin\Documents\audio-gear\web_auto_eq.txt` 한 줄. Editor는 Include 파일의 `Preamp: -60 dB`를 읽어 Peak gain −60dB로 계산함(설정·Include 정상). 그런데 실제로 듣는 Fosi Audio ZH3(기본 장치, Device Selector에 "APO is already installed")에서 스포티파이·유튜브 소리가 그대로 → APO가 실제 소리 경로에서 동작하지 않음. 해 본 것: 공간 음향 끄기, 오디오 향상 = 장치 기본 효과, Device Selector Troubleshooting에서 Auto 끄고 설치 방식 변경 + 재부팅 → 모두 변화 없음. 원인 모름(Windows Insider 빌드 26300과 APO 1.4.2 호환 문제일 수도 있으나 추측). 원격(Sunshine 스트리밍)으로 들을 때는 APO 효과가 안 실릴 수 있어 판정에 쓰지 않음. Device Selector는 그냥 실행하면 Qt 플러그인 오류 → `$env:QT_PLUGIN_PATH = "C:\Program Files\EqualizerAPO\qt"` 후 실행. 다음에 할 수 있는 것: 출력을 K66으로 바꿔 같은 시험(ZH3 문제인지 PC 전체 문제인지 구분), Device Selector에서 ZH3 Auto를 다시 켜 원래대로. 이 문제가 풀리기 전에는 앱의 Equalizer APO 내보내기도 이 PC에서는 소리를 못 바꿈
   - 수식 보정 필요: 대역 폭이 서로 달라(기준 500Hz~2kHz = 2옥타브, 치찰음 4.5~7.5kHz ≈ 0.7옥타브, 중저역 220~320Hz ≈ 0.5옥타브) 옥타브당 에너지로 나눠야 비교가 됨. 참고 코드는 기준을 `freq1000` 하나로 써서 설명과 다름. 임계치(−2/+3.5/−4dB)는 근거가 없어 장르가 다른 곡 20~30개로 실제 값을 보고 정함
   - 이 앱에 필요한 것: `eq.ts`에 로우 셸프 필터, 곡 감지(Last.fm API 키), 분석기, 캐시·제외 목록(DB 새 version), APO 파일 연결. 다시 쓸 것: EQ 프리셋, `autoPreamp`, `eqExport.ts`의 APO 형식
@@ -137,8 +138,8 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 
 ## 다음 작업
 
-(2026-11-20 기준. 지난 채팅 요약·지금 상태·남은 일 전체는 `docs/handoff-2026-11-20.md`)
+(2026-11-20 기준. 지난 채팅 요약은 `docs/handoff-2026-11-20.md`. APO 관련 일은 보류)
 
-1. (선택) 추천 결과 특징 필터, Harman 선호도 점수 — 필요해지면
+1. 모바일 다듬기: 그래프 위 툴바(정규화·타깃·차이 기준·버튼)가 폰에서 3줄을 차지해 그래프가 작음 → 접거나 한 줄로. EQ 화면과 팝업들의 폰 배치
 2. 배포 사이트로 옮기기: localhost 데이터를 JSON 백업으로 옮기고, 폰에서 PWA 설치·오프라인 실행 확인
-3. 모바일 반응형은 맨 마지막: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로
+3. (선택) 추천 결과 특징 필터, Harman 선호도 점수, 청력 측정 EQ

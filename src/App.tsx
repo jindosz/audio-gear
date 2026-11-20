@@ -50,7 +50,7 @@ function App() {
         <EqPage />
       ) : (
         <>
-          <DeviceList category={category} tabId={activeId} />
+          <DeviceList category={category} tabId={activeId} onCategoryChange={setCategory} />
           <ResizeHandle
             width={listWidth}
             min={LIST_WIDTH.min}

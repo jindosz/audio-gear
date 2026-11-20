@@ -32,6 +32,16 @@ export function EarphoneIcon() {
   )
 }
 
+/** 그래프: 축과 꺾은선(폰에서 기기·그래프 화면으로 돌아가는 버튼) */
+export function GraphIcon() {
+  return (
+    <svg {...common}>
+      <path d="M4 4v16h16" />
+      <path d="M7 15l4-5 3 3 5-6" />
+    </svg>
+  )
+}
+
 /** EQ: 높이가 다른 슬라이더 세 개 */
 export function EqIcon() {
   return (

@@ -1266,3 +1266,78 @@ body.resizing {
   max-width: 420px;
   font-size: 16px;
 }
+
+/* ---- 폰 화면(폭 768px 이하) ----
+   @media: 조건(여기서는 화면 폭)이 맞을 때만 안의 CSS를 쓴다. PC 화면은 위의 3단 그대로.
+   grid-template-areas: 칸마다 이름을 붙여 배치를 그림처럼 적는 방법. 위에서부터 메뉴 / 그래프 / 목록 */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'top' 'main' 'list';
+  }
+
+  /* 왼쪽 메뉴 → 맨 위 가로 한 줄. 헤드폰/이어폰은 목록 위로 옮겼으니 숨긴다 */
+  .sidebar {
+    grid-area: top;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 4px 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-item {
+    flex-direction: row;
+    gap: 6px;
+    width: auto;
+    padding: 6px 10px;
+  }
+
+  .nav-item.category {
+    display: none;
+  }
+
+  .nav-item.mobile-only {
+    display: flex;
+  }
+
+  .nav-item.settings {
+    margin-top: 0;
+  }
+
+  .main-col {
+    grid-area: main;
+  }
+
+  /* 목록은 아래쪽, 화면 높이의 45%. dvh: 주소창이 나타나고 사라질 때 바뀌는 실제 화면 높이 기준 */
+  .list-col {
+    grid-area: list;
+    height: 45dvh;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .list-category.mobile-only {
+    display: flex;
+    margin: 8px 10px 0;
+  }
+
+  .list-category button {
+    flex: 1; /* 두 버튼이 반씩 */
+  }
+
+  .eq-page {
+    grid-area: main / main / list / list;
+    padding: 16px;
+  }
+
+  /* 목록 폭 조절은 PC 전용 */
+  .resize-handle {
+    display: none;
+  }
+}

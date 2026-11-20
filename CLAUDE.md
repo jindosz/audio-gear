@@ -16,6 +16,7 @@
 - 저장: 브라우저 IndexedDB, Dexie.js(`dexie`, `dexie-react-hooks`)로 접근
 - Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 GitHub Pages(2026-11-07 결정, 주소 https://jindosz.github.io/audio-gear/). `vite.config.ts`의 `base`는 빌드·`npm run preview`일 때만 `/audio-gear/`, 개발 서버는 `/`(Vite는 preview도 command가 `serve`라 `isPreview`로 구분). main에 푸시하면 `.github/workflows/deploy.yml`이 빌드해서 올림(저장소 Settings → Pages → Source = GitHub Actions). 무료 플랜은 공개 저장소만 Pages 가능. 배포한 사이트는 localhost와 출처(origin)가 달라 IndexedDB·localStorage가 따로라, 기존 데이터는 설정의 JSON 백업 내보내기 → 가져오기로 옮김
 - 저장소: https://github.com/jindosz/audio-gear (main 브랜치)
+- 안드로이드 앱(2026-11-20 1단계 완료, 설계 `docs/superpowers/specs/2026-11-20-android-eq-app-design.md`, 계획 `docs/superpowers/plans/2026-11-20-android-app-unit1.md`): Capacitor 8.6(`capacitor.config.ts`, appId `io.github.jindosz.audiogear`)로 같은 웹 코드를 감싼 앱. `npm run build:android` = `vite build --mode capacitor`(base `./`, PWA·서비스 워커 끔) + `cap sync android`. `android/`는 Capacitor 표준 프로젝트(저장소에 커밋, 아이콘은 `assets/icon.png`에서 `@capacitor/assets`로 생성). APK는 `.github/workflows/android.yml`이 main·`claude/**` 푸시 때 빌드해 Releases `android-latest`의 `audio-gear.apk`로 올림(versionCode = 실행 번호). 서명은 저장소 Secrets 4개(`ANDROID_KEYSTORE_BASE64`·`ANDROID_KEYSTORE_PASSWORD`·`ANDROID_KEY_ALIAS`·`ANDROID_KEY_PASSWORD`, 키는 사용자 PC에 보관)로 고정 → 덮어쓰기 업데이트. 사용자용 설치 안내 `docs/android-install.md`. 앱 데이터는 배포 사이트와 따로라 JSON 백업으로 옮김. 플랫폼마다 다른 일은 `src/platform.ts`(`isAndroidApp`, `saveTextFile`: 앱 안에서는 `<a download>`·`navigator.share`가 안 되어 `@capacitor/filesystem` + `@capacitor/share` 공유 창). 폰(폴드7·안드로이드 17)에서 설치·화면·목록 받기·백업 가져오기/내보내기 확인. 아직 확인 안 함: 새 APK 덮어쓰기 설치 시 데이터 유지
 
 ## 아키텍처 결정
 
@@ -143,6 +144,6 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 
 (2026-11-20 기준. 지난 채팅 요약은 `docs/handoff-2026-11-20.md`. APO 관련 일은 보류)
 
-1. 폰에서 Wavelet으로 EQ 파일 가져오기·공유 버튼 실제 확인(배포 후), 기기를 바꿔 연결할 때 Wavelet 프로필이 자동으로 바뀌는지 확인
+1. 안드로이드 앱 2단계: 127밴드 DynamicsProcessing을 시험 앱으로 먼저 확인 → PEQ→DynamicsProcessing 변환 함수(vitest) → `SystemEq` Kotlin 플러그인·포그라운드 서비스 → EQ 엔진 창구(`src/eqEngine.ts`) → EQ 화면 "폰에 적용". 계획은 설계 문서의 작업 단위 2번으로 새로 세움. 첫 새 빌드로 덮어쓰기 업데이트·데이터 유지 확인
 2. 배포 사이트로 옮기기: localhost 데이터를 JSON 백업으로 옮기고, 폰에서 PWA 설치·오프라인 실행 확인
 3. (선택) 추천 결과 특징 필터, Harman 선호도 점수, 청력 측정 EQ

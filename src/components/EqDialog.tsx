@@ -5,6 +5,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { fitPeq, MAX_BOOST, targetEq } from '../eq'
+import { applyPreset, getEqEngine } from '../eqEngine'
 import { categoryLabels, sourceLabel } from '../labels'
 import { addEqPreset, listDevices, listMeasurements } from '../repo'
 import { FINE_GRID } from '../similarity'
@@ -55,6 +56,8 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
   // 방금 저장한 EQ. pair(지금 기기|들어볼 소리)가 바뀌면 안내를 감춘다
   const [saved, setSaved] = useState<{ pair: string; id: string; name: string } | null>(null)
   const [saveError, setSaveError] = useState('')
+  // 안드로이드 앱: [폰에 적용] 결과 한 줄
+  const [phoneMessage, setPhoneMessage] = useState('')
 
   if (!devices || !measurements) return <p className="muted">불러오는 중…</p>
 
@@ -100,16 +103,33 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
   const sameSource = !!current.source && current.source === wish.source
   const pair = `${current.key}|${wish.key}`
 
-  async function handleSave() {
-    if (!current || !wish) return
+  /** EQ 목록에 저장하고 저장된 id와 이름을 돌려준다(이미 저장했으면 그대로). 실패하면 null */
+  async function handleSave(): Promise<{ id: string; name: string } | null> {
+    if (!current || !wish) return null
+    if (saved?.pair === pair) return saved
     setSaveError('')
     // EQ 화면의 자동 계산과 같은 이름 규칙("기기 → 목표")
     const name = `${current.name} → ${wish.name}`
     try {
       const id = await addEqPreset({ name, measurementId: current.key, goal: wish.goal, filters: eq.filters })
       setSaved({ pair, id, name })
+      return { id, name }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : String(err))
+      return null
+    }
+  }
+
+  /** 안드로이드 앱: 저장(아직이면)한 뒤 그 EQ를 폰 전체에 건다 */
+  async function handleApplyToPhone() {
+    setPhoneMessage('적용 중…')
+    const preset = await handleSave()
+    if (!preset) return setPhoneMessage('')
+    try {
+      const result = await applyPreset(preset.id, preset.name, eq)
+      setPhoneMessage(result.on ? `폰에 적용했습니다: ${preset.name}` : `적용하지 못했습니다${result.error ? `: ${result.error}` : ''}`)
+    } catch (err) {
+      setPhoneMessage(`적용하지 못했습니다: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -175,6 +195,18 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
 
       <EqExport eq={eq} name={`${current.name} → ${wish.name}`} />
 
+      {/* 안드로이드 앱에서만: 저장하고 바로 폰 전체에 걸기 */}
+      {getEqEngine().kind === 'android' && (
+        <div className="row">
+          <button type="button" className="primary" onClick={handleApplyToPhone} disabled={eq.filters.length === 0}>
+            폰에 적용
+          </button>
+          <span className="small" role="status">
+            {phoneMessage || '이 EQ를 EQ 목록에 저장하고 폰 전체 소리에 겁니다.'}
+          </span>
+        </div>
+      )}
+
       <div className="row">
         {saved?.pair === pair ? (
           <>
@@ -187,7 +219,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
           </>
         ) : (
           <>
-            <button type="button" onClick={handleSave} disabled={eq.filters.length === 0}>
+            <button type="button" onClick={() => void handleSave()} disabled={eq.filters.length === 0}>
               EQ 목록에 저장
             </button>
             <span className="muted small">저장하면 EQ 화면에서 밴드를 직접 고치거나 나중에 다시 내보낼 수 있습니다.</span>

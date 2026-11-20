@@ -13,6 +13,7 @@
 ## 기술 스택
 
 - React + TypeScript + Vite (템플릿 `react-ts`)
+- 테스트: `npm test`(vitest, 순수 함수용 `src/*.test.ts`)
 - 저장: 브라우저 IndexedDB, Dexie.js(`dexie`, `dexie-react-hooks`)로 접근
 - Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 GitHub Pages(2026-11-07 결정, 주소 https://jindosz.github.io/audio-gear/). `vite.config.ts`의 `base`는 빌드·`npm run preview`일 때만 `/audio-gear/`, 개발 서버는 `/`(Vite는 preview도 command가 `serve`라 `isPreview`로 구분). main에 푸시하면 `.github/workflows/deploy.yml`이 빌드해서 올림(저장소 Settings → Pages → Source = GitHub Actions). 무료 플랜은 공개 저장소만 Pages 가능. 배포한 사이트는 localhost와 출처(origin)가 달라 IndexedDB·localStorage가 따로라, 기존 데이터는 설정의 JSON 백업 내보내기 → 가져오기로 옮김
 - 저장소: https://github.com/jindosz/audio-gear (main 브랜치)
@@ -50,7 +51,7 @@
    - 각 줄의 별(☆/★)로 찜한다. 한 기기는 보유 > 찜 > 전체 중 한 곳에만 보인다. 아직 받지 않은 AutoEQ 기기를 찜하면 추천 측정치까지 받아 저장한다. 측정치 없는 내 기기를 클릭하면 AutoEQ에 있으면 받아온다.
    - "전체 기기" = 내 기기(보유 제외) + AutoEQ 목록 전체(현재 카테고리, 이름순). 수천 개라 가상 스크롤(`VirtualList.tsx`, 줄 높이 40px 고정)로 그린다.
    - 목록 칸 폭은 오른쪽 경계를 끌어서 200~640px로 조절(`ResizeHandle.tsx`, 두 번 누르면 260px, ←/→ 키도 됨, localStorage `listWidth`). 선택됨·보유·찜 구역은 제목을 눌러 접고 폄(localStorage `list.collapsed`). 많이 내려가면 오른쪽 아래 "맨 위로"(↑) 버튼. 브라우저별 화면 설정은 `src/localPrefs.ts`로 읽고 씀.
-   - 검색창 옆 "필터" 버튼: 브랜드(선택 상자, 기기 수 표시)·유선/무선·ANC·오픈/밀폐(헤드폰만)로 거르기(`src/listFilter.ts` 순수 함수 + `ListFilterBar.tsx`). 특징은 입력값, 없으면 추정값 기준이라 정보가 없는 기기는 빠짐. 유·무선 겸용은 둘 다에 걸리고 오픈은 세미 오픈 포함. 필터는 카테고리마다 따로 기억(앱을 다시 열면 초기화), 선택됨 구역에는 적용하지 않음.
+   - 검색창 옆 "필터" 버튼: 브랜드(선택 상자, 기기 수 표시)·측정자(선택 상자, 측정치 source 형식 "AutoEQ · oratory1990"/"squig.link · 사이트", 기기 수 많은 순)·유선/무선·ANC·오픈/밀폐(헤드폰만)로 거르기. 측정자를 고르면 그 측정자가 잰 기기만 남고, 기기를 누르면 그 측정자의 측정치를 받아 선택(`catalog.ts`의 `entryFor`, `CatalogDevice.curves`·`measurers`)해 같은 측정자끼리 비교할 수 있음(`src/listFilter.ts` 순수 함수 + `ListFilterBar.tsx`). 특징은 입력값, 없으면 추정값 기준이라 정보가 없는 기기는 빠짐. 유·무선 겸용은 둘 다에 걸리고 오픈은 세미 오픈 포함. 필터는 카테고리마다 따로 기억(앱을 다시 열면 초기화), 선택됨 구역에는 적용하지 않음.
    - 목록 위 검색창 옆 `+` 버튼은 다른 출처 측정치 추가·직접 입력용 팝업을 연다. "전체 기기"에는 보유 기기를 다시 넣지 않는다.
    - 기기 클릭은 비교 선택에 쓰므로, 보유 토글·측정치 관리·삭제는 각 줄의 `⋯` 버튼으로 여는 기기 상세 팝업에서 한다.
 3. 오른쪽 메인
@@ -65,7 +66,7 @@
 - 목록 항목 배경은 같은 색의 연한 버전 + 왼쪽에 진한 색 띠. 다크 모드용 색은 따로 정의한다.
 - 팔레트 개수가 동시 비교 최대 개수가 된다.
 
-모바일(화면 폭 768px 이하, `index.css` 끝의 `@media` 블록, 2026-11-20): 위에서부터 메뉴 줄(그래프·EQ·테마·설정) → 비교 탭·그래프 → 기기 목록(화면 높이 45%, 높이 700px 이하 폰은 38%, CSS 변수 `--list-h`). 목록 맨 위 ▲/▼ 손잡이로 80%까지 펼치고 접음(기억 안 함). 헤드폰/이어폰은 목록 맨 위 `[헤드폰 | 이어폰]`으로 바꿈. 폰에서만 보이는 부품은 `.mobile-only`. 목록 폭 조절은 폰에서 숨김. 그래프 칸은 펼친 목록과 겹치지 않게 칸 안에서 스크롤. 그래프 칸 안 순서는 CSS `order`로 탭 → 범례 → 그래프(높이 `max(160px, 100dvh − --list-h − 140px)`로 화면 높이에 맞춤, 차이 그래프는 그 60%) → 툴바 → 경고·안내(툴바는 아래로 밀어서 봄). EQ 화면은 한 칸으로: 저장한 EQ 목록은 가로 스크롤, 기기·목표 선택 상자는 폭 전체, 밴드 표는 숫자 칸을 줄이고 게인 슬라이더 폭을 화면 폭으로 계산. 팝업들은 원래 폭 `min(640px, 100vw − 32px)`라 그대로 맞음. 설계는 `docs/superpowers/specs/2026-11-20-mobile-layout-design.md`.
+모바일(화면 폭 768px 이하, `index.css` 끝의 `@media` 블록, 2026-11-20): 위에서부터 메뉴 줄(그래프·EQ·테마·설정) → 비교 탭·그래프 → 기기 목록(화면 높이 45%, 높이 700px 이하 폰은 38%, CSS 변수 `--list-h`). 목록 맨 위 손잡이(`ListGrip.tsx`, 가로 막대)를 잡고 끌어 높이 조절(최소 150px = 검색창까지, 최대 화면의 88%), 끌지 않고 누르면 80%로 펼치기/기본으로(계산은 `src/listHeight.ts`, 높이는 `.app`의 `--list-h`에 px로 적어 그래프 높이도 따라감, 기억 안 함). 헤드폰/이어폰은 목록 맨 위 `[헤드폰 | 이어폰]`으로 바꿈. 폰에서만 보이는 부품은 `.mobile-only`. 목록 폭 조절은 폰에서 숨김. 그래프 칸은 펼친 목록과 겹치지 않게 칸 안에서 스크롤. 그래프 칸 안 순서는 CSS `order`로 탭 → 범례 → 그래프(높이 `max(160px, 100dvh − --list-h − 140px)`로 화면 높이에 맞춤, 차이 그래프는 그 60%) → 툴바 → 경고·안내(툴바는 아래로 밀어서 봄). EQ 화면은 한 칸으로: 저장한 EQ 목록은 가로 스크롤, 기기·목표 선택 상자는 폭 전체, 밴드 표는 숫자 칸을 줄이고 게인 슬라이더 폭을 화면 폭으로 계산. 팝업들은 원래 폭 `min(640px, 100vw − 32px)`라 그대로 맞음. 설계는 `docs/superpowers/specs/2026-11-20-mobile-layout-design.md`.
 
 다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환. 메뉴의 테마 버튼(해/달)은 지금 보이는 테마의 반대로 바로 바꾸고, "시스템 설정 따르기"는 설정 팝업에서 고른다. 설정 버튼은 톱니바퀴. 다크 색은 `@media (prefers-color-scheme: dark)` 안(`:root:not([data-theme=light])`)과 `:root[data-theme=dark]` 두 곳에 같은 값으로 적는다. 그래프처럼 색을 직접 읽는 화면은 `useResolvedTheme()`으로 테마 변화를 구독한다.
 

@@ -1275,7 +1275,9 @@ body.resizing {
 }
 
 @media (max-width: 768px) {
+  /* --list-h: 접었을 때 목록 높이. 그래프 높이 계산에도 같이 쓴다 */
   .app {
+    --list-h: 45dvh;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas: 'top' 'main' 'list';
@@ -1323,14 +1325,23 @@ body.resizing {
     order: 1;
   }
 
-  .main-col > .chart-box {
-    order: 2;
-    flex: none; /* 칸 높이에 맞춰 줄어들지 않고 정해진 높이를 유지. 툴바는 그 아래로 밀려 스크롤로 본다 */
-    height: 280px;
+  /* 그래프 높이는 폰 화면 높이에 맞춘다. 화면 높이에서 목록(--list-h)과
+     메뉴 줄·탭·범례 몫(약 140px)을 뺀 만큼이라, 처음 화면에서 그래프가 칸에 꼭 맞게 보인다.
+     아주 작은 화면에서도 160px 아래로는 줄이지 않는다.
+     flex: none: 칸 크기에 맞춰 줄어들지 않고 이 높이를 지킨다. 툴바는 그 아래로 밀려 스크롤로 본다 */
+  .main-col {
+    --chart-h: max(160px, calc(100dvh - var(--list-h) - 140px));
   }
 
+  .main-col > .chart-box {
+    order: 2;
+    flex: none;
+    height: var(--chart-h);
+  }
+
+  /* 차이 그래프는 위 그래프의 60% */
   .main-col > .chart-box.diff {
-    height: 180px;
+    height: calc(var(--chart-h) * 0.6);
   }
 
   .main-col > .toolbar {
@@ -1344,7 +1355,7 @@ body.resizing {
   /* 목록은 아래쪽, 화면 높이의 45%. dvh: 주소창이 나타나고 사라질 때 바뀌는 실제 화면 높이 기준 */
   .list-col {
     grid-area: list;
-    height: 45dvh;
+    height: var(--list-h);
     background: var(--bg);
     border-right: none;
     border-top: 1px solid var(--border);
@@ -1384,5 +1395,12 @@ body.resizing {
   /* 목록 폭 조절은 PC 전용 */
   .resize-handle {
     display: none;
+  }
+}
+
+/* 높이가 낮은 폰(예: iPhone SE)은 목록을 조금 줄여 그래프 자리를 확보한다 */
+@media (max-width: 768px) and (max-height: 700px) {
+  .app {
+    --list-h: 38dvh;
   }
 }

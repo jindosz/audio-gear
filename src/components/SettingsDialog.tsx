@@ -7,6 +7,7 @@ import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { buildLabel } from '../buildInfo'
+import { ChevronRightIcon } from './Icons'
 
 interface Props {
   open: boolean
@@ -21,7 +22,9 @@ export function SettingsDialog({ open, onClose }: Props) {
         <BackupGroup />
         {/* 자주 안 쓰는 항목은 접어 둔다 */}
         <details className="settings-advanced">
-          <summary className="settings-group-title">고급</summary>
+          <summary className="settings-group-title">
+            <ChevronRightIcon size={14} /> 고급
+          </summary>
           <CleanupRow />
           {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
           {!isAndroidApp() && <StorageRow />}
@@ -120,12 +123,12 @@ function BackupGroup() {
       <h3 className="settings-group-title">데이터</h3>
       <button type="button" className="settings-row settings-link" onClick={handleExport}>
         <span>백업 내보내기</span>
-        <span aria-hidden="true">›</span>
+        <ChevronRightIcon />
       </button>
       {/* 파일 선택 칸은 숨기고, 한 줄 항목처럼 보이는 label을 눌러 연다 */}
       <label className="settings-row settings-link">
         <span>백업 가져오기</span>
-        <span aria-hidden="true">›</span>
+        <ChevronRightIcon />
         <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
       </label>
 
@@ -180,7 +183,7 @@ function CleanupRow() {
     <>
       <button type="button" className="settings-row settings-link" onClick={handleCleanup} disabled={busy}>
         <span>{busy ? '정리 중…' : '저장된 기기 정리'}</span>
-        <span aria-hidden="true">›</span>
+        <ChevronRightIcon />
       </button>
       {message && <p className="notice small">{message}</p>}
     </>

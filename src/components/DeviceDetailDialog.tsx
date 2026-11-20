@@ -30,6 +30,7 @@ import { MeasurementUpload } from './MeasurementUpload'
 import { Modal } from './Modal'
 import { ToggleButton } from './ToggleButton'
 import { Help } from './Help'
+import { PlusIcon } from './Icons'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -136,7 +137,7 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
         <MeasurementUpload deviceId={deviceId} onDone={() => setUploadOpen(false)} />
       ) : (
         <button className="link" onClick={() => setUploadOpen(true)}>
-          + CSV로 측정치 추가
+          <PlusIcon size={16} /> CSV로 측정치 추가
         </button>
       )}
 

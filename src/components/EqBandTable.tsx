@@ -1,6 +1,7 @@
 // EQ 밴드(피크 필터) 표: 주파수·게인·Q를 직접 고치고, 밴드를 더하고 뺀다
 import { useState } from 'react'
 import type { PeakFilter } from '../eq'
+import { CloseIcon, PlusIcon } from './Icons'
 
 interface Props {
   filters: PeakFilter[]
@@ -61,7 +62,7 @@ export function EqBandTable({ filters, onChange }: Props) {
                 </td>
                 <td>
                   <button type="button" className="icon-btn small" onClick={() => onChange(filters.filter((_, j) => j !== i))} title="밴드 삭제" aria-label={`${i + 1}번 밴드 삭제`}>
-                    ✕
+                    <CloseIcon size={16} />
                   </button>
                 </td>
               </tr>
@@ -71,7 +72,7 @@ export function EqBandTable({ filters, onChange }: Props) {
       )}
       <div className="row">
         <button type="button" onClick={handleAdd} disabled={filters.length >= MAX_BANDS}>
-          + 밴드 추가
+          <PlusIcon size={16} /> 밴드 추가
         </button>
         {filters.length > 0 && (
           <button type="button" onClick={() => confirm('밴드를 모두 지울까요?') && onChange([])}>

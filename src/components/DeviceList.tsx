@@ -25,6 +25,7 @@ import { DeviceDetailDialog } from './DeviceDetailDialog'
 import { ListFilterBar } from './ListFilterBar'
 import { ListGrip } from './ListGrip'
 import { VirtualList } from './VirtualList'
+import { ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, MoreIcon, PlusIcon, StarIcon } from './Icons'
 
 interface Props {
   category: DeviceCategory
@@ -290,7 +291,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
           필터{filterCount > 0 && <span className="badge">{filterCount}</span>}
         </button>
         <button className="icon-btn" onClick={() => setAddOpen(true)} title="기기 추가" aria-label="기기 추가">
-          +
+          <PlusIcon />
         </button>
       </div>
 
@@ -422,7 +423,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
           title="맨 위로"
           aria-label="맨 위로"
         >
-          ↑
+          <ArrowUpIcon />
         </button>
       )}
 
@@ -451,7 +452,7 @@ function SectionTitle({
     <h2>
       <button type="button" className="section-toggle" aria-expanded={open} onClick={() => onToggle(id)}>
         <span className="chevron" aria-hidden>
-          {open ? '▾' : '▸'}
+          {open ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
         </span>
         {children}
       </button>
@@ -508,12 +509,12 @@ function Row({ name, sub, subEstimated, owned, starred, onStar, colorIndex, comp
           title={starred ? '찜 해제' : '찜하기'}
           aria-label={starred ? '찜 해제' : '찜하기'}
         >
-          {starred ? '★' : '☆'}
+          <StarIcon filled={!!starred} />
         </button>
       )}
       {onMore && (
         <button className="more-btn" onClick={onMore} title="기기 정보·측정치 관리" aria-label="기기 정보">
-          ⋯
+          <MoreIcon />
         </button>
       )}
     </li>

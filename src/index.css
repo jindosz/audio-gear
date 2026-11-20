@@ -806,10 +806,6 @@ button.small {
   color: var(--accent);
 }
 
-.settings-link > span[aria-hidden] {
-  color: var(--muted);
-  font-size: 18px;
-}
 
 /* 고급: 누르면 펼침 */
 .settings-advanced > summary {
@@ -823,12 +819,13 @@ button.small {
   display: none;
 }
 
-.settings-advanced > summary::before {
-  content: '▸ ';
+/* 고급 앞 꺾쇠: 펼치면 아래로 돌아간다 */
+.settings-advanced > summary .icon {
+  transition: transform 0.15s;
 }
 
-.settings-advanced[open] > summary::before {
-  content: '▾ ';
+.settings-advanced[open] > summary .icon {
+  transform: rotate(90deg);
 }
 
 .settings-version {
@@ -2026,4 +2023,45 @@ a:focus-visible,
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---- SVG 아이콘(Icons.tsx의 작은 아이콘) ---- */
+.icon {
+  flex: none;
+  vertical-align: -0.2em; /* 글자 옆에 놓일 때 줄 높이 가운데에 맞춤 */
+}
+
+/* 아이콘 + 글자 버튼: 가운데 정렬, 사이 6px */
+button:has(> .icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 아이콘만 있는 작은 버튼: 바탕 없이 */
+.star-btn,
+.more-btn,
+.tab-close,
+.icon-close {
+  background: none;
+}
+
+.settings-link > .icon {
+  color: var(--muted);
+}
+
+.section-toggle .chevron {
+  display: inline-flex;
+  width: 16px;
+}
+
+/* 경고 문구 안의 아이콘 */
+.warning .icon {
+  margin-right: 2px;
+}
+
+/* 설정 항목 줄은 아이콘이 있어도 양 끝 정렬(위의 "아이콘 + 글자 버튼" 가운데 정렬보다 뒤에 둬서 이김) */
+button.settings-row {
+  justify-content: space-between;
 }

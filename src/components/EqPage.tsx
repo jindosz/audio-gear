@@ -25,6 +25,7 @@ import { EqBandTable } from './EqBandTable'
 import { EqExport } from './EqExport'
 import { Help } from './Help'
 import { PhoneEqControl, PhoneEqStatusBar } from './PhoneEqControl'
+import { AlertIcon, PlusIcon } from './Icons'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -132,7 +133,7 @@ export function EqPage() {
       <div className="eq-layout">
         <aside className="eq-list">
           <button type="button" className="primary" onClick={handleNew} disabled={options.length === 0}>
-            + 새 EQ
+            <PlusIcon size={16} /> 새 EQ
           </button>
           <ul>
             {presets.map((p) => {
@@ -170,7 +171,7 @@ export function EqPage() {
               onDelete={() => handleDelete(active)}
             />
           ) : (
-            <p className="muted">"+ 새 EQ"로 시작하세요.</p>
+            <p className="muted">"새 EQ"로 시작하세요.</p>
           )}
         </section>
       </div>
@@ -365,7 +366,7 @@ function EqEditor({
 
       {goal && goal.category !== category && (
         <p className="warning small" title="헤드폰과 이어폰은 측정 방식이 달라 EQ 결과가 부정확합니다">
-          ⚠ {categoryLabels[category]}↔{categoryLabels[goal.category]}: 결과가 부정확할 수 있어요
+          <AlertIcon size={15} /> {categoryLabels[category]}↔{categoryLabels[goal.category]}: 결과가 부정확할 수 있어요
         </p>
       )}
       {goal?.source && goal.source !== current.measurement.source && (
@@ -373,7 +374,7 @@ function EqEditor({
           className="warning small"
           title={`${sourceLabel(current.measurement.source)} / ${sourceLabel(goal.source)} — 측정 환경 차이까지 EQ에 섞이므로 같은 측정자를 고르는 것이 좋습니다`}
         >
-          ⚠ 측정자가 달라요
+          <AlertIcon size={15} /> 측정자가 달라요
         </p>
       )}
 

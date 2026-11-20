@@ -14,6 +14,7 @@ import type { SelectedItem } from '../useCompareData'
 import { EqExport } from './EqExport'
 import { Help } from './Help'
 import { Modal } from './Modal'
+import { AlertIcon } from './Icons'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -93,7 +94,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
 
   if (!current || !wish) {
     return (
-      <p className="muted">보유 기기(⋯ → 보유)와 들어볼 기기(비교 중인 기기 또는 타깃)가 필요해요.</p>
+      <p className="muted">보유 기기(기기 상세 → 보유)와 들어볼 기기(비교 중인 기기 또는 타깃)가 필요해요.</p>
     )
   }
 
@@ -159,7 +160,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
 
       {current.category !== wish.category && (
         <p className="warning small" title="헤드폰과 이어폰은 측정 방식이 달라 EQ 결과가 부정확합니다">
-          ⚠ {categoryLabels[current.category]}↔{categoryLabels[wish.category]}: 결과가 부정확할 수 있어요
+          <AlertIcon size={15} /> {categoryLabels[current.category]}↔{categoryLabels[wish.category]}: 결과가 부정확할 수 있어요
         </p>
       )}
       {wish.key !== 'target' && !sameSource && (
@@ -167,7 +168,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
           className="warning small"
           title={`${sourceLabel(current.source ?? '')} / ${sourceLabel(wish.source ?? '')} — 측정 환경 차이까지 EQ에 섞이므로 같은 측정자를 고르는 것이 좋습니다`}
         >
-          ⚠ 측정자가 달라요
+          <AlertIcon size={15} /> 측정자가 달라요
         </p>
       )}
 

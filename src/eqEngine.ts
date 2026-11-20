@@ -7,6 +7,7 @@ import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import { toDeviceEq } from './eqDevice'
 import type { EqSettings } from './eqExport'
+import { EQ_APPLIED_KEY, readPref, writePref } from './localPrefs'
 import { isAndroidApp } from './platform'
 
 export interface EqStatus {
@@ -69,7 +70,11 @@ function androidEngine(): EqEngine {
       }
       const timer = setTimeout(() => {
         listeners.delete(done)
-        void plugin.status().then(resolve)
+        // 상태 묻기마저 실패해도 버튼이 "적용 중…"에 멈추지 않게 반드시 끝낸다
+        plugin
+          .status()
+          .then(resolve)
+          .catch(() => resolve({ on: false, error: '폰 EQ 상태를 알 수 없습니다' }))
       }, RESULT_TIMEOUT_MS)
       listeners.add(done)
     })
@@ -119,4 +124,54 @@ export function useEqStatus(): EqStatus | null {
     }
   }, [])
   return status
+}
+
+// ---- 어떤 EQ를 어떤 값으로 걸었는지(화면 표시용) ----
+// 폰에 걸린 값과 지금 편집 중인 값이 다르면 "변경 사항 적용"을 보여 주려고, 건 EQ의 id와 값 서명을 기억한다
+
+export interface AppliedEq {
+  /** 건 EQ의 id(eqPresets) */
+  id: string
+  /** 건 값(이름·필터·프리앰프)의 서명. 지금 값과 비교한다 */
+  signature: string
+}
+
+/** 이름·필터·프리앰프가 같으면 같은 문자열 */
+export function eqSignature(name: string, eq: EqSettings): string {
+  return JSON.stringify([name, eq.filters, eq.preamp])
+}
+
+let applied: AppliedEq | null = readPref<AppliedEq | null>(EQ_APPLIED_KEY, null)
+const appliedListeners = new Set<() => void>()
+
+function setApplied(next: AppliedEq | null) {
+  applied = next
+  writePref(EQ_APPLIED_KEY, next)
+  appliedListeners.forEach((l) => l())
+}
+
+/** 이 EQ를 폰에 건다(이미 켜져 있으면 끊김 없이 바꿈). 성공하면 무엇을 걸었는지 기억한다 */
+export async function applyPreset(id: string, name: string, eq: EqSettings): Promise<EqStatus> {
+  const result = await getEqEngine().apply(name, eq)
+  setApplied(result.on ? { id, signature: eqSignature(name, eq) } : null)
+  return result
+}
+
+export async function turnOffPhoneEq(): Promise<EqStatus> {
+  const result = await getEqEngine().off()
+  if (!result.on) setApplied(null)
+  return result
+}
+
+/** 화면용: 마지막으로 건 EQ. 폰 EQ가 꺼져 있으면(알림에서 끈 경우 등) null */
+export function useAppliedEq(status: EqStatus | null): AppliedEq | null {
+  const [, force] = useState(0)
+  useEffect(() => {
+    const l = () => force((n) => n + 1)
+    appliedListeners.add(l)
+    return () => {
+      appliedListeners.delete(l)
+    }
+  }, [])
+  return status?.on ? applied : null
 }

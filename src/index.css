@@ -1507,12 +1507,14 @@ body.resizing {
   margin: 0;
 }
 
-/* 글자처럼 보이는 버튼(문장 안의 "끄기") */
-.link-btn {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  text-decoration: underline;
+/* EQ 화면 맨 위: 폰 EQ가 켜져 있을 때 늘 보이는 줄 */
+.phone-eq-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }

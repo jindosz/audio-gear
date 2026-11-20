@@ -23,7 +23,7 @@ import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { Device, DeviceCategory, EqPreset, FrCurve, Measurement, Target } from '../types'
 import { EqBandTable } from './EqBandTable'
 import { EqExport } from './EqExport'
-import { PhoneEqControl } from './PhoneEqControl'
+import { PhoneEqControl, PhoneEqStatusBar } from './PhoneEqControl'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -123,6 +123,9 @@ export function EqPage() {
           고친 내용은 자동으로 저장됩니다.
         </p>
       </header>
+
+      {/* 안드로이드 앱: 폰 EQ가 켜져 있으면 늘 보이는 상태 줄과 끄기 */}
+      <PhoneEqStatusBar />
 
       <div className="eq-layout">
         <aside className="eq-list">

@@ -146,8 +146,8 @@ public class SystemEqService extends Service {
             turnOff();
         }
         if (!getStatus().on) {
-            stopForeground(STOP_FOREGROUND_REMOVE);
-            stopSelf();
+            // stopSelfResult(startId): 이 명령 뒤에 새 명령(예: 다시 적용)이 이미 와 있으면 멈추지 않는다
+            if (stopSelfResult(startId)) stopForeground(STOP_FOREGROUND_REMOVE);
         } else {
             updateNotification();
         }
@@ -165,6 +165,8 @@ public class SystemEqService extends Service {
 
     private void applyEq() {
         if (cutoffs.length == 0 || cutoffs.length != gains.length) {
+            releaseAll();
+            saveLast(false);
             publish(false, null, null, "EQ 값이 올바르지 않습니다(밴드 수가 맞지 않음)");
             return;
         }
@@ -182,7 +184,9 @@ public class SystemEqService extends Service {
             }
             saveLast(true);
         } catch (Throwable t) {
+            // 실패한 EQ가 "켜짐"으로 저장되어 나중에(재부팅 복원 등) 다시 걸리지 않게
             releaseAll();
+            saveLast(false);
             publish(false, null, null, "EQ를 걸지 못했습니다: " + t.getMessage());
         }
     }

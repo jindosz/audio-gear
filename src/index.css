@@ -1314,6 +1314,31 @@ body.resizing {
   .main-col {
     grid-area: main;
     overflow-y: auto;
+    padding-bottom: 16px;
+  }
+
+  /* 그래프를 위로, 툴바·안내 문구를 아래로. order: 코드 순서는 두고 보이는 순서만 바꾸는 CSS 속성(기본 0, 작을수록 앞)
+     순서: 탭 → 범례 → 그래프(→ 차이 그래프) → 툴바 → 경고·안내 */
+  .main-col > .legend {
+    order: 1;
+  }
+
+  .main-col > .chart-box {
+    order: 2;
+    flex: none; /* 칸 높이에 맞춰 줄어들지 않고 정해진 높이를 유지. 툴바는 그 아래로 밀려 스크롤로 본다 */
+    height: 280px;
+  }
+
+  .main-col > .chart-box.diff {
+    height: 180px;
+  }
+
+  .main-col > .toolbar {
+    order: 3;
+  }
+
+  .main-col > p {
+    order: 4;
   }
 
   /* 목록은 아래쪽, 화면 높이의 45%. dvh: 주소창이 나타나고 사라질 때 바뀌는 실제 화면 높이 기준 */

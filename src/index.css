@@ -1518,3 +1518,46 @@ body.resizing {
   border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
+
+/* ---- 접어 둔 도움말(Help.tsx) ---- */
+.help {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.help > summary {
+  display: inline-block;
+  cursor: pointer;
+  list-style: none; /* 기본 ▶ 표시 숨김 */
+  padding: 2px 0;
+}
+
+.help > summary::-webkit-details-marker {
+  display: none;
+}
+
+.help > summary:hover {
+  color: var(--text);
+}
+
+.help-body {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--border);
+  line-height: 1.5;
+}
+
+.help-body > :first-child {
+  margin-top: 0;
+}
+
+.help-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* 접어 둔 내보내기(안드로이드 앱의 EqExport) */
+.export-box > summary {
+  cursor: pointer;
+  font-weight: 500;
+  padding: 6px 0;
+}

@@ -23,6 +23,7 @@ import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { Device, DeviceCategory, EqPreset, FrCurve, Measurement, Target } from '../types'
 import { EqBandTable } from './EqBandTable'
 import { EqExport } from './EqExport'
+import { Help } from './Help'
 import { PhoneEqControl, PhoneEqStatusBar } from './PhoneEqControl'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
@@ -118,10 +119,11 @@ export function EqPage() {
     <main className="eq-page">
       <header>
         <h2>EQ</h2>
-        <p className="muted small">
-          EQ를 여러 개 만들어 저장해 두고, 목록에서 눌러 바꿉니다. 목표에 맞춰 자동으로 만들거나 밴드를 직접 고칠 수 있고,
-          고친 내용은 자동으로 저장됩니다.
-        </p>
+        <Help>
+          <p>EQ를 여러 개 저장해 두고 목록에서 눌러 바꿉니다. 목표를 고르고 "자동 계산"을 누르거나 밴드를 직접 고치세요. 고친 내용은 자동 저장됩니다.</p>
+          <p>프리앰프는 EQ로 가장 많이 올라가는 만큼 전체 음량을 낮춘 값입니다(소리가 깨지지 않게).</p>
+          <p>EQ로 바뀌는 것은 음색(주파수 응답)뿐이라 공간감·착용감 같은 차이는 따라 할 수 없습니다.</p>
+        </Help>
       </header>
 
       {/* 안드로이드 앱: 폰 EQ가 켜져 있으면 늘 보이는 상태 줄과 끄기 */}
@@ -152,14 +154,12 @@ export function EqPage() {
               )
             })}
           </ul>
-          {presets.length === 0 && <p className="muted small">저장한 EQ가 없습니다. "+ 새 EQ"로 만들어 보세요.</p>}
+          {presets.length === 0 && <p className="muted small">아직 EQ가 없습니다.</p>}
         </aside>
 
         <section className="eq-editor">
           {options.length === 0 ? (
-            <p className="muted">
-              저장된 측정치가 없습니다. 기기 목록에서 지금 쓰는 기기를 눌러 측정치를 받고, ⋯ 버튼에서 "보유"로 표시해 주세요.
-            </p>
+            <p className="muted">먼저 기기 목록에서 지금 쓰는 기기를 눌러 측정치를 받아 주세요.</p>
           ) : active ? (
             // key: 다른 EQ를 고르면 편집 칸을 새로 만들어, 고르던 EQ의 입력 중인 값이 섞이지 않게 한다
             <EqEditor
@@ -170,7 +170,7 @@ export function EqPage() {
               onDelete={() => handleDelete(active)}
             />
           ) : (
-            <p className="muted">왼쪽에서 "+ 새 EQ"를 눌러 시작하세요.</p>
+            <p className="muted">"+ 새 EQ"로 시작하세요.</p>
           )}
         </section>
       </div>
@@ -364,14 +364,16 @@ function EqEditor({
       {error && <p className="error small">{error}</p>}
 
       {goal && goal.category !== category && (
-        <p className="warning small">
-          ⚠ {categoryLabels[category]}과 {categoryLabels[goal.category]}은 측정 방식이 달라 EQ 결과가 부정확합니다.
+        <p className="warning small" title="헤드폰과 이어폰은 측정 방식이 달라 EQ 결과가 부정확합니다">
+          ⚠ {categoryLabels[category]}↔{categoryLabels[goal.category]}: 결과가 부정확할 수 있어요
         </p>
       )}
       {goal?.source && goal.source !== current.measurement.source && (
-        <p className="warning small">
-          ⚠ 두 측정치의 측정자가 다릅니다({sourceLabel(current.measurement.source)} / {sourceLabel(goal.source)}). 측정 환경
-          차이까지 EQ에 섞이므로, 가능하면 같은 측정자 측정치를 고르세요.
+        <p
+          className="warning small"
+          title={`${sourceLabel(current.measurement.source)} / ${sourceLabel(goal.source)} — 측정 환경 차이까지 EQ에 섞이므로 같은 측정자를 고르는 것이 좋습니다`}
+        >
+          ⚠ 측정자가 달라요
         </p>
       )}
 
@@ -428,19 +430,15 @@ function EqEditor({
         >
           목표에 맞춰 자동 계산
         </button>
-        <span className="small">
+        <span className="small muted">
           밴드 {filters.length}개 · 프리앰프 {preamp.toFixed(1)}dB
-          {remaining !== null && ` · 목표와 남은 차이 ${remaining.toFixed(1)}dB`}
+          {remaining !== null && ` · 남은 차이 ${remaining.toFixed(1)}dB`}
         </span>
       </div>
 
       <EqBandTable filters={filters} onChange={(f) => update({ filters: f })} />
 
       {filters.length > 0 && <EqExport eq={{ filters, preamp }} name={draft.name} />}
-      <p className="muted small">
-        프리앰프는 EQ로 가장 많이 올라가는 만큼 전체 음량을 낮춘 값입니다(소리가 깨지지 않게). EQ로 바뀌는 것은 주파수
-        응답(음색)뿐이라, 공간감·착용감 같은 차이는 따라 할 수 없습니다.
-      </p>
     </>
   )
 }

@@ -29,6 +29,7 @@ import type { Acoustic, Codec, Connection, Device } from '../types'
 import { MeasurementUpload } from './MeasurementUpload'
 import { Modal } from './Modal'
 import { ToggleButton } from './ToggleButton'
+import { Help } from './Help'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -97,12 +98,10 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
 
       <h3>측정치 {measurements.length}개</h3>
       {measurements.length > 1 && (
-        <p className="muted small">
-          목록에서 기기를 클릭하면 첫 번째 측정치가 선택됩니다. 다른 측정치나 여러 측정치를 비교하려면 여기서 고르세요.
-        </p>
+        <Help>목록에서 기기를 누르면 첫 번째 측정치가 선택됩니다. 다른 측정치를 비교하려면 여기서 "비교에 추가"를 누르세요.</Help>
       )}
       {notice && <p className="error small">{notice}</p>}
-      {measurements.length === 0 && <p className="muted small">측정치가 없습니다. CSV를 올려 추가하세요.</p>}
+      {measurements.length === 0 && <p className="muted small">측정치가 없어요.</p>}
       <ul className="measurements">
         {measurements.map((m) => {
           // 이 측정치가 지금 탭에서 선택되어 있으면 그 색 순번
@@ -224,13 +223,13 @@ function SpecHintLine({ device }: { device: Device }) {
   const hasAny = device.connection || device.acoustic || device.anc || device.codecs?.length
   if (!hint || hasAny) return null
   return (
-    <p className="small spec-hint">
+    <p className="small spec-hint" title="이름으로 추정한 값이라 틀릴 수 있어요. 적용한 뒤 고칠 수 있습니다">
       <span className="muted">추정: </span>
       <span className="estimated">{specTags(hint).join(' · ')}</span>{' '}
       <button type="button" className="small" onClick={() => updateDeviceSpecs(device.id, hint)}>
         추정값 적용
       </button>
-      <span className="muted"> · 이름으로 추정한 값이라 틀릴 수 있습니다. 적용한 뒤 고칠 수 있어요.</span>
+
     </p>
   )
 }

@@ -107,7 +107,7 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 - [x] 타깃 선택 드롭다운과 리그 불일치 경고, 커스텀 타깃 CSV 불러오기 (기본 타깃 `src/targets.ts`, 커스텀은 드롭다운의 "+ CSV 불러오기…" → `CustomTargetDialog.tsx`, `isCustom: true`로 저장·삭제 가능)
 - [x] 기기 삭제 시 연결된 측정치도 함께 삭제 (`deleteDevice`)
 - [x] JSON 내보내기/가져오기 백업 (왼쪽 아래 설정 버튼 → `SettingsDialog.tsx`. 형식·검사는 `src/backup.ts`, 버전 필드로 나중 형식 변경 대비. 가져오기는 합치기/모두 바꾸기. AutoEQ 목록 보관본은 제외) + `navigator.storage.persist()` 요청
-- [ ] PWA 적용과 배포 — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인, 주소는 http://localhost:4173/audio-gear/. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 설정 완료(GitHub Pages, 위 기술 스택 참고). 남은 것: 저장소 공개·Pages 설정 후 첫 배포, 배포 사이트에서 서비스 워커(오프라인)·설치 확인(앱 안 미리보기 창에서는 서비스 워커 등록이 "unknown error"로 실패해 확인 못 함)
+- [x] PWA 적용과 배포 (2026-11-07 첫 배포, https://jindosz.github.io/audio-gear/ 에서 화면·기기 목록·서비스 워커 activated 확인) — PWA 완료(`vite-plugin-pwa`, 설정은 `vite.config.ts`, 아이콘은 `public/icon.svg` → `npx pwa-assets-generator`로 PNG 생성, `npm run build && npm run preview`로 확인, 주소는 http://localhost:4173/audio-gear/. 개발 서버에서는 서비스 워커가 동작하지 않음), 배포 완료(GitHub Pages, 위 기술 스택 참고). 앱 안 미리보기 창의 localhost에서는 서비스 워커 등록이 "unknown error"로 실패하지만 배포 사이트에서는 정상. 남은 확인: 폰에서 설치·오프라인 실행
 - [x] 기기 주요 특징(유선/무선, 오픈/세미 오픈/밀폐, 코덱, ANC) 입력과 목록·추천 결과 태그 표시 (`labels.ts`의 `specTags`)
 - [x] 특징 추정값: 헤드폰은 Claude가 확실히 아는 시리즈만 규칙으로(`src/data/headphoneHints.ts`, 키 = 이름 앞부분, 가장 긴 키가 이김, `{}`는 일부러 비움), 이어폰은 이름에 무선 단서(AirPods, Galaxy Buds, Sony WF-, TWS 등)가 있을 때만. 이어폰 "대부분 유선" 같은 기본값은 넣지 않음. 적용 범위: 헤드폰 3,037개 중 1,759개, 이어폰 260개(2026-10-24). 무작위 40개 점검과 확신이 덜한 6개 웹 확인에서 오류 없음
 
@@ -121,7 +121,8 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 - [ ] 곡 분석 기반 자동 톤 조절 + Equalizer APO 자동 적용 (사용자 명세서 V2 검토, 2026-10-25, 아직 안 만듦)
   - 흐름: Last.fm `user.getRecentTracks`로 지금 곡 감지 → 제목 정리·커버/라이브 등은 제외 목록 → iTunes Search API로 30초 미리듣기(.m4a) 받아 대역 에너지·Crest Factor 분석 → 문제 있을 때만 필터 3개(5.5kHz 피로도 컷, 250Hz 중저역 컷, 105Hz 로우 셸프 부스트) → Layer 1(헤드폰 보정 = 이 앱의 EQ 프리셋) + Layer 2(곡별 필터)를 합쳐 APO가 `Include`하는 파일을 File System Access API로 덮어씀. 캐시·제외 목록은 DB에
   - 확인됨: iTunes 검색·미리듣기 음원·noembed 모두 CORS 허용(`Access-Control-Allow-Origin: *`). 선형 파워 합산 방식은 맞음. V1의 "핑크 노이즈로 평탄화"는 곡의 의도를 깎아서 버림
-  - 위험(먼저 실험): ① APO 설정 폴더가 `C:\Program Files\...`라 관리자 권한·Chrome 시스템 폴더 차단 → `Include: <사용자 폴더 절대 경로>`로 우회하고 그 파일을 고쳐도 APO가 자동으로 다시 읽는지 확인 ② 파일 핸들은 IndexedDB에 저장되지만 브라우저를 다시 열면 권한 재허용 클릭이 필요할 수 있음 ③ 뒤에 있는 탭은 타이머가 늦어지고 Last.fm 반영도 몇 초 걸려 곡 바뀐 뒤 수 초~수십 초 늦게 적용 ④ 이 PC에는 APO가 기본 경로에 설치되어 있지 않음
+  - 위험(먼저 실험): ① APO 설정 폴더가 `C:\Program Files\...`라 관리자 권한·Chrome 시스템 폴더 차단 → `Include: <사용자 폴더 절대 경로>`로 우회하고 그 파일을 고쳐도 APO가 자동으로 다시 읽는지 확인 ② 파일 핸들은 IndexedDB에 저장되지만 브라우저를 다시 열면 권한 재허용 클릭이 필요할 수 있음 ③ 뒤에 있는 탭은 타이머가 늦어지고 Last.fm 반영도 몇 초 걸려 곡 바뀐 뒤 수 초~수십 초 늦게 적용
+  - 실험 결과(2026-10-30, 미해결): 사용자 PC에 APO 1.4.2가 `C:\Program Files\EqualizerAPO`에 설치되어 있고, `config.txt`는 `Include: C:\Users\dojin\Documents\audio-gear\web_auto_eq.txt` 한 줄. Editor는 Include 파일의 `Preamp: -60 dB`를 읽어 Peak gain −60dB로 계산함(설정·Include 정상). 그런데 실제로 듣는 Fosi Audio ZH3(기본 장치, Device Selector에 "APO is already installed")에서 스포티파이·유튜브 소리가 그대로 → APO가 실제 소리 경로에서 동작하지 않음. 해 본 것: 공간 음향 끄기, 오디오 향상 = 장치 기본 효과, Device Selector Troubleshooting에서 Auto 끄고 설치 방식 변경 + 재부팅 → 모두 변화 없음. 원인 모름(Windows Insider 빌드 26300과 APO 1.4.2 호환 문제일 수도 있으나 추측). 원격(Sunshine 스트리밍)으로 들을 때는 APO 효과가 안 실릴 수 있어 판정에 쓰지 않음. Device Selector는 그냥 실행하면 Qt 플러그인 오류 → `$env:QT_PLUGIN_PATH = "C:\Program Files\EqualizerAPO\qt"` 후 실행. 다음에 할 수 있는 것: 출력을 K66으로 바꿔 같은 시험(ZH3 문제인지 PC 전체 문제인지 구분), Device Selector에서 ZH3 Auto를 다시 켜 원래대로. 이 문제가 풀리기 전에는 앱의 Equalizer APO 내보내기도 이 PC에서는 소리를 못 바꿈
   - 수식 보정 필요: 대역 폭이 서로 달라(기준 500Hz~2kHz = 2옥타브, 치찰음 4.5~7.5kHz ≈ 0.7옥타브, 중저역 220~320Hz ≈ 0.5옥타브) 옥타브당 에너지로 나눠야 비교가 됨. 참고 코드는 기준을 `freq1000` 하나로 써서 설명과 다름. 임계치(−2/+3.5/−4dB)는 근거가 없어 장르가 다른 곡 20~30개로 실제 값을 보고 정함
   - 이 앱에 필요한 것: `eq.ts`에 로우 셸프 필터, 곡 감지(Last.fm API 키), 분석기, 캐시·제외 목록(DB 새 version), APO 파일 연결. 다시 쓸 것: EQ 프리셋, `autoPreamp`, `eqExport.ts`의 APO 형식
   - 제외: 하드웨어 DAC 직접 제어(WebHID/WebUSB, 제품마다 비공개 프로토콜). 플레이리스트 평균 프리셋(Android용)은 나중에 가능
@@ -136,8 +137,8 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 
 ## 다음 작업
 
-(2026-10-24 기준, 사용자가 다음에 하기로 한 것부터)
+(2026-11-20 기준. 지난 채팅 요약·지금 상태·남은 일 전체는 `docs/handoff-2026-11-20.md`)
 
 1. (선택) 추천 결과 특징 필터, Harman 선호도 점수 — 필요해지면
-2. 배포 마무리: 저장소 공개 + Settings → Pages → Source를 GitHub Actions로 → 푸시 → 배포 사이트에서 동작·오프라인·설치 확인, 데이터는 JSON 백업으로 옮기기
+2. 배포 사이트로 옮기기: localhost 데이터를 JSON 백업으로 옮기고, 폰에서 PWA 설치·오프라인 실행 확인
 3. 모바일 반응형은 맨 마지막: 왼쪽 두 칸을 햄버거 메뉴로 접고 그래프를 전체 폭으로

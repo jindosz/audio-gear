@@ -2,6 +2,7 @@
 // "EQ로 들어보기" 팝업과 EQ 화면이 같이 쓴다.
 import { useState } from 'react'
 import { defaultApp, detectPlatform, EQ_APPS, eqText, platformLabels, type EqApp, type EqSettings } from '../eqExport'
+import { isAndroidApp, saveTextFile } from '../platform'
 
 interface Props {
   eq: EqSettings
@@ -28,7 +29,8 @@ export function EqExport({ eq, name }: Props) {
   const cleanName = name.replace(/[\\/:*?"<>|]/g, '').trim() || 'EQ'
   const fileName = app === 'wavelet' ? `${cleanName}.txt` : `audio-gear-eq ${cleanName}.txt`
   const file = new File([text], fileName, { type: 'text/plain' })
-  const shareable = canShareFiles(file)
+  // 안드로이드 앱에서는 "파일로 저장"이 이미 공유 창을 열어서 공유 버튼을 따로 두지 않는다
+  const shareable = !isAndroidApp() && canShareFiles(file)
 
   async function handleCopy() {
     try {
@@ -43,14 +45,14 @@ export function EqExport({ eq, name }: Props) {
     }
   }
 
-  function handleSave() {
-    const blob = new Blob([text], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileName
-    a.click()
-    URL.revokeObjectURL(url)
+  // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
+  async function handleSave() {
+    setShareFailed(false)
+    try {
+      await saveTextFile(fileName, text, 'text/plain')
+    } catch {
+      setShareFailed(true)
+    }
   }
 
   // Web Share API: 폰의 공유 메뉴를 열어 파일을 다른 앱(Wavelet, 파일 앱, 메신저 등)으로 바로 보낸다
@@ -106,7 +108,11 @@ export function EqExport({ eq, name }: Props) {
             공유
           </button>
         )}
-        {shareFailed && <span className="error small">공유하지 못했습니다. "파일로 저장"을 써 주세요.</span>}
+        {shareFailed && (
+          <span className="error small">
+            {isAndroidApp() ? '파일을 내보내지 못했습니다. 복사를 써 주세요.' : '공유하지 못했습니다. "파일로 저장"을 써 주세요.'}
+          </span>
+        )}
         {copyFailed && <span className="error small">자동 복사가 막혔습니다. 선택된 글을 Ctrl+C로 복사하세요.</span>}
       </div>
     </>

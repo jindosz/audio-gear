@@ -5,6 +5,7 @@ import { cleanupStoredDevices, exportAll, importAll } from '../repo'
 import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
+import { isAndroidApp, saveTextFile } from '../platform'
 
 interface Props {
   open: boolean
@@ -64,16 +65,22 @@ function BackupSection() {
   async function handleExport() {
     setError('')
     const data = await exportAll()
-    // Blob: 메모리에 만든 파일. 임시 주소(URL)를 만들어 <a download>로 내려받게 한 뒤 주소를 지운다
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = backupFileName()
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
+      const result = await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
+      if (result === 'cancelled') {
+        setMessage('내보내기를 취소했습니다. 백업 파일은 저장되지 않았습니다.')
+        return
+      }
+    } catch (e) {
+      setError(`내보내지 못했습니다: ${e instanceof Error ? e.message : String(e)}`)
+      return
+    }
     const s = summarize(data)
-    setMessage(`내보냈습니다: 기기 ${s.devices}개, 측정치 ${s.measurements}개, 타깃 ${s.targets}개, 탭 ${s.tabs}개, EQ ${s.eqPresets}개`)
+    setMessage(
+      `내보냈습니다: 기기 ${s.devices}개, 측정치 ${s.measurements}개, 타깃 ${s.targets}개, 탭 ${s.tabs}개, EQ ${s.eqPresets}개` +
+        (isAndroidApp() ? ' (공유 창에서 저장할 곳을 고르세요: 내 파일, 드라이브 등)' : ''),
+    )
   }
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {

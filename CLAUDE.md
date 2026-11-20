@@ -13,9 +13,11 @@
 ## 기술 스택
 
 - React + TypeScript + Vite (템플릿 `react-ts`)
+- 테스트: `npm test`(vitest, 순수 함수용 `src/*.test.ts`)
 - 저장: 브라우저 IndexedDB, Dexie.js(`dexie`, `dexie-react-hooks`)로 접근
 - Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 GitHub Pages(2026-11-07 결정, 주소 https://jindosz.github.io/audio-gear/). `vite.config.ts`의 `base`는 빌드·`npm run preview`일 때만 `/audio-gear/`, 개발 서버는 `/`(Vite는 preview도 command가 `serve`라 `isPreview`로 구분). main에 푸시하면 `.github/workflows/deploy.yml`이 빌드해서 올림(저장소 Settings → Pages → Source = GitHub Actions). 무료 플랜은 공개 저장소만 Pages 가능. 배포한 사이트는 localhost와 출처(origin)가 달라 IndexedDB·localStorage가 따로라, 기존 데이터는 설정의 JSON 백업 내보내기 → 가져오기로 옮김
 - 저장소: https://github.com/jindosz/audio-gear (main 브랜치)
+- 안드로이드 앱(2026-11-20 1단계 완료, 설계 `docs/superpowers/specs/2026-11-20-android-eq-app-design.md`, 계획 `docs/superpowers/plans/2026-11-20-android-app-unit1.md`): Capacitor 8.6(`capacitor.config.ts`, appId `io.github.jindosz.audiogear`)로 같은 웹 코드를 감싼 앱. `npm run build:android` = `vite build --mode capacitor`(base `./`, PWA·서비스 워커 끔) + `cap sync android`. `android/`는 Capacitor 표준 프로젝트(저장소에 커밋, 아이콘은 `assets/icon.png`에서 `@capacitor/assets`로 생성). APK는 `.github/workflows/android.yml`이 빌드: main 푸시는 Releases `android-latest`(정식 설치 링크), `claude/**` 작업 브랜치 푸시는 `android-preview`(미리 보기, prerelease)에 `audio-gear.apk`로 올림(versionCode = 실행 번호, 브랜치별로 따로 줄 세움). 앱 안 웹 주소(`capacitor.config.ts`의 `server` = `https://localhost`)는 IndexedDB가 묶여 있어 절대 바꾸지 않음. 서명은 저장소 Secrets 4개(`ANDROID_KEYSTORE_BASE64`·`ANDROID_KEYSTORE_PASSWORD`·`ANDROID_KEY_ALIAS`·`ANDROID_KEY_PASSWORD`, 키는 사용자 PC에 보관)로 고정 → 덮어쓰기 업데이트. 사용자용 설치 안내 `docs/android-install.md`. 앱 데이터는 배포 사이트와 따로라 JSON 백업으로 옮김. 플랫폼마다 다른 일은 `src/platform.ts`(`isAndroidApp`, `saveTextFile`: 앱 안에서는 `<a download>`·`navigator.share`가 안 되어 `@capacitor/filesystem` + `@capacitor/share` 공유 창). 폰(폴드7·안드로이드 17)에서 설치·화면·목록 받기·백업 가져오기/내보내기 확인. 아직 확인 안 함: 새 APK 덮어쓰기 설치 시 데이터 유지
 
 ## 아키텍처 결정
 
@@ -49,7 +51,7 @@
    - 각 줄의 별(☆/★)로 찜한다. 한 기기는 보유 > 찜 > 전체 중 한 곳에만 보인다. 아직 받지 않은 AutoEQ 기기를 찜하면 추천 측정치까지 받아 저장한다. 측정치 없는 내 기기를 클릭하면 AutoEQ에 있으면 받아온다.
    - "전체 기기" = 내 기기(보유 제외) + AutoEQ 목록 전체(현재 카테고리, 이름순). 수천 개라 가상 스크롤(`VirtualList.tsx`, 줄 높이 40px 고정)로 그린다.
    - 목록 칸 폭은 오른쪽 경계를 끌어서 200~640px로 조절(`ResizeHandle.tsx`, 두 번 누르면 260px, ←/→ 키도 됨, localStorage `listWidth`). 선택됨·보유·찜 구역은 제목을 눌러 접고 폄(localStorage `list.collapsed`). 많이 내려가면 오른쪽 아래 "맨 위로"(↑) 버튼. 브라우저별 화면 설정은 `src/localPrefs.ts`로 읽고 씀.
-   - 검색창 옆 "필터" 버튼: 브랜드(선택 상자, 기기 수 표시)·유선/무선·ANC·오픈/밀폐(헤드폰만)로 거르기(`src/listFilter.ts` 순수 함수 + `ListFilterBar.tsx`). 특징은 입력값, 없으면 추정값 기준이라 정보가 없는 기기는 빠짐. 유·무선 겸용은 둘 다에 걸리고 오픈은 세미 오픈 포함. 필터는 카테고리마다 따로 기억(앱을 다시 열면 초기화), 선택됨 구역에는 적용하지 않음.
+   - 검색창 옆 "필터" 버튼: 브랜드(선택 상자, 기기 수 표시)·측정자(선택 상자, 측정치 source 형식 "AutoEQ · oratory1990"/"squig.link · 사이트", 기기 수 많은 순)·유선/무선·ANC·오픈/밀폐(헤드폰만)로 거르기. 측정자를 고르면 그 측정자가 잰 기기만 남고, 기기를 누르면 그 측정자의 측정치를 받아 선택(`catalog.ts`의 `entryFor`, `CatalogDevice.curves`·`measurers`)해 같은 측정자끼리 비교할 수 있음(`src/listFilter.ts` 순수 함수 + `ListFilterBar.tsx`). 특징은 입력값, 없으면 추정값 기준이라 정보가 없는 기기는 빠짐. 유·무선 겸용은 둘 다에 걸리고 오픈은 세미 오픈 포함. 필터는 카테고리마다 따로 기억(앱을 다시 열면 초기화), 선택됨 구역에는 적용하지 않음.
    - 목록 위 검색창 옆 `+` 버튼은 다른 출처 측정치 추가·직접 입력용 팝업을 연다. "전체 기기"에는 보유 기기를 다시 넣지 않는다.
    - 기기 클릭은 비교 선택에 쓰므로, 보유 토글·측정치 관리·삭제는 각 줄의 `⋯` 버튼으로 여는 기기 상세 팝업에서 한다.
 3. 오른쪽 메인
@@ -64,7 +66,7 @@
 - 목록 항목 배경은 같은 색의 연한 버전 + 왼쪽에 진한 색 띠. 다크 모드용 색은 따로 정의한다.
 - 팔레트 개수가 동시 비교 최대 개수가 된다.
 
-모바일(화면 폭 768px 이하, `index.css` 끝의 `@media` 블록, 2026-11-20): 위에서부터 메뉴 줄(그래프·EQ·테마·설정) → 비교 탭·그래프 → 기기 목록(화면 높이 45%, 높이 700px 이하 폰은 38%, CSS 변수 `--list-h`). 목록 맨 위 ▲/▼ 손잡이로 80%까지 펼치고 접음(기억 안 함). 헤드폰/이어폰은 목록 맨 위 `[헤드폰 | 이어폰]`으로 바꿈. 폰에서만 보이는 부품은 `.mobile-only`. 목록 폭 조절은 폰에서 숨김. 그래프 칸은 펼친 목록과 겹치지 않게 칸 안에서 스크롤. 그래프 칸 안 순서는 CSS `order`로 탭 → 범례 → 그래프(높이 `max(160px, 100dvh − --list-h − 140px)`로 화면 높이에 맞춤, 차이 그래프는 그 60%) → 툴바 → 경고·안내(툴바는 아래로 밀어서 봄). EQ 화면은 한 칸으로: 저장한 EQ 목록은 가로 스크롤, 기기·목표 선택 상자는 폭 전체, 밴드 표는 숫자 칸을 줄이고 게인 슬라이더 폭을 화면 폭으로 계산. 팝업들은 원래 폭 `min(640px, 100vw − 32px)`라 그대로 맞음. 설계는 `docs/superpowers/specs/2026-11-20-mobile-layout-design.md`.
+모바일(화면 폭 768px 이하, `index.css` 끝의 `@media` 블록, 2026-11-20): 위에서부터 메뉴 줄(그래프·EQ·테마·설정) → 비교 탭·그래프 → 기기 목록(화면 높이 45%, 높이 700px 이하 폰은 38%, CSS 변수 `--list-h`). 목록 맨 위 손잡이(`ListGrip.tsx`, 가로 막대)를 잡고 끌어 높이 조절(최소 150px = 검색창까지, 최대 화면의 88%), 끌지 않고 누르면 80%로 펼치기/기본으로(계산은 `src/listHeight.ts`, 높이는 `.app`의 `--list-h`에 px로 적어 그래프 높이도 따라감, 기억 안 함). 헤드폰/이어폰은 목록 맨 위 `[헤드폰 | 이어폰]`으로 바꿈. 폰에서만 보이는 부품은 `.mobile-only`. 목록 폭 조절은 폰에서 숨김. 그래프 칸은 펼친 목록과 겹치지 않게 칸 안에서 스크롤. 그래프 칸 안 순서는 CSS `order`로 탭 → 범례 → 그래프(높이 `max(160px, 100dvh − --list-h − 140px)`로 화면 높이에 맞춤, 차이 그래프는 그 60%) → 툴바 → 경고·안내(툴바는 아래로 밀어서 봄). EQ 화면은 한 칸으로: 저장한 EQ 목록은 가로 스크롤, 기기·목표 선택 상자는 폭 전체, 밴드 표는 숫자 칸을 줄이고 게인 슬라이더 폭을 화면 폭으로 계산. 팝업들은 원래 폭 `min(640px, 100vw − 32px)`라 그대로 맞음. 설계는 `docs/superpowers/specs/2026-11-20-mobile-layout-design.md`.
 
 다크/라이트 모드: CSS 변수로 색을 정의하고 시스템 설정 또는 버튼으로 전환. 메뉴의 테마 버튼(해/달)은 지금 보이는 테마의 반대로 바로 바꾸고, "시스템 설정 따르기"는 설정 팝업에서 고른다. 설정 버튼은 톱니바퀴. 다크 색은 `@media (prefers-color-scheme: dark)` 안(`:root:not([data-theme=light])`)과 `:root[data-theme=dark]` 두 곳에 같은 값으로 적는다. 그래프처럼 색을 직접 읽는 화면은 `useResolvedTheme()`으로 테마 변화를 구독한다.
 
@@ -86,6 +88,8 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
 
 - 목적: 지금 쓰는 기기에 EQ를 걸어 들어볼 기기와 비슷한 음색으로 미리 듣기. 스트리밍으로 듣는 게 기본이라, 웹앱은 다른 앱 소리를 바꿀 수 없음 → **앱 안 재생 대신 기기 전체 EQ 앱용 설정을 내보내고, 그 앱에서 켜고 끄며 비교**(임시 적용).
 - 결정(2026-10-24): 웹앱(PWA)으로 유지하고, 실제 EQ 적용은 계속 외부 EQ 앱(Equalizer APO, Wavelet)으로 내보내서 한다. 데스크톱 앱 전환(Tauri/Electron)은 하지 않음. 이유: 기기 전체 EQ는 OS마다 네이티브 오디오 코드(Windows는 가상 오디오 장치·드라이버, Android는 Kotlin AudioEffect)를 따로 짜야 해서 부담이 너무 크고, iPhone은 어떤 앱이든 다른 앱 소리를 바꿀 수 없음. Electron은 모바일 미지원, Tauri 2는 모바일 앱은 되지만 전체 EQ는 결국 네이티브 코드가 필요. 앱 안 플레이어(Web Audio API로 내 음악 파일 재생)는 나중에 필요해지면 검토.
+- 안드로이드 자체 EQ 시험(2026-11-20): 사용자가 "EQ 앱을 따로 켜는 게 귀찮다"고 해서 2026-10-24 결정을 다시 검토. `android-spike/`(Kotlin, 버튼 몇 개짜리 시험 앱)를 GitHub Actions(`.github/workflows/android-spike.yml`)로 빌드해 Releases `eq-spike`에 APK로 올림(작업 환경에서 dl.google.com이 막혀 안드로이드 SDK를 못 받음, Kotlin 타입 검사만 Robolectric `android-all` jar로 로컬에서 함). 안드로이드 기본 효과 DynamicsProcessing(API 28+)으로 ① 전체 출력(세션 0) ② 재생 앱의 오디오 세션 열림 신호(`ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION`) 두 방식을 시험 → 갤럭시 폴드7·안드로이드 17에서 **둘 다 스포티파이 소리에 EQ가 걸림**. 효과 객체는 포그라운드 서비스(`specialUse`)가 들고 있어야 화면을 닫아도 유지됨. 시험 전 Wavelet·삼성 이퀄라이저·Dolby Atmos 끄기, 삼성 "자동 차단" 끄고 APK 설치. 시험 앱은 빌드마다 서명이 달라 지우고 다시 설치해야 함
+- PC 쪽 참고: 사용자가 받아 본 "소리결"(아카라이브 @koss, 파이썬 Windows 프로그램)은 VB-CABLE 가상 장치로 소리를 돌려받아 scipy 피크 필터를 거는 방식(지연 수십 ms, APO 불필요). 붙여넣기는 APO `Filter N: ON PK Fc ...` 형식을 읽어 이 앱의 Equalizer APO 내보내기를 그대로 붙여 쓸 수 있음. 내부 서버(127.0.0.1:47321)는 CORS가 없어 웹앱에서 자동으로 보낼 수는 없음. 스포티파이는 Web API에 EQ 기능이 없어 EQ를 넘길 수 없음(앱 내 EQ는 6밴드 고정)
 - 계산(`src/eq.ts`, 순수 함수): 목표 EQ = 들어볼 곡선 − 지금 곡선(1/3옥타브 스무딩, 300Hz~3kHz 평균 정규화). 부스트 최대 +6dB, 컷 최대 −12dB, 8kHz 위는 점점 덜 따라가 12kHz부터 0. 피크 필터(RBJ 쿡북 공식, 48kHz 기준)를 오차가 가장 큰 곳부터 최대 10개 놓고 좌표 하강으로 다듬음(Q ≤ 4). 프리앰프 = −(최대 부스트). 검증: HD 600 → HD 650/HD 800 S/LCD-2 오차 0.07~0.42dB.
 - 내보내기(`src/eqExport.ts`): Equalizer APO(Windows, ParametricEQ "Preamp/Filter: ON PK" 형식), Wavelet(Android, AutoEq GraphicEQ 형식, 프리앰프 포함), 직접 입력(PEQ 값). OS를 userAgent로 감지해 기본 앱을 고르고 사용자가 바꿀 수 있음. iPhone은 기기 전체 EQ가 불가해 안내만. 파일 이름은 "기기 → 목표"(Wavelet은 파일 이름을 프로필 이름으로 보여줘서 앞에 `audio-gear-eq`를 붙이지 않음). 폰 브라우저가 파일 공유를 지원하면(`navigator.canShare`) "공유" 버튼으로 공유 메뉴를 열어 바로 다른 앱에 보냄. 안드로이드 EQ 자동 적용은 불가(2026-11-20 확인: Wavelet·RootlessJamesDSP 모두 외부에서 프리셋을 넣는 공개 방법이 없음) → 파일을 Wavelet 가져오기(Import)로 한 번 넣고 앱 안에서 고름
 - EQ 화면(왼쪽 메뉴 "EQ", `EqPage.tsx`, 목록·메인 칸을 합쳐 넓게 씀): 지금 쓰는 기기(DB의 모든 측정치, 보유 먼저) + 목표(없음/기기 측정치/내 타깃/기본 타깃). "목표에 맞춰 자동 계산"으로 밴드를 채우고 `EqBandTable.tsx`에서 주파수·게인(슬라이더+숫자)·Q를 직접 고치거나 밴드 추가·삭제(최대 20개). 프리앰프는 `autoPreamp`로 자동. 그래프는 원래/EQ 적용 후/목표(위)와 만든 EQ/필요한 EQ(아래). EQ는 여러 개 저장(DB `eqPresets`, 백업 포함)해 왼쪽 목록에서 눌러 바꾸고, 새로 만들기·복제·삭제·이름 바꾸기. 고친 내용은 0.3초 멈추면 자동 저장(다른 EQ로 바꾸면 바로 저장). 고른 EQ id는 localStorage `eq.active`. 자동 계산 때 이름이 "새 EQ n"이면 "기기 → 목표"로 이름을 붙임. 웹앱은 다른 앱(스트리밍) 소리에 EQ를 걸 수 없어서 실제 적용은 EQ 앱으로 내보내서 한다. 내보내기 칸은 `EqExport.tsx`로 팝업과 공유.
@@ -134,12 +138,13 @@ AI 대신 앱 안의 계산기로 한다(근거를 숫자로 보여줄 수 있�
   - 보정: 역치 차이를 다 올리지 않고 절반 정도만(등청감 특성상 평소 음량에서는 차이가 작게 느껴짐), 기존 EQ 규칙(부스트 최대 +6dB, 12kHz 위는 0) 적용. 14~16kHz 위의 나이에 따른 저하는 보정하지 않음
   - 안전: 아주 작은 소리에서 시작, 최대 음량 제한, "의료용 검사가 아님"·조용한 곳·볼륨 고정·블루투스 음향 효과 끄기 안내
   - 연결: 결과를 `FrCurve`로 저장해 "내 귀 보정" 타깃이나 EQ 프리셋(`eqPresets`)으로 쓰고, 계산은 `eq.ts`, 내보내기는 기존 형식 재사용. 서버·외부 API 불필요
+- [ ] 안드로이드 앱: 고른 앱에만 EQ 걸기(2026-11-20 "나중에"로 미룸). 재생 앱의 오디오 세션 신호(② 방식)에 앱 이름이 와서 [모든 앱 | 고른 앱만] 설정으로 가능. 신호를 보내는 앱만 됨(스포티파이 확인, 유튜브 등은 안 보낼 수 있음 → 시험 앱 ②로 앱별 확인)
 - [ ] 소스 출력 임피던스에 따른 FR 변화 시뮬레이션, PC↔폰 동기화
 
 ## 다음 작업
 
 (2026-11-20 기준. 지난 채팅 요약은 `docs/handoff-2026-11-20.md`. APO 관련 일은 보류)
 
-1. 폰에서 Wavelet으로 EQ 파일 가져오기·공유 버튼 실제 확인(배포 후), 기기를 바꿔 연결할 때 Wavelet 프로필이 자동으로 바뀌는지 확인
+1. 안드로이드 앱 2단계: 127밴드 DynamicsProcessing을 시험 앱으로 먼저 확인 → PEQ→DynamicsProcessing 변환 함수(vitest) → `SystemEq` Kotlin 플러그인·포그라운드 서비스 → EQ 엔진 창구(`src/eqEngine.ts`) → EQ 화면 "폰에 적용". 계획은 설계 문서의 작업 단위 2번으로 새로 세움. 첫 새 빌드로 덮어쓰기 업데이트·데이터 유지 확인
 2. 배포 사이트로 옮기기: localhost 데이터를 JSON 백업으로 옮기고, 폰에서 PWA 설치·오프라인 실행 확인
 3. (선택) 추천 결과 특징 필터, Harman 선호도 점수, 청력 측정 EQ

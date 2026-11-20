@@ -135,6 +135,25 @@ export interface CatalogDevice {
   searchKey: string
   /** 클릭했을 때 받을 측정치: 추천 측정치, 추천이 비공개면 공개된 것 중 첫 번째. 없으면 undefined */
   primary: CatalogEntry | undefined
+  /** 받을 수 있는(곡선이 공개된) 측정치 전부. 측정자 필터에서 고른 측정자의 것을 받을 때 쓴다 */
+  curves: CatalogEntry[]
+  /** curves의 측정자들(측정치 source 형식, 예: "AutoEQ · oratory1990") */
+  measurers: ReadonlySet<string>
+}
+
+/** 측정치 source 형식의 측정자 이름: "AutoEQ · oratory1990", "squig.link · 사이트 이름" */
+export function catalogSourceLabel(entry: CatalogEntry): string {
+  return `${entry.provider === 'squig' ? 'squig.link' : 'AutoEQ'} · ${entry.source}`
+}
+
+/**
+ * 기기를 눌렀을 때 받을 측정치.
+ * 측정자를 고르지 않았으면 기본(primary), 골랐으면 그 측정자의 것(추천 측정치가 있으면 그것). 없으면 undefined
+ */
+export function entryFor(device: CatalogDevice, measurer: string | null): CatalogEntry | undefined {
+  if (!measurer) return device.primary
+  const mine = device.curves.filter((e) => catalogSourceLabel(e) === measurer)
+  return mine.find((e) => e.recommended) ?? mine[0]
 }
 
 /**
@@ -189,7 +208,9 @@ export function groupCatalog(entries: CatalogEntry[]): CatalogDevice[] {
       // 카테고리: AutoEQ에 있으면 AutoEQ 분류, 없으면 여러 사이트의 다수결
       // (헤드폰 목록에 이어폰을 섞어 둔 사이트가 있어도, 다른 사이트들이 이어폰으로 분류했으면 이어폰으로 본다)
       const category = autoeq.length ? main.category : majorityCategory(list)
-      return { name: displayName(main), category, searchKey, primary }
+      const curves = list.filter((e) => e.hasCurve)
+      const measurers = new Set(curves.map(catalogSourceLabel))
+      return { name: displayName(main), category, searchKey, primary, curves, measurers }
     })
     .sort((a, b) => collator.compare(a.name, b.name))
 }
@@ -286,7 +307,7 @@ export interface AddOutcome {
  * - 같은 출처의 측정치가 이미 있으면 새로 받지 않고 그 측정치를 돌려준다
  */
 export async function addFromCatalog(entry: CatalogEntry, owned: boolean): Promise<AddOutcome> {
-  const source = `${entry.provider === 'squig' ? 'squig.link' : 'AutoEQ'} · ${entry.source}`
+  const source = catalogSourceLabel(entry)
   const variant = entry.variant ?? ''
   const existing = await findDeviceByName(entry.name)
   if (existing) {

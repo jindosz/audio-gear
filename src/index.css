@@ -1361,21 +1361,34 @@ body.resizing {
     border-top: 1px solid var(--border);
   }
 
-  /* 펼치면 화면 높이의 80%. 그래프는 남은 위쪽에 작게 보인다 */
-  .list-col.expanded {
-    height: 80dvh;
-  }
-
-  /* 목록 맨 위 손잡이: 폭 전체가 누르는 곳 */
+  /* 목록 맨 위 손잡이: 폭 전체가 잡는 곳. 가운데 짧은 막대로 "끌 수 있음"을 보여준다.
+     touch-action: none — 끄는 동안 브라우저가 화면 스크롤로 가로채지 않게 */
   .list-grip.mobile-only {
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     width: 100%;
-    padding: 2px 0;
+    height: 24px;
+    padding: 0;
     border: none;
     border-radius: 0;
     background: none;
-    color: var(--muted);
-    font-size: 12px;
+    cursor: ns-resize;
+    touch-action: none;
+  }
+
+  .grip-bar {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--muted);
+    opacity: 0.6;
+  }
+
+  .list-grip:active .grip-bar,
+  .list-grip:focus-visible .grip-bar {
+    background: var(--accent);
+    opacity: 1;
   }
 
   .list-category.mobile-only {

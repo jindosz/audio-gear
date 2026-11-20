@@ -26,7 +26,8 @@ export const EQ_APPS: Record<EqApp, { label: string; howto: string[] }> = {
   wavelet: {
     label: 'Wavelet (Android)',
     howto: [
-      'Wavelet에서 그래픽 EQ(AutoEq 형식) 가져오기로 저장한 파일을 열거나 복사한 내용을 붙여 넣는다. 메뉴 이름은 앱 버전에 따라 다를 수 있다.',
+      '"파일로 저장"(또는 "공유" → 파일 앱에 저장)으로 파일을 받은 뒤, Wavelet의 가져오기(Import)로 그 파일을 연다. Wavelet은 파일 이름을 프로필 이름으로 보여준다. 메뉴 이름은 앱 버전에 따라 다를 수 있다.',
+      '한 번 가져온 프로필은 Wavelet 안에서 골라 쓰면 된다. 이어폰·헤드폰을 바꿔 연결했을 때 프로필이 자동으로 바뀌는지는 Wavelet 버전에 따라 다를 수 있으니 한 번 확인한다.',
       'Wavelet은 스트리밍 앱을 포함한 폰 전체 소리에 적용된다. Wavelet의 켜기/끄기로 원래 소리와 비교한다.',
     ],
   },

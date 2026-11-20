@@ -5,20 +5,30 @@ import { defaultApp, detectPlatform, EQ_APPS, eqText, platformLabels, type EqApp
 
 interface Props {
   eq: EqSettings
-  /** 저장할 파일 이름에 붙일 설명(예: 들어볼 기기 이름) */
+  /** 저장할 파일 이름에 붙일 설명(예: "기기 → 목표"). Wavelet은 파일 이름을 프로필 이름으로 보여준다 */
   name: string
 }
 
 const platform = detectPlatform()
+
+/** 이 브라우저가 파일 공유(폰의 공유 메뉴로 다른 앱에 보내기)를 지원하는지 */
+function canShareFiles(file: File): boolean {
+  return typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })
+}
 
 export function EqExport({ eq, name }: Props) {
   const [app, setApp] = useState<EqApp>(defaultApp(platform))
   // 무엇을 복사했는지 기억해서, 내용이 바뀌면 "복사됨" 표시가 저절로 사라지게 한다
   const [copiedText, setCopiedText] = useState<string | null>(null)
   const [copyFailed, setCopyFailed] = useState(false)
+  const [shareFailed, setShareFailed] = useState(false)
 
   const text = eqText(app, eq)
-  const fileName = `audio-gear-eq ${name.replace(/[\\/:*?"<>|]/g, '')}.txt` // 파일 이름에 못 쓰는 글자는 뺀다
+  // 파일 이름에 못 쓰는 글자는 뺀다. Wavelet은 파일 이름이 곧 프로필 이름이라 앞에 "audio-gear-eq"를 붙이지 않는다
+  const cleanName = name.replace(/[\\/:*?"<>|]/g, '').trim() || 'EQ'
+  const fileName = app === 'wavelet' ? `${cleanName}.txt` : `audio-gear-eq ${cleanName}.txt`
+  const file = new File([text], fileName, { type: 'text/plain' })
+  const shareable = canShareFiles(file)
 
   async function handleCopy() {
     try {
@@ -41,6 +51,17 @@ export function EqExport({ eq, name }: Props) {
     a.download = fileName
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  // Web Share API: 폰의 공유 메뉴를 열어 파일을 다른 앱(Wavelet, 파일 앱, 메신저 등)으로 바로 보낸다
+  async function handleShare() {
+    setShareFailed(false)
+    try {
+      await navigator.share({ files: [file], title: fileName })
+    } catch (e) {
+      // 사용자가 공유 메뉴를 그냥 닫은 경우(AbortError)는 실패가 아니다
+      if (!(e instanceof DOMException && e.name === 'AbortError')) setShareFailed(true)
+    }
   }
 
   return (
@@ -80,6 +101,12 @@ export function EqExport({ eq, name }: Props) {
         <button type="button" onClick={handleSave}>
           파일로 저장
         </button>
+        {shareable && (
+          <button type="button" onClick={handleShare} title="폰의 공유 메뉴로 다른 앱에 파일 보내기">
+            공유
+          </button>
+        )}
+        {shareFailed && <span className="error small">공유하지 못했습니다. "파일로 저장"을 써 주세요.</span>}
         {copyFailed && <span className="error small">자동 복사가 막혔습니다. 선택된 글을 Ctrl+C로 복사하세요.</span>}
       </div>
     </>

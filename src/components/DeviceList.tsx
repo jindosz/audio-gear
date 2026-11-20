@@ -1,9 +1,18 @@
 // 가운데 목록 열: 검색창, 기기 추가 버튼, "선택됨 → 보유 기기 → 찜한 기기 → 전체 기기" 목록
 // 전체 기기 = 내가 가진 기기(보유 제외) + AutoEQ 목록의 모든 기기. 수천 개라 가상 스크롤로 그린다.
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
+import { addFromCatalog, entryFor, normalize, splitBrand, type CatalogDevice } from '../catalog'
 import { categoryLabels, measurementLabel, specTags } from '../labels'
-import { EMPTY_FILTER, activeCount, brandOptions, filterInfo, matchesFilter, type FilterInfo, type ListFilter } from '../listFilter'
+import {
+  EMPTY_FILTER,
+  activeCount,
+  brandOptions,
+  filterInfo,
+  matchesFilter,
+  measurerOptions,
+  type FilterInfo,
+  type ListFilter,
+} from '../listFilter'
 import { readPref, writePref } from '../localPrefs'
 import { displaySpecs, specHint } from '../specHints'
 import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
@@ -97,7 +106,10 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
 
   // 카탈로그 기기마다 필터 정보(브랜드, 특징 추정값)를 목록이 바뀔 때 한 번만 계산해 둔다
   const catalogInfo = useMemo(
-    () => new Map((catalogDevices ?? []).map((e): [CatalogDevice, FilterInfo] => [e, filterInfo(e.name, e.category)])),
+    () =>
+      new Map(
+        (catalogDevices ?? []).map((e): [CatalogDevice, FilterInfo] => [e, filterInfo(e.name, e.category, e.measurers)]),
+      ),
     [catalogDevices],
   )
 
@@ -105,6 +117,13 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   // 목록(6천 개)이 바뀔 때만 다시 만든다
   // 키는 공백·기호를 지운 이름(normalize): 출처마다 표기가 조금 달라도 같은 기기로 찾는다
   const catalogByName = useMemo(() => new Map((catalogDevices ?? []).map((e) => [e.searchKey, e])), [catalogDevices])
+
+  /** 내 기기의 측정자들: 저장된 측정치의 출처 + 목록(카탈로그)에서 더 받을 수 있는 측정자 */
+  function myMeasurers(d: Device): Set<string> {
+    const set = new Set((measurementsByDevice.get(d.id) ?? []).map((m) => m.source))
+    for (const m of catalogByName.get(normalize(deviceName(d)))?.measurers ?? []) set.add(m)
+    return set
+  }
 
   // 선택된 기기는 "선택됨"으로 올라가고 원래 구역에서는 빠진다
   const selectedDeviceIds = new Set(selected.map((s) => s.device.id))
@@ -118,7 +137,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
       d.category === category &&
       !selectedDeviceIds.has(d.id) &&
       matches(normalize(deviceName(d))) &&
-      matchesFilter(filterInfo(deviceName(d), d.category, d), filter),
+      matchesFilter(filterInfo(deviceName(d), d.category, myMeasurers(d), d), filter),
   )
   // owned·wishlist는 인덱스가 없어서 JS의 filter로 나눈다. 보유 > 찜 > 전체 순으로 한 곳에만 보인다
   const owned = mine.filter((d) => d.owned)
@@ -152,6 +171,19 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
       ]),
     [catalogDevices, devices, category],
   )
+  // 측정자 선택지: 지금 카테고리의 내 기기 + 목록에 보이는 카탈로그 기기. 기기 수가 많은 순
+  // (내 DB에 있는 기기는 카탈로그 쪽에서 빼서 두 번 세지 않는다.
+  //  myMeasurers는 measurementsByDevice·catalogByName에서 계산되므로 그 둘을 의존값으로 둔다)
+  const measurers = useMemo(() => {
+    const myKeys = new Set(devices.map((d) => normalize(deviceName(d))))
+    return measurerOptions([
+      ...devices.filter((d) => d.category === category).map(myMeasurers),
+      ...(catalogDevices ?? [])
+        .filter((e) => e.primary && e.category === category && !myKeys.has(e.searchKey))
+        .map((e) => e.measurers),
+    ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogDevices, devices, category, measurementsByDevice, catalogByName])
   const filterCount = activeCount(filter)
   const mineItems = mine
     .filter((d) => !d.owned && !d.wishlist)
@@ -165,7 +197,19 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
 
   async function handleSelectMine(device: Device) {
     setNotice('')
-    const first = measurementsByDevice.get(device.id)?.[0]
+    const list = measurementsByDevice.get(device.id) ?? []
+    // 측정자 필터가 켜져 있으면 그 측정자의 측정치를 고른다. 아직 안 받았으면 목록에서 받아 온다
+    if (filter.measurer) {
+      const same = list.find((m) => m.source === filter.measurer)
+      if (!same) {
+        const catalogEntry = catalogByName.get(normalize(deviceName(device)))
+        if (catalogEntry && entryFor(catalogEntry, filter.measurer)) return handleSelectCatalog(catalogEntry)
+      } else {
+        if (tabId && (await toggleSelection(tabId, same.id)) === 'full') full()
+        return
+      }
+    }
+    const first = list[0]
     if (!first) {
       // 측정치가 없을 때: AutoEQ에 있으면 받아오고(찜만 해 둔 기기 등), 없으면 측정치를 추가할 상세 팝업을 연다
       const catalogEntry = catalogByName.get(normalize(deviceName(device)))
@@ -177,18 +221,19 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
     if ((await toggleSelection(tabId, first.id)) === 'full') full()
   }
 
-  /** AutoEQ 기기 클릭: 추천 측정치를 받아 내 DB에 저장하고 바로 선택한다 */
+  /** 목록 기기 클릭: 측정치(측정자 필터가 켜져 있으면 그 측정자의 것, 아니면 추천)를 받아 내 DB에 저장하고 바로 선택한다 */
   async function handleSelectCatalog(entry: CatalogDevice) {
     setNotice('')
     if (!tabId || pendingName) return
-    if (!entry.primary) {
+    const target = entryFor(entry, filter.measurer) ?? entry.primary
+    if (!target) {
       setNotice(`${entry.name}: 공개된 측정치가 없어 그래프에 그릴 수 없습니다.`)
       return
     }
     if (selected.length >= PALETTE_SIZE) return full() // 받기 전에 먼저 확인(헛걸음 방지)
     setPendingName(entry.name)
     try {
-      const { measurementId } = await addFromCatalog(entry.primary, false)
+      const { measurementId } = await addFromCatalog(target, false)
       if (measurementId && (await toggleSelection(tabId, measurementId)) === 'full') full()
     } catch (err) {
       setNotice(`${entry.name}: ${err instanceof Error ? err.message : String(err)}`)
@@ -203,8 +248,9 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
     if (pendingName) return
     setPendingName(entry.name)
     try {
-      const deviceId = entry.primary
-        ? (await addFromCatalog(entry.primary, false)).deviceId
+      const target = entryFor(entry, filter.measurer) ?? entry.primary
+      const deviceId = target
+        ? (await addFromCatalog(target, false)).deviceId
         : await addDevice({ ...splitBrand(entry.name), category: entry.category, owned: false, notes: '' })
       await setDeviceWishlist(deviceId, true)
     } catch (err) {
@@ -256,7 +302,9 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
         </button>
       </div>
 
-      {filterOpen && <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} />}
+      {filterOpen && (
+        <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} measurers={measurers} />
+      )}
 
       <div className="list-scroll" ref={scrollRef} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 600)}>
         {notice && <p className="list-notice small">{notice}</p>}

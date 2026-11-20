@@ -1,4 +1,4 @@
-// 기기 목록 필터 칸: 브랜드 선택, 유선/무선, 오픈/밀폐(헤드폰만), ANC
+// 기기 목록 필터 칸: 브랜드·측정자 선택, 유선/무선, 오픈/밀폐(헤드폰만), ANC
 import { EMPTY_FILTER, activeCount, type ListFilter } from '../listFilter'
 import type { DeviceCategory } from '../types'
 import { ToggleButton } from './ToggleButton'
@@ -8,6 +8,8 @@ interface Props {
   filter: ListFilter
   onChange: (f: ListFilter) => void
   brands: { key: string; label: string; count: number }[]
+  /** 측정자 선택지(기기 수가 많은 순) */
+  measurers: { key: string; label: string; count: number }[]
 }
 
 /** 세그먼트 버튼 한 묶음. value가 null이면 "전체" */
@@ -40,7 +42,7 @@ function Segmented<T extends string>({
   )
 }
 
-export function ListFilterBar({ category, filter, onChange, brands }: Props) {
+export function ListFilterBar({ category, filter, onChange, brands, measurers }: Props) {
   const set = (patch: Partial<ListFilter>) => onChange({ ...filter, ...patch })
   const specOn = filter.connection || filter.acoustic || filter.anc
 
@@ -58,6 +60,20 @@ export function ListFilterBar({ category, filter, onChange, brands }: Props) {
           </option>
         ))}
       </select>
+      {/* 같은 측정자끼리 비교하려고: 고르면 그 측정자가 잰 기기만 남고, 누르면 그 측정자의 측정치를 받는다 */}
+      <select
+        value={filter.measurer ?? ''}
+        onChange={(e) => set({ measurer: e.target.value || null })}
+        aria-label="측정자"
+      >
+        <option value="">모든 측정자</option>
+        {measurers.map((m) => (
+          <option key={m.key} value={m.key}>
+            {m.label} ({m.count})
+          </option>
+        ))}
+      </select>
+      {filter.measurer && <p className="muted small">기기를 누르면 이 측정자의 측정치를 그래프에 올립니다.</p>}
       <div className="row">
         <Segmented
           label="연결 방식"

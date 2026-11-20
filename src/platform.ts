@@ -9,13 +9,16 @@ export function isAndroidApp(): boolean {
   return Capacitor.getPlatform() === 'android'
 }
 
+/** saveTextFile의 결과. 'cancelled'는 사용자가 공유 창을 그냥 닫은 경우 */
+export type SaveResult = 'saved' | 'cancelled'
+
 /**
  * 글로 된 파일을 사용자에게 건넨다.
  * - 브라우저: 파일 내려받기
  * - 안드로이드 앱: 앱 안(WebView)에서는 내려받기가 안 되므로, 앱 임시 폴더에 쓴 뒤 공유 창을 연다.
  *   사용자가 공유 창에서 "내 파일"·드라이브·다른 앱 등 보낼 곳을 고른다
  */
-export async function saveTextFile(fileName: string, text: string, mime: string): Promise<void> {
+export async function saveTextFile(fileName: string, text: string, mime: string): Promise<SaveResult> {
   if (!isAndroidApp()) {
     // Blob: 메모리에 만든 파일. 임시 주소(URL)를 만들어 <a download>로 내려받게 한 뒤 주소를 지운다
     const blob = new Blob([text], { type: mime })
@@ -25,7 +28,7 @@ export async function saveTextFile(fileName: string, text: string, mime: string)
     a.download = fileName
     a.click()
     URL.revokeObjectURL(url)
-    return
+    return 'saved'
   }
   const { uri } = await Filesystem.writeFile({
     path: fileName,
@@ -35,9 +38,10 @@ export async function saveTextFile(fileName: string, text: string, mime: string)
   })
   try {
     await Share.share({ title: fileName, files: [uri] })
+    return 'saved'
   } catch (e) {
-    // 사용자가 공유 창을 그냥 닫은 것은 실패가 아니다
-    if (e instanceof Error && /cancel/i.test(e.message)) return
+    // 사용자가 공유 창을 그냥 닫은 것은 오류가 아니지만, 저장된 것도 아니다
+    if (e instanceof Error && /cancel/i.test(e.message)) return 'cancelled'
     throw e
   }
 }

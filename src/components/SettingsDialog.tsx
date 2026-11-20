@@ -67,7 +67,11 @@ function BackupSection() {
     const data = await exportAll()
     try {
       // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
-      await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
+      const result = await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
+      if (result === 'cancelled') {
+        setMessage('내보내기를 취소했습니다. 백업 파일은 저장되지 않았습니다.')
+        return
+      }
     } catch (e) {
       setError(`내보내지 못했습니다: ${e instanceof Error ? e.message : String(e)}`)
       return

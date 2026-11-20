@@ -22,8 +22,9 @@ on:
 permissions:
   contents: write # Releases에 APK를 올리려면 필요
 
+# 브랜치마다 따로 줄을 세운다(작업 브랜치 빌드가 main 빌드를 취소하지 않게)
 concurrency:
-  group: android-app
+  group: android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -69,7 +70,9 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/audio-gear.apk"
 
-      - uses: softprops/action-gh-release@v2
+      # main: 정식 설치 링크(android-latest). 설치 안내 문서가 가리키는 곳
+      - if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
           name: audio-gear 안드로이드 앱 (최신)
@@ -79,5 +82,19 @@ jobs:
           body: |
             audio-gear 안드로이드 앱 최신 빌드입니다. 아래 audio-gear.apk를 폰에서 받아 설치하세요.
             처음 설치·데이터 옮기기 안내: docs/android-install.md
+            버전: 0.1.${{ github.run_number }} · 커밋: ${{ github.sha }}
+          files: audio-gear.apk
+
+      # 작업 브랜치: 합치기 전 미리 보기(android-preview). 정식 링크를 덮어쓰지 않는다
+      - if: github.ref != 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-preview
+          name: audio-gear 안드로이드 앱 (미리 보기, 합치기 전)
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            main에 합치기 전 작업 브랜치(${{ github.ref_name }})의 시험 빌드입니다. 확인용으로만 설치하세요.
             버전: 0.1.${{ github.run_number }} · 커밋: ${{ github.sha }}
           files: audio-gear.apk

@@ -19,6 +19,7 @@ GitHub이 앱을 매번 같은 키로 서명해야 폰에서 지우지 않고 �
 1. 폰 브라우저로 https://github.com/jindosz/audio-gear/releases/tag/android-latest 를 열고 `audio-gear.apk`를 받습니다.
 2. 받은 파일을 열어 설치합니다. "출처를 알 수 없는 앱" 허용, Play 프로텍트 경고가 나오면 허용 / "그래도 설치".
 3. 업데이트도 같은 방법입니다. 지우지 말고 그대로 설치하면 덮어써집니다.
+- `android-preview`(미리 보기)는 main에 합치기 전 작업 브랜치의 시험 빌드입니다. Claude가 확인을 부탁할 때만 설치하세요.
 
 ## 4. 데이터 옮기기 (처음 한 번)
 앱과 배포 사이트(https://jindosz.github.io/audio-gear/)는 저장소가 따로라, 기기·EQ 목록을 백업으로 옮깁니다.

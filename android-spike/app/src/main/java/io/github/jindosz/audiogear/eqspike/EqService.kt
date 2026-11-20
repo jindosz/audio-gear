@@ -35,6 +35,9 @@ class EqService : Service() {
         const val ACTION_SESSIONS_ON = "eqspike.SESSIONS_ON"
         const val ACTION_SESSIONS_OFF = "eqspike.SESSIONS_OFF"
         const val ACTION_ALL_OFF = "eqspike.ALL_OFF"
+        const val ACTION_BANDS127_ON = "eqspike.BANDS127_ON"
+        const val ACTION_STRESS_ON = "eqspike.STRESS_ON"
+        const val ACTION_STRESS_OFF = "eqspike.STRESS_OFF"
 
         private const val CHANNEL_ID = "eq"
         private const val NOTIFICATION_ID = 1
@@ -47,11 +50,50 @@ class EqService : Service() {
          * 밴드 값은 (그 밴드의 위쪽 끝 주파수 Hz, 게인 dB). 켜는 순간 "얇고 작은 소리"가 되면 성공
          */
         private val TEST_BANDS = listOf(150f to -20f, 500f to -10f, 20000f to 0f)
+
+        /** 실제 앱이 쓸 127개 주파수(Wavelet GraphicEQ와 같은 목록, src/eqExport.ts의 GRAPHIC_EQ_FREQS) */
+        private val FREQS_127 = intArrayOf(
+            20, 21, 22, 23, 24, 26, 27, 29, 30, 32, 34, 36, 38, 40, 43, 45, 48, 50, 53, 56, 59, 63, 66, 70, 74, 78, 83,
+            87, 92, 97, 103, 109, 115, 121, 128, 136, 143, 151, 160, 169, 178, 188, 199, 210, 222, 235, 248, 262, 277,
+            292, 309, 326, 345, 364, 385, 406, 429, 453, 479, 506, 534, 565, 596, 630, 665, 703, 743, 784, 829, 875,
+            924, 977, 1032, 1090, 1151, 1216, 1284, 1357, 1433, 1514, 1599, 1689, 1784, 1885, 1991, 2103, 2221, 2347,
+            2479, 2618, 2766, 2921, 3086, 3260, 3443, 3637, 3842, 4058, 4287, 4528, 4783, 5052, 5337, 5637, 5955,
+            6290, 6644, 7018, 7414, 7831, 8272, 8738, 9230, 9749, 10298, 10878, 11490, 12137, 12821, 13543, 14305,
+            15110, 15961, 16860, 17809, 18812, 19871,
+        )
+
+        /** 밴드 i의 위쪽 끝 = i번째와 i+1번째 주파수의 기하 평균, 마지막은 20000Hz(실제 앱 설계와 같음) */
+        private val CUTOFFS_127 = FloatArray(FREQS_127.size) { i ->
+            if (i == FREQS_127.size - 1) 20000f
+            else kotlin.math.sqrt(FREQS_127[i].toDouble() * FREQS_127[i + 1]).toFloat()
+        }
+
+        /** 시험 곡선 A: 200Hz 아래 −12dB에서 1kHz까지 서서히 0으로 + 3kHz 근처 −8dB 골. "얇고 움푹한" 소리 */
+        private val CURVE_A = FloatArray(FREQS_127.size) { i ->
+            val f = FREQS_127[i].toDouble()
+            val oct = kotlin.math.ln(f) / kotlin.math.ln(2.0)
+            val bass = when {
+                f <= 200 -> -12.0
+                f >= 1000 -> 0.0
+                else -> -12.0 * (1 - (oct - kotlin.math.ln(200.0) / kotlin.math.ln(2.0)) / (kotlin.math.ln(5.0) / kotlin.math.ln(2.0)))
+            }
+            val d = (oct - kotlin.math.ln(3000.0) / kotlin.math.ln(2.0)) / 0.35
+            val dip = -8.0 * kotlin.math.exp(-d * d)
+            (bass + dip).toFloat()
+        }
+
+        /** 시험 곡선 B: 평평(0dB). 실시간 변경 시험에서 A와 번갈아 건다 */
+        private val CURVE_B = FloatArray(FREQS_127.size)
+
+        /** 실시간 변경 시험 간격(ms). 실제 앱의 "편집 후 0.3초 멈추면 반영"과 같게 */
+        private const val STRESS_INTERVAL_MS = 300L
         private const val TEST_INPUT_GAIN_DB = -10f
 
         // 화면(MainActivity)이 1초마다 읽어 가는 상태. 같은 앱 안이라 이렇게 공유해도 된다
         @Volatile var globalOn = false
         @Volatile var sessionsOn = false
+        @Volatile var bands127On = false
+        @Volatile var stressOn = false
         val attached = linkedMapOf<Int, String>() // 세션 번호 → 앱 이름
 
         private val logLines = ArrayDeque<String>()
@@ -66,6 +108,30 @@ class EqService : Service() {
     }
 
     private var globalEffect: DynamicsProcessing? = null
+    private var bands127Effect: DynamicsProcessing? = null
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var stressFlip = false
+    private var stressCount = 0
+    private var stressStart = 0L
+
+    /** 0.3초마다 곡선 A ↔ B를 바꿔 건다(효과를 새로 만들지 않고 값만 바꿈 — 실제 앱이 쓸 방식) */
+    private val stressTick = object : Runnable {
+        override fun run() {
+            val effect = bands127Effect ?: return
+            stressFlip = !stressFlip
+            try {
+                effect.setPreEqAllChannelsTo(makeEq127(if (stressFlip) CURVE_A else CURVE_B))
+                stressCount++
+                if (stressCount % 20 == 0) {
+                    val sec = (System.currentTimeMillis() - stressStart) / 1000
+                    log("④ 실시간 변경 ${stressCount}번째(${sec}초째) 문제없이 적용 중")
+                }
+            } catch (t: Throwable) {
+                log("④ 변경 실패: ${t.javaClass.simpleName}: ${t.message}")
+            }
+            handler.postDelayed(this, STRESS_INTERVAL_MS)
+        }
+    }
     private val sessionEffects = HashMap<Int, DynamicsProcessing>()
     private var receiverRegistered = false
 
@@ -91,12 +157,16 @@ class EqService : Service() {
             ACTION_GLOBAL_OFF -> globalOff()
             ACTION_SESSIONS_ON -> sessionsOn()
             ACTION_SESSIONS_OFF -> sessionsOff()
+            ACTION_BANDS127_ON -> bands127On()
+            ACTION_STRESS_ON -> stressOn()
+            ACTION_STRESS_OFF -> stressOff()
             ACTION_ALL_OFF -> {
                 globalOff()
                 sessionsOff()
+                bands127Off()
             }
         }
-        if (!globalOn && !sessionsOn) {
+        if (!globalOn && !sessionsOn && !bands127On) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         } else {
@@ -108,6 +178,7 @@ class EqService : Service() {
     override fun onDestroy() {
         globalOff()
         sessionsOff()
+        bands127Off()
         super.onDestroy()
     }
 
@@ -132,6 +203,77 @@ class EqService : Service() {
         }
         globalEffect = null
         globalOn = false
+    }
+
+    // ---- ③ 127밴드(전체 출력) / ④ 실시간 변경 ----
+
+    private fun makeEq127(gains: FloatArray): DynamicsProcessing.Eq {
+        val eq = DynamicsProcessing.Eq(true, true, FREQS_127.size)
+        for (i in FREQS_127.indices) eq.setBand(i, DynamicsProcessing.EqBand(true, CUTOFFS_127[i], gains[i]))
+        return eq
+    }
+
+    private fun bands127On() {
+        if (bands127Effect != null) return
+        globalOff() // 3밴드 시험과 겹치지 않게
+        try {
+            val t0 = System.nanoTime()
+            val config = DynamicsProcessing.Config.Builder(
+                DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION,
+                2,
+                true, FREQS_127.size,
+                false, 0,
+                false, 0,
+                false,
+            ).build()
+            config.setPreEqAllChannelsTo(makeEq127(CURVE_A))
+            config.setInputGainAllChannelsTo(0f) // 곡선이 0dB 이하라 음량은 그대로
+            val effect = DynamicsProcessing(PRIORITY, 0, config)
+            effect.setControlStatusListener { _, granted -> log("③ 127밴드: 제어권 ${if (granted) "되찾음" else "빼앗김"}") }
+            val status = effect.setEnabled(true)
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            bands127Effect = effect
+            bands127On = true
+            log(
+                "③ 127밴드 EQ를 걸었습니다(만드는 데 ${ms}ms). 밴드 수 확인: ${effect.getConfig().preEqBandCount} · " +
+                    "켜기 결과 $status · 제어권 ${if (effect.hasControl()) "있음" else "없음"}",
+            )
+        } catch (t: Throwable) {
+            log("③ 127밴드 실패: ${t.javaClass.simpleName}: ${t.message}")
+        }
+    }
+
+    private fun bands127Off() {
+        stressOff()
+        bands127Effect?.let {
+            it.release()
+            log("③ 127밴드 EQ를 껐습니다")
+        }
+        bands127Effect = null
+        bands127On = false
+    }
+
+    private fun stressOn() {
+        if (stressOn) return
+        if (bands127Effect == null) bands127On()
+        if (bands127Effect == null) return
+        stressOn = true
+        stressCount = 0
+        stressStart = System.currentTimeMillis()
+        log("④ 실시간 변경 시험 시작: 0.3초마다 '얇은 소리 ↔ 원래 소리'를 번갈아 겁니다. 바뀔 때 틱 소리·끊김이 나는지 들어 보세요")
+        handler.post(stressTick)
+    }
+
+    private fun stressOff() {
+        if (!stressOn) return
+        handler.removeCallbacks(stressTick)
+        stressOn = false
+        log("④ 실시간 변경 시험 끝: 모두 ${stressCount}번 바꿈")
+        // 끝나면 곡선 A로 돌려 둔다
+        try {
+            bands127Effect?.setPreEqAllChannelsTo(makeEq127(CURVE_A))
+        } catch (_: Throwable) {
+        }
     }
 
     // ---- ② 앱 신호 받기(세션별) ----
@@ -237,6 +379,7 @@ class EqService : Service() {
         )
         val parts = buildList {
             if (globalOn) add("전체 출력")
+            if (bands127On) add(if (stressOn) "127밴드 실시간 변경 중" else "127밴드")
             if (sessionsOn) add("앱 ${synchronized(attached) { attached.size }}개")
         }
         return Notification.Builder(this, CHANNEL_ID)

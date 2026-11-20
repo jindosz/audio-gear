@@ -28,6 +28,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # 설정 화면 맨 아래에 보이는 빌드 번호·커밋(src/buildInfo.ts)
+          VITE_BUILD_NUMBER: ${{ github.run_number }}
+          VITE_COMMIT: ${{ github.sha }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

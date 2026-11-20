@@ -25,6 +25,8 @@ class MainActivity : Activity() {
     private lateinit var logView: TextView
     private lateinit var globalButton: Button
     private lateinit var sessionsButton: Button
+    private lateinit var bandsButton: Button
+    private lateinit var stressButton: Button
     private val handler = Handler(Looper.getMainLooper())
 
     // 1초마다 서비스 상태와 기록을 다시 읽어 화면에 보여준다
@@ -56,7 +58,7 @@ class MainActivity : Activity() {
             setTypeface(typeface, Typeface.BOLD)
         })
         column.addView(TextView(this).apply {
-            text = "버튼을 켜면 저음을 크게 깎고 음량을 낮춘 EQ가 걸립니다. " +
+            text = "①② 버튼은 저음을 크게 깎고 음량을 낮춘 EQ, ③은 실제 앱과 같은 127밴드 EQ(저음 깎기 + 3kHz 골)를 겁니다. " +
                 "스포티파이에서 곡을 틀어 둔 채로 켜고 끄며 소리가 바뀌는지 들어 보세요.\n" +
                 "시험 전에 Wavelet과 삼성 사운드의 이퀄라이저·Dolby Atmos는 꺼 두세요."
             setPadding(0, dp(8), 0, dp(8))
@@ -66,8 +68,12 @@ class MainActivity : Activity() {
 
         globalButton = button { send(if (EqService.globalOn) EqService.ACTION_GLOBAL_OFF else EqService.ACTION_GLOBAL_ON) }
         sessionsButton = button { send(if (EqService.sessionsOn) EqService.ACTION_SESSIONS_OFF else EqService.ACTION_SESSIONS_ON) }
+        bandsButton = button { send(if (EqService.bands127On) EqService.ACTION_ALL_OFF else EqService.ACTION_BANDS127_ON) }
+        stressButton = button { send(if (EqService.stressOn) EqService.ACTION_STRESS_OFF else EqService.ACTION_STRESS_ON) }
         column.addView(globalButton)
         column.addView(sessionsButton)
+        column.addView(bandsButton)
+        column.addView(stressButton)
         column.addView(button("모두 끄기") { send(EqService.ACTION_ALL_OFF) })
 
         column.addView(TextView(this).apply {
@@ -118,10 +124,13 @@ class MainActivity : Activity() {
     private fun refresh() {
         val apps = synchronized(EqService.attached) { EqService.attached.values.toList() }
         status.text = "① 전체 출력: ${onOff(EqService.globalOn)}\n" +
+            "③ 127밴드: ${onOff(EqService.bands127On)}${if (EqService.stressOn) " · ④ 실시간 변경 중" else ""}\n" +
             "② 앱 신호 받기: ${onOff(EqService.sessionsOn)}" +
             (if (apps.isNotEmpty()) " · EQ 걸린 앱: ${apps.joinToString()}" else "")
         globalButton.text = if (EqService.globalOn) "① 전체 출력 EQ 끄기" else "① 전체 출력에 EQ 걸기 (세션 0)"
         sessionsButton.text = if (EqService.sessionsOn) "② 앱 신호 받기 끄기" else "② 앱 신호 받기 (세션별)"
+        bandsButton.text = if (EqService.bands127On) "③ 127밴드 EQ 끄기" else "③ 127밴드 EQ 걸기 (실제 앱 방식)"
+        stressButton.text = if (EqService.stressOn) "④ 실시간 변경 시험 멈추기" else "④ 실시간 변경 시험 (0.3초마다 바뀜)"
         logView.text = EqService.logText()
     }
 

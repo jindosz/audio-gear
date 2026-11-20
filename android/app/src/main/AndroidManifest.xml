@@ -20,6 +20,16 @@
             </intent-filter>
         </activity>
 
+        <!-- 폰 전체 EQ: 화면을 닫아도 EQ를 유지하는 포그라운드 서비스(SystemEqService.java) -->
+        <service
+            android:name=".SystemEqService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="system-wide audio equalizer" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -32,4 +42,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 폰 전체 EQ: 오디오 효과 걸기, 포그라운드 서비스와 그 알림 -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

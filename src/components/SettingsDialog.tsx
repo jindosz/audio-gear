@@ -20,7 +20,8 @@ export function SettingsDialog({ open, onClose }: Props) {
         <ThemeSection />
         <BackupSection />
         <CleanupSection />
-        <StorageSection />
+        {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
+        {!isAndroidApp() && <StorageSection />}
         {/* 지금 쓰는 앱이 몇 번째 빌드인지(업데이트가 됐는지 확인용) */}
         <p className="muted small">버전: {buildLabel()}</p>
       </div>

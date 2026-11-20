@@ -2,7 +2,7 @@
 // 전체 기기 = 내가 가진 기기(보유 제외) + AutoEQ 목록의 모든 기기. 수천 개라 가상 스크롤로 그린다.
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { addFromCatalog, normalize, splitBrand, type CatalogDevice } from '../catalog'
-import { measurementLabel, specTags } from '../labels'
+import { categoryLabels, measurementLabel, specTags } from '../labels'
 import { EMPTY_FILTER, activeCount, brandOptions, filterInfo, matchesFilter, type FilterInfo, type ListFilter } from '../listFilter'
 import { readPref, writePref } from '../localPrefs'
 import { displaySpecs, specHint } from '../specHints'
@@ -20,6 +20,8 @@ interface Props {
   category: DeviceCategory
   /** 선택을 저장할 비교 탭 */
   tabId: string | undefined
+  /** 폰 화면에서 목록 위 헤드폰/이어폰 버튼으로 카테고리를 바꿀 때 */
+  onCategoryChange: (category: DeviceCategory) => void
 }
 
 /** 전체 기기 목록의 한 줄: 내 DB에 있는 기기이거나, 아직 받지 않은 AutoEQ 기기 */
@@ -63,7 +65,7 @@ function catalogSub(entry: CatalogDevice, pending: boolean): Pick<RowProps, 'sub
   return hint ? { sub: specTags(hint)[0], subEstimated: true } : {}
 }
 
-export function DeviceList({ category, tabId }: Props) {
+export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   const { loading, devices, measurementsByDevice, selected } = useCompareData(tabId)
   const { catalogDevices, catalogError, squigReady, squigError, squigProgress } = useCatalogDevices()
   const [query, setQuery] = useState('')
@@ -220,6 +222,14 @@ export function DeviceList({ category, tabId }: Props) {
 
   return (
     <aside className="list-col">
+      {/* 폰에서만 보임: 왼쪽 메뉴 대신 목록 위에서 헤드폰/이어폰 전환 */}
+      <div className="list-category segmented mobile-only">
+        {(Object.keys(categoryLabels) as DeviceCategory[]).map((c) => (
+          <button key={c} className={c === category ? 'active' : undefined} onClick={() => onCategoryChange(c)} aria-pressed={c === category}>
+            {categoryLabels[c]}
+          </button>
+        ))}
+      </div>
       <div className="list-search">
         <input type="search" placeholder="기기 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button

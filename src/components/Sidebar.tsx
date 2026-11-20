@@ -1,7 +1,7 @@
 // 왼쪽 메뉴: 카테고리(헤드폰/이어폰) 전환, EQ 화면, 설정
 import { categoryLabels } from '../labels'
 import type { DeviceCategory } from '../types'
-import { EarphoneIcon, EqIcon, HeadphoneIcon, SettingsIcon } from './Icons'
+import { EarphoneIcon, EqIcon, GraphIcon, HeadphoneIcon, SettingsIcon } from './Icons'
 
 /** 오른쪽에 보이는 화면: 기기 목록과 비교 그래프, 또는 EQ */
 export type Page = 'devices' | 'eq'
@@ -26,12 +26,21 @@ export function Sidebar({ category, page, onChange, onOpenEq, onOpenSettings }: 
         const Icon = icons[c]
         const active = page === 'devices' && c === category
         return (
-          <button key={c} className={active ? 'nav-item active' : 'nav-item'} onClick={() => onChange(c)} aria-pressed={active}>
+          <button key={c} className={active ? 'nav-item category active' : 'nav-item category'} onClick={() => onChange(c)} aria-pressed={active}>
             <Icon />
             <span>{categoryLabels[c]}</span>
           </button>
         )
       })}
+      {/* 폰에서만 보임: 헤드폰/이어폰 버튼이 목록 위로 옮겨 가므로, EQ 화면에서 돌아올 버튼 */}
+      <button
+        className={page === 'devices' ? 'nav-item mobile-only active' : 'nav-item mobile-only'}
+        onClick={() => onChange(category)}
+        aria-pressed={page === 'devices'}
+      >
+        <GraphIcon />
+        <span>그래프</span>
+      </button>
       <button className={page === 'eq' ? 'nav-item active' : 'nav-item'} onClick={onOpenEq} aria-pressed={page === 'eq'}>
         <EqIcon />
         <span>EQ</span>

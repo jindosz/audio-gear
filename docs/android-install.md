@@ -13,7 +13,7 @@ GitHub이 앱을 매번 같은 키로 서명해야 폰에서 지우지 않고 �
 
 ## 2. 폰 준비
 - **설정 → 보안 및 개인정보 보호 → 자동 차단**을 끕니다(켜져 있으면 APK 설치가 막힘). 설치 후 다시 켜도 됩니다.
-- 다른 EQ와 겹치지 않게 **Wavelet**을 끄거나 지우고, 삼성 사운드의 **이퀄라이저·Dolby Atmos**를 끕니다.
+- 앱의 "폰에 적용"(폰 전체 EQ, 2단계에서 추가 예정)을 쓰기 시작하면, 다른 EQ와 겹치지 않게 **Wavelet**을 끄거나 지우고 삼성 사운드의 **이퀄라이저·Dolby Atmos**를 끕니다. 그 전까지는 지금처럼 EQ 파일을 Wavelet으로 가져와 씁니다.
 
 ## 3. 설치·업데이트
 1. 폰 브라우저로 https://github.com/jindosz/audio-gear/releases/tag/android-latest 를 열고 `audio-gear.apk`를 받습니다.

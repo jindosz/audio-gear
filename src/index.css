@@ -2197,3 +2197,33 @@ button.settings-row {
     display: none;
   }
 }
+
+/* 폰 목록 칸 위쪽 부품은 공간이 모자라도 눌려 줄어들지 않게(줄어들면 서로 겹침). 줄어드는 건 아래 목록(스크롤 칸)만 */
+.list-col > .list-grip,
+.list-col > .list-category,
+.list-col > .list-search,
+.list-col > .list-filter {
+  flex-shrink: 0;
+}
+
+/* 그래프 툴바: 자주 쓰는 버튼 줄(위) + 그래프 설정 줄(아래) */
+.toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.toolbar-actions,
+.toolbar-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* 폰: 두 버튼이 한 줄을 반씩 */
+@media (max-width: 768px) {
+  .toolbar-actions > button {
+    flex: 1 1 0;
+  }
+}

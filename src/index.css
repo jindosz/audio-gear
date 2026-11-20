@@ -409,7 +409,7 @@ button[type='submit'] {
   align-self: flex-start;
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 button:disabled {
@@ -886,7 +886,7 @@ button.small {
 
 .segmented button.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---- 추천 팝업 ---- */
@@ -952,7 +952,7 @@ button.toggle:hover {
 button.toggle.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .import-box .segmented {
@@ -1394,11 +1394,11 @@ body.resizing {
   }
 
   /* 그래프 높이는 폰 화면 높이에 맞춘다. 화면 높이에서 기본 목록 높이(--list-base)와
-     메뉴 줄·탭·범례·그래프 카드 여백 몫(약 180px)을 뺀 만큼이라, 처음 화면에서 그래프가 칸에 꼭 맞게 보인다.
+     메뉴 줄·탭·범례·그래프 카드 여백 몫(약 200px)을 뺀 만큼이라, 처음 화면에서 그래프가 칸에 꼭 맞게 보인다.
      아주 작은 화면에서도 160px 아래로는 줄이지 않는다.
      flex: none: 칸 크기에 맞춰 줄어들지 않고 이 높이를 지킨다. 툴바는 그 아래로 밀려 스크롤로 본다 */
   .main-col {
-    --chart-h: max(160px, calc(100dvh - var(--list-base) - 180px));
+    --chart-h: max(160px, calc(100dvh - var(--list-base) - 200px));
   }
 
   .main-col > .chart-box {
@@ -1643,6 +1643,10 @@ body.resizing {
   --bg: #f2f2f6;
   --card: #fff;
   --border: #e6e6eb;
+  /* 글자 대비 4.5:1 이상(ui-ux-pro-max 점검): 회색 보조 글자·강조색을 조금 진하게 */
+  --muted: #6b6676;
+  --accent: #1c68c9;
+  --on-accent: #fff; /* 강조색 바탕 위의 글자 */
 
   font-family: 'Pretendard Variable', Pretendard, system-ui, 'Malgun Gothic', sans-serif;
   letter-spacing: -0.01em;
@@ -1656,6 +1660,7 @@ body.resizing {
     --bg: #0e0e10;
     --card: #1c1c1f;
     --border: #2c2c31;
+    --on-accent: #0b1220; /* 다크의 밝은 파랑 위에는 흰 글자(2.65:1)가 흐려서 어두운 글자(7:1) */
   }
 }
 
@@ -1666,6 +1671,7 @@ body.resizing {
   --bg: #0e0e10;
   --card: #1c1c1f;
   --border: #2c2c31;
+  --on-accent: #0b1220; /* 다크의 밝은 파랑 위에는 흰 글자(2.65:1)가 흐려서 어두운 글자(7:1) */
 }
 
 body {
@@ -1699,7 +1705,7 @@ button:not(:disabled):hover {
 button.primary,
 button[type='submit'] {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 button.primary:not(:disabled):hover,
@@ -1941,4 +1947,83 @@ input[type='range']::-moz-range-thumb {
 /* 툴바 선택 상자: 예전 좁은 여백 규칙이 꺾쇠와 겹치지 않게 */
 .toolbar select {
   padding: 8px 34px 8px 12px;
+}
+
+/* ---- 점검 반영(ui-ux-pro-max): 눌림 반응, 포커스, 터치 영역 — PC(마우스)와 폰(손가락) 모두 쓰는 앱 ---- */
+
+/* 누르는 순간 살짝 어두워지는 반응(폰에는 hover가 없어서 이것이 유일한 눌림 표시). 크기는 바꾸지 않는다 */
+button:not(:disabled):active,
+.settings-link:active,
+summary:active {
+  filter: brightness(0.9);
+}
+
+/* 키보드로 옮겨 다닐 때만 보이는 포커스 테두리(마우스·손가락으로 누를 때는 안 보임) */
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+a:focus-visible,
+.settings-link:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 손가락으로 쓰는 화면(폰·태블릿)에서만 누르는 영역을 넓힌다(안드로이드 기준 48dp, 최소 44px).
+   마우스로 쓰는 PC는 지금처럼 촘촘하게 둔다 */
+@media (pointer: coarse) {
+  button,
+  select,
+  input:not([type='range']):not([type='file']),
+  summary,
+  .settings-row {
+    min-height: 44px;
+  }
+
+  .nav-item {
+    min-height: 48px;
+  }
+
+  /* 목록 줄 안의 작은 아이콘 버튼: 줄 높이(40px)를 꽉 채우고 폭을 44px로 */
+  .star-btn,
+  .more-btn {
+    min-width: 44px;
+    min-height: 40px;
+  }
+
+  .tab-close,
+  .tab-add,
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .section-toggle {
+    min-height: 44px;
+  }
+
+  .list-grip.mobile-only {
+    height: 36px;
+  }
+
+  /* 줄 안의 작은 버튼들 사이 간격 8px 이상 */
+  .row {
+    gap: 8px;
+  }
+}
+
+/* PC: 마우스라도 너무 작은 것만 웹 최소 기준(24px)으로 */
+@media (pointer: fine) {
+  .star-btn {
+    min-width: 24px;
+    min-height: 24px;
+  }
+}
+
+/* "동작 줄이기"를 켠 사용자: 전환 효과를 끈다 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }

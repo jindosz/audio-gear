@@ -82,3 +82,109 @@ export function MoonIcon() {
     </svg>
   )
 }
+
+// ---- 작은 아이콘(버튼·목록·경고). 위 메뉴 아이콘과 같은 선 굵기로 통일한다 ----
+// size: 크기(px). 글자 옆에 놓을 때는 className="icon"으로 글자 높이에 맞춘다
+
+interface SmallIconProps {
+  size?: number
+}
+
+function small(size = 18) {
+  return { ...common, width: size, height: size, className: 'icon' }
+}
+
+/** 별(찜). filled면 칠한 별 */
+export function StarIcon({ size, filled }: SmallIconProps & { filled?: boolean }) {
+  return (
+    <svg {...small(size)} fill={filled ? 'currentColor' : 'none'}>
+      <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />
+    </svg>
+  )
+}
+
+/** 닫기·지우기(×) */
+export function CloseIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+/** 더 보기(가로 점 세 개) */
+export function MoreIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <circle cx="5" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** 더하기 */
+export function PlusIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
+/** 꺾쇠: 아래(펼쳐짐) */
+export function ChevronDownIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+/** 꺾쇠: 오른쪽(접힘·다음 화면) */
+export function ChevronRightIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+/** 위로(맨 위로 가기) */
+export function ArrowUpIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  )
+}
+
+/** 정보(도움말) */
+export function InfoIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
+  )
+}
+
+/** 경고(삼각형 느낌표) */
+export function AlertIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z" />
+      <path d="M12 10v4M12 17h.01" />
+    </svg>
+  )
+}
+
+/** 보유(동그라미 안 체크). filled면 칠한 동그라미에 빈 체크 */
+export function OwnedIcon({ size, filled }: SmallIconProps & { filled?: boolean }) {
+  return (
+    <svg {...small(size)}>
+      <circle cx="12" cy="12" r="9" fill={filled ? 'currentColor' : 'none'} />
+      <path d="m8.5 12.5 2.5 2.5 4.5-5" stroke={filled ? 'var(--card)' : 'currentColor'} />
+    </svg>
+  )
+}

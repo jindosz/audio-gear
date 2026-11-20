@@ -1,7 +1,9 @@
 package io.github.jindosz.audiogear;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import com.getcapacitor.JSArray;
@@ -20,14 +22,17 @@ import org.json.JSONException;
 @CapacitorPlugin(name = "SystemEq")
 public class SystemEqPlugin extends Plugin {
 
+    private final SystemEqService.Listener listener = s -> notifyListeners("statusChange", toJs(s));
+
     @Override
     public void load() {
-        SystemEqService.setListener(s -> notifyListeners("statusChange", toJs(s)));
+        SystemEqService.setListener(listener);
     }
 
     @Override
     protected void handleOnDestroy() {
-        SystemEqService.setListener(null);
+        // 새 화면이 이미 자기 리스너를 등록했을 수 있어서, 내 것일 때만 지운다
+        SystemEqService.clearListener(listener);
     }
 
     /** EQ 걸기(이미 켜져 있으면 값만 바꿈). 결과 상태는 statusChange 이벤트로 온다 */
@@ -89,10 +94,17 @@ public class SystemEqPlugin extends Plugin {
         return out;
     }
 
-    /** 안드로이드 13부터 알림을 띄우려면 허락이 필요하다. 거절해도 EQ는 걸린다(알림만 안 보임) */
+    /**
+     * 안드로이드 13부터 알림을 띄우려면 허락이 필요하다. 거절해도 EQ는 걸린다(알림만 안 보임, EQ 화면 맨 위에서 끌 수 있음).
+     * 적용할 때마다 묻지 않게 처음 한 번만 묻는다
+     */
     private void askNotificationPermissionOnce() {
         if (Build.VERSION.SDK_INT < 33 || getActivity() == null) return;
         if (getContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return;
-        getActivity().requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 7301);
+        SharedPreferences prefs = getContext().getSharedPreferences(SystemEqService.PREFS, Context.MODE_PRIVATE);
+        if (prefs.getBoolean("askedNotification", false)) return;
+        prefs.edit().putBoolean("askedNotification", true).apply();
+        getActivity().runOnUiThread(() ->
+                getActivity().requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 7301));
     }
 }

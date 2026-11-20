@@ -20,10 +20,10 @@ interface Props {
 }
 
 const resultMessages: Record<AddResult, string> = {
-  added: '추가했습니다 (측정치 포함)',
-  measurementAdded: '이미 있는 기기에 측정치를 추가했습니다',
-  deviceOnly: '기기만 추가했습니다 (이 출처는 측정치가 공개되어 있지 않음)',
-  alreadyExists: '이미 추가되어 있습니다',
+  added: '추가했어요',
+  measurementAdded: '측정치를 추가했어요',
+  deviceOnly: '기기만 추가했어요(측정치 비공개)',
+  alreadyExists: '이미 있어요',
 }
 
 export function AddDeviceDialog({ open, onClose }: Props) {
@@ -79,7 +79,7 @@ function AddDeviceBody() {
       <div className="row">
         <input
           className="search"
-          placeholder="기기 검색 (예: hd600, blessing 2)"
+          placeholder="기기 검색"
           value={query}
           data-autofocus
           onChange={(e) => setQuery(e.target.value)}
@@ -93,11 +93,11 @@ function AddDeviceBody() {
 
       <div className="results">
         {loadError && <p className="error">{loadError}</p>}
-        {!catalog && !loadError && <p className="muted">전체 기기 목록을 불러오는 중…</p>}
+        {!catalog && !loadError && <p className="muted">불러오는 중…</p>}
         {catalog && query.trim() === '' && (
-          <p className="muted">{catalog.length.toLocaleString()}개 측정 결과에서 검색합니다.</p>
+          <p className="muted">{catalog.length.toLocaleString()}개 중에서 검색</p>
         )}
-        {catalog && query.trim() !== '' && groups.length === 0 && <p className="muted">검색 결과가 없습니다.</p>}
+        {catalog && query.trim() !== '' && groups.length === 0 && <p className="muted">결과 없음</p>}
 
         <ul className="result-list">
           {groups.map((group) => (
@@ -134,11 +134,11 @@ function AddDeviceBody() {
           <DeviceForm onAdded={(name) => setMessage(`${name}: 직접 추가했습니다`)} />
         ) : (
           <button className="link" onClick={() => setManual(true)}>
-            찾는 기기가 없나요? 직접 추가
+            직접 추가
           </button>
         )}
         <p className="muted small">
-          목록·측정치 출처:{' '}
+          출처:{' '}
           <a href="https://github.com/jaakkopasanen/AutoEq" target="_blank" rel="noreferrer">
             AutoEQ
           </a>
@@ -146,7 +146,7 @@ function AddDeviceBody() {
           <a href="https://squig.link" target="_blank" rel="noreferrer">
             squig.link
           </a>
-          (리뷰어별 사이트). 측정치의 권리는 각 측정자에게 있습니다.
+          {' · '}측정치 권리는 각 측정자에게
         </p>
       </div>
     </>

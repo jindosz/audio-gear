@@ -25,6 +25,7 @@ import { displaySpecs, specHint } from '../specHints'
 import { useCatalogDevices } from '../useCatalogDevices'
 import type { SelectedItem } from '../useCompareData'
 import { Modal } from './Modal'
+import { Help } from './Help'
 
 interface Props {
   open: boolean
@@ -130,7 +131,7 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
 
   if (!devices || !measurements || !summaries) return <p className="muted">불러오는 중…</p>
   if (!base || !reference || !category) {
-    return <p className="muted">비교 중인 기기, 타깃, 또는 측정치가 있는 보유 기기가 있어야 기준으로 삼을 수 있습니다.</p>
+    return <p className="muted">기준으로 삼을 기기나 타깃을 먼저 고르세요.</p>
   }
 
   const deviceById = new Map(devices.map((d) => [d.id, d]))
@@ -217,17 +218,17 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
         <button type="button" className="small" onClick={handleSaveTarget}>
           이 기준 곡선을 타깃으로 저장
         </button>
-        {savedTarget && <span className="notice small">내 타깃으로 저장하고 이 탭에 적용했습니다(그래프의 회색 점선).</span>}
+        {savedTarget && <span className="notice small">타깃으로 저장했어요</span>}
       </div>
 
       <CatalogDataBox category={category} saved={summaries.length} />
 
-      <p className="muted small">
-        {categoryLabels[category]} 중에서 기준과 소리 모양(주파수 응답)이 가까운 순서입니다. 측정자·리그가 다르면 같은
-        기기도 곡선이 달라지므로, 같은 측정자 → 같은 리그 후보를 먼저 보여줍니다. (묶음마다 가까운 15개)
-      </p>
+      <Help>
+        기준과 소리 모양(주파수 응답)이 가까운 순서예요. 측정자·리그가 다르면 같은 기기도 곡선이 달라서 같은 측정자 → 같은
+        리그 순으로 묶어 보여줘요(묶음마다 15개). 슬라이더로 저음·중고음·고음을 더하거나 뺀 소리도 찾을 수 있어요.
+      </Help>
       {notice && <p className="error small">{notice}</p>}
-      {results.length === 0 && <p className="muted">비교할 후보가 없습니다. 위에서 추천용 데이터를 받아 보세요.</p>}
+      {results.length === 0 && <p className="muted">후보가 없어요. 위에서 데이터를 받아 주세요.</p>}
 
       {levels.map((level) => {
         const group = results.filter((r) => r.level === level)
@@ -290,9 +291,7 @@ function TasteSliders({ adj, onChange }: { adj: Adjustments; onChange: (adj: Adj
         <button type="button" className="link small" onClick={() => onChange(NO_ADJUSTMENTS)}>
           조절 초기화
         </button>
-      ) : (
-        <span className="muted small">슬라이더로 기준보다 저음·중고음·고음을 더하거나 뺀 소리를 찾을 수 있습니다.</span>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -361,20 +360,18 @@ function CatalogDataBox({ category, saved }: { category: DeviceCategory; saved: 
   const total = available ?? (thisJob ? job.total : 0)
   const percent = total ? Math.min(100, Math.round((saved / total) * 100)) : 0
 
-  let message: string
-  if (running && !thisJob) message = '다른 카테고리를 받는 중입니다. 끝난 뒤 받을 수 있습니다.'
-  else if (running) message = `받는 중… ${percent}%${job.failed ? ` (실패 ${job.failed}개)` : ''}. 팝업을 닫아도 계속 받습니다.`
+  let message = ''
+  if (running && !thisJob) message = '다른 종류를 받는 중이에요'
+  else if (running) message = `받는 중 ${percent}%${job.failed ? ` · 실패 ${job.failed}개` : ''} (닫아도 계속 받아요)`
   else if (thisJob && job.status === 'error') message = `오류: ${job.error}`
-  else if (saved === 0)
-    message = `받으면 AutoEQ ${categoryLabels[category]} 전체가 추천 후보가 됩니다. 기기마다 측정치를 하나씩 받아 요약값(곡선당 숫자 약 60개)만 저장합니다. 처음 한 번 수십 MB를 받고 몇 분 걸립니다.`
-  else if (thisJob && job.failed) message = `받지 못한 ${job.failed}개는 "이어 받기"로 다시 시도할 수 있습니다.`
-  else message = '받아 둔 데이터는 다음에도 그대로 쓰입니다. 중간에 멈춰도 이어서 받을 수 있습니다.'
+  else if (saved === 0) message = `받으면 ${categoryLabels[category]} 전체가 후보가 돼요(처음 한 번, 몇 분)`
+  else if (thisJob && job.failed) message = `실패 ${job.failed}개 — "이어 받기"로 다시 시도`
 
   return (
     <div className="data-box">
       <div className="row">
         <span className="small">
-          AutoEQ 추천용 데이터({categoryLabels[category]}): <strong>{saved.toLocaleString()}</strong>
+          추천 데이터 <strong>{saved.toLocaleString()}</strong>
           {total > 0 && ` / ${total.toLocaleString()}개`}
         </span>
         {running && thisJob ? (
@@ -390,7 +387,7 @@ function CatalogDataBox({ category, saved }: { category: DeviceCategory; saved: 
         )}
       </div>
       {total > 0 && <progress max={100} value={percent} />}
-      <p className="muted small">{message}</p>
+      {message && <p className="muted small">{message}</p>}
     </div>
   )
 }

@@ -5,13 +5,17 @@
 import { lazy, Suspense, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { fitPeq, MAX_BOOST, targetEq } from '../eq'
+import { applyPreset, getEqEngine } from '../eqEngine'
 import { categoryLabels, sourceLabel } from '../labels'
-import { addEqPreset, listDevices, listMeasurements } from '../repo'
+import { addEqPreset, listDevices, listEqPresets, listMeasurements } from '../repo'
+import { findSamePreset } from '../eqPresetList'
 import { FINE_GRID } from '../similarity'
 import type { DeviceCategory, FrCurve, Target } from '../types'
 import type { SelectedItem } from '../useCompareData'
 import { EqExport } from './EqExport'
+import { Help } from './Help'
 import { Modal } from './Modal'
+import { AlertIcon } from './Icons'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -53,8 +57,11 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
   const [currentKey, setCurrentKey] = useState('')
   const [wishKey, setWishKey] = useState('')
   // 방금 저장한 EQ. pair(지금 기기|들어볼 소리)가 바뀌면 안내를 감춘다
-  const [saved, setSaved] = useState<{ pair: string; id: string; name: string } | null>(null)
+  // 저장한(또는 이미 있던) EQ. existing: 같은 조합이 이미 있어서 새로 만들지 않음
+  const [saved, setSaved] = useState<{ pair: string; id: string; name: string; existing?: boolean } | null>(null)
   const [saveError, setSaveError] = useState('')
+  // 안드로이드 앱: [폰에 적용] 결과 한 줄
+  const [phoneMessage, setPhoneMessage] = useState('')
 
   if (!devices || !measurements) return <p className="muted">불러오는 중…</p>
 
@@ -89,10 +96,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
 
   if (!current || !wish) {
     return (
-      <p className="muted">
-        EQ를 만들려면 지금 쓰는 기기(보유 기기의 측정치)와 들어볼 기기(비교 중인 기기 또는 타깃)가 필요합니다. 목록에서
-        보유 기기를 표시하고, 들어볼 기기를 비교에 추가해 주세요.
-      </p>
+      <p className="muted">보유 기기(기기 상세 → 보유)와 들어볼 기기(비교 중인 기기 또는 타깃)가 필요해요.</p>
     )
   }
 
@@ -100,16 +104,39 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
   const sameSource = !!current.source && current.source === wish.source
   const pair = `${current.key}|${wish.key}`
 
-  async function handleSave() {
-    if (!current || !wish) return
+  /** EQ 목록에 저장하고 저장된 id와 이름을 돌려준다(이미 저장했으면 그대로). 실패하면 null */
+  async function handleSave(): Promise<{ id: string; name: string } | null> {
+    if (!current || !wish) return null
+    if (saved?.pair === pair) return saved
     setSaveError('')
     // EQ 화면의 자동 계산과 같은 이름 규칙("기기 → 목표")
     const name = `${current.name} → ${wish.name}`
     try {
+      // 같은 "기기 → 목표" EQ가 이미 있으면 새로 만들지 않고 그것을 쓴다(같은 EQ가 쌓이지 않게)
+      const same = findSamePreset(await listEqPresets(), current.key, wish.goal)
+      if (same) {
+        setSaved({ pair, id: same.id, name: same.name, existing: true })
+        return { id: same.id, name: same.name }
+      }
       const id = await addEqPreset({ name, measurementId: current.key, goal: wish.goal, filters: eq.filters })
       setSaved({ pair, id, name })
+      return { id, name }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : String(err))
+      return null
+    }
+  }
+
+  /** 안드로이드 앱: 저장(아직이면)한 뒤 그 EQ를 폰 전체에 건다 */
+  async function handleApplyToPhone() {
+    setPhoneMessage('적용 중…')
+    const preset = await handleSave()
+    if (!preset) return setPhoneMessage('')
+    try {
+      const result = await applyPreset(preset.id, preset.name, eq)
+      setPhoneMessage(result.on ? `폰에 적용했습니다: ${preset.name}` : `적용하지 못했습니다${result.error ? `: ${result.error}` : ''}`)
+    } catch (err) {
+      setPhoneMessage(`적용하지 못했습니다: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -140,23 +167,21 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
       </div>
 
       {current.category !== wish.category && (
-        <p className="warning small">
-          ⚠ {categoryLabels[current.category]}과 {categoryLabels[wish.category]}은 측정 방식이 달라 EQ 결과가 부정확합니다.
+        <p className="warning small" title="헤드폰과 이어폰은 측정 방식이 달라 EQ 결과가 부정확합니다">
+          <AlertIcon size={15} /> {categoryLabels[current.category]}↔{categoryLabels[wish.category]}: 결과가 부정확할 수 있어요
         </p>
       )}
       {wish.key !== 'target' && !sameSource && (
-        <p className="warning small">
-          ⚠ 두 측정치의 측정자가 다릅니다({sourceLabel(current.source ?? '')} / {sourceLabel(wish.source ?? '')}). 측정 환경
-          차이까지 EQ에 섞이므로, 가능하면 같은 측정자 측정치를 고르세요.
+        <p
+          className="warning small"
+          title={`${sourceLabel(current.source ?? '')} / ${sourceLabel(wish.source ?? '')} — 측정 환경 차이까지 EQ에 섞이므로 같은 측정자를 고르는 것이 좋습니다`}
+        >
+          <AlertIcon size={15} /> 측정자가 달라요
         </p>
       )}
 
-      <p className="small">
-        필터 {eq.filters.length}개 · 프리앰프 {eq.preamp.toFixed(1)}dB · 목표와의 오차 {eq.error.toFixed(1)}dB
-        <span className="muted">
-          {' '}
-          (부스트는 최대 +{MAX_BOOST}dB, 측정 편차가 큰 8kHz 위는 덜 따라갑니다)
-        </span>
+      <p className="small muted">
+        필터 {eq.filters.length}개 · 프리앰프 {eq.preamp.toFixed(1)}dB · 오차 {eq.error.toFixed(1)}dB
       </p>
 
       <div className="eq-chart">
@@ -173,32 +198,36 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
         </Suspense>
       </div>
 
+      {/* 할 일 버튼을 먼저: 폰에 적용(안드로이드 앱) · EQ 목록에 저장 */}
+      <div className="row">
+        {getEqEngine().kind === 'android' && (
+          <button type="button" className="primary" onClick={handleApplyToPhone} disabled={eq.filters.length === 0}>
+            폰에 적용
+          </button>
+        )}
+        {saved?.pair === pair ? (
+          <button type="button" onClick={() => onOpenPreset(saved.id)}>
+            EQ 화면에서 열기
+          </button>
+        ) : (
+          <button type="button" onClick={() => void handleSave()} disabled={eq.filters.length === 0}>
+            EQ 목록에 저장
+          </button>
+        )}
+      </div>
+      {(phoneMessage || saved?.pair === pair || saveError) && (
+        <p className="small" role="status">
+          {saveError ? <span className="error">저장하지 못했어요: {saveError}</span> : phoneMessage || (saved?.existing ? `이미 있는 EQ를 썼어요: ${saved.name}` : `저장했어요: ${saved?.name}`)}
+        </p>
+      )}
+
       <EqExport eq={eq} name={`${current.name} → ${wish.name}`} />
 
-      <div className="row">
-        {saved?.pair === pair ? (
-          <>
-            <span className="small" role="status">
-              EQ 목록에 저장했습니다: {saved.name}
-            </span>
-            <button type="button" onClick={() => onOpenPreset(saved.id)}>
-              EQ 화면에서 열기
-            </button>
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={handleSave} disabled={eq.filters.length === 0}>
-              EQ 목록에 저장
-            </button>
-            <span className="muted small">저장하면 EQ 화면에서 밴드를 직접 고치거나 나중에 다시 내보낼 수 있습니다.</span>
-          </>
-        )}
-        {saveError && <span className="error small">저장하지 못했습니다: {saveError}</span>}
-      </div>
-      <p className="muted small">
-        EQ로 바뀌는 것은 주파수 응답(음색)뿐입니다. 공간감, 해상도, 착용감 같은 차이는 따라 할 수 없어서 "비슷한
-        음색"까지만 들어볼 수 있습니다.
-      </p>
+      <Help>
+        <p>지금 쓰는 기기에 EQ를 걸어 들어볼 기기와 비슷한 음색으로 만듭니다. 부스트는 최대 +{MAX_BOOST}dB, 측정 편차가 큰 8kHz 위는 덜 따라갑니다.</p>
+        <p>EQ로 바뀌는 것은 음색(주파수 응답)뿐이라 공간감·해상도·착용감은 따라 할 수 없어요.</p>
+        <p>"EQ 목록에 저장"하면 EQ 화면에서 밴드를 직접 고칠 수 있습니다.</p>
+      </Help>
     </div>
   )
 }

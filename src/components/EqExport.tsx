@@ -1,8 +1,9 @@
 // 만든 EQ를 기기 전체 EQ 앱(Equalizer APO, Wavelet 등)에 넣을 수 있게 복사·저장하는 칸.
 // "EQ로 들어보기" 팝업과 EQ 화면이 같이 쓴다.
 import { useState } from 'react'
-import { defaultApp, detectPlatform, EQ_APPS, eqText, platformLabels, type EqApp, type EqSettings } from '../eqExport'
+import { defaultApp, detectPlatform, EQ_APPS, eqText, type EqApp, type EqSettings } from '../eqExport'
 import { isAndroidApp, saveTextFile } from '../platform'
+import { Help } from './Help'
 
 interface Props {
   eq: EqSettings
@@ -66,9 +67,8 @@ export function EqExport({ eq, name }: Props) {
     }
   }
 
-  return (
+  const body = (
     <>
-      <h3>EQ 앱에 넣기</h3>
       <div className="row">
         <div className="segmented" role="group" aria-label="EQ 앱">
           {(Object.keys(EQ_APPS) as EqApp[]).map((key) => (
@@ -84,18 +84,16 @@ export function EqExport({ eq, name }: Props) {
           ))}
         </div>
       </div>
-      <p className="muted small">
-        이 기기: {platformLabels[platform]}
-        {platform === 'ios'
-          ? ' — iPhone은 다른 앱(스트리밍) 소리에 EQ를 거는 앱을 허용하지 않아서, PC나 Android에서 들어보는 것을 추천합니다.'
-          : ` — 기본으로 ${EQ_APPS[defaultApp(platform)].label}을(를) 골랐습니다.`}
-      </p>
-      <ol className="small howto">
-        {EQ_APPS[app].howto.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ol>
-      <textarea className="eq-text" readOnly value={text} rows={Math.min(12, text.split('\n').length + 1)} />
+      {platform === 'ios' && <p className="warning small">iPhone은 다른 앱 소리에 EQ를 걸 수 없어요</p>}
+      {/* 넣는 방법은 처음 한 번만 보면 되니 접어 둔다 */}
+      <Help label="넣는 방법">
+        <ol className="howto">
+          {EQ_APPS[app].howto.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ol>
+      </Help>
+      <textarea className="eq-text" readOnly value={text} rows={4} />
       <div className="row">
         <button type="button" className="primary" onClick={handleCopy}>
           {copiedText === text ? '복사됨' : '복사'}
@@ -110,11 +108,27 @@ export function EqExport({ eq, name }: Props) {
         )}
         {shareFailed && (
           <span className="error small">
-            {isAndroidApp() ? '파일을 내보내지 못했습니다. 복사를 써 주세요.' : '공유하지 못했습니다. "파일로 저장"을 써 주세요.'}
+            {isAndroidApp() ? '내보내지 못했어요. 복사를 써 주세요.' : '공유하지 못했어요. "파일로 저장"을 써 주세요.'}
           </span>
         )}
-        {copyFailed && <span className="error small">자동 복사가 막혔습니다. 선택된 글을 Ctrl+C로 복사하세요.</span>}
+        {copyFailed && <span className="error small">자동 복사가 막혔어요. 선택된 글을 직접 복사하세요.</span>}
       </div>
+    </>
+  )
+
+  // 안드로이드 앱은 [폰에 적용]으로 바로 거니까 내보내기는 접어 둔다. 웹은 내보내기가 유일한 방법이라 펼쳐 둔다
+  if (isAndroidApp()) {
+    return (
+      <details className="export-box">
+        <summary>다른 EQ 앱으로 내보내기</summary>
+        {body}
+      </details>
+    )
+  }
+  return (
+    <>
+      <h3>EQ 앱에 넣기</h3>
+      {body}
     </>
   )
 }

@@ -1,6 +1,7 @@
 // 메인 영역 위쪽의 비교 탭 줄: 탭 전환, 닫기(✕), 새 탭(+)
 import { createTab, deleteTab } from '../repo'
 import type { CompareTab } from '../types'
+import { CloseIcon, PlusIcon } from './Icons'
 
 interface Props {
   tabs: CompareTab[]
@@ -39,12 +40,12 @@ export function TabBar({ tabs, activeId, onSelect }: Props) {
             {tab.selections.length > 0 && <span className="tab-count">{tab.selections.length}</span>}
           </button>
           <button className="tab-close" onClick={() => handleClose(tab)} aria-label={`${tab.name} 닫기`} title="탭 닫기">
-            ✕
+            <CloseIcon size={14} />
           </button>
         </div>
       ))}
       <button className="tab-add" onClick={handleAdd} aria-label="새 비교 탭" title="새 비교 탭">
-        +
+        <PlusIcon />
       </button>
     </div>
   )

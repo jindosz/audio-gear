@@ -1,5 +1,6 @@
 // 여러 팝업이 함께 쓰는 틀: 제목, 닫기 버튼, 열고 닫기 처리
 import { useEffect, useRef, type ReactNode } from 'react'
+import { CloseIcon } from './Icons'
 
 interface Props {
   open: boolean
@@ -30,8 +31,8 @@ export function Modal({ open, onClose, title, children }: Props) {
     <dialog ref={dialogRef} className="dialog" onClose={onClose}>
       <div className="dialog-head">
         <h2>{title}</h2>
-        <button className="link" onClick={onClose} aria-label="닫기">
-          ✕
+        <button className="link icon-close" onClick={onClose} aria-label="닫기">
+          <CloseIcon size={20} />
         </button>
       </div>
       {/* 닫혀 있을 때는 내용을 그리지 않는다. 다시 열면 입력칸 등이 처음 상태로 돌아간다 */}

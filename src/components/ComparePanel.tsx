@@ -12,6 +12,7 @@ import { EqDialog } from './EqDialog'
 import { RecommendDialog } from './RecommendDialog'
 import { TabBar } from './TabBar'
 import { TargetSelect } from './TargetSelect'
+import { AlertIcon } from './Icons'
 
 // 그래프(Chart.js, 앱 코드의 절반 가까운 크기)는 필요할 때 따로 불러온다(lazy).
 // 첫 화면에 필요한 파일이 작아져서 앱이 더 빨리 뜨고, 빌드 파일도 둘로 나뉜다
@@ -149,7 +150,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
 
       {target && mismatched.length > 0 && (
         <p className="warning small" role="status">
-          ⚠ 리그 불일치: 타깃은 {rigLabels[target.rig]} 기준인데{' '}
+          <AlertIcon size={15} /> 리그 불일치: 타깃은 {rigLabels[target.rig]} 기준인데{' '}
           {mismatched.map((s) => `${labelOf(s)}(${rigLabels[s.measurement.rig]})`).join(', ')}는 다른 리그로 측정됐습니다.
           리그가 다르면 같은 소리도 곡선이 달라서 타깃과의 차이를 그대로 믿기 어렵습니다.
         </p>

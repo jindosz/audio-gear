@@ -248,6 +248,11 @@ export async function updateEqPreset(id: string, patch: Partial<Pick<EqPreset, '
   await db.eqPresets.update(id, { ...patch, updatedAt: Date.now() })
 }
 
+/** 즐겨찾기 켜고 끄기. 목록 순서(최근 수정 순)가 바뀌지 않게 updatedAt은 건드리지 않는다 */
+export async function setEqPresetFavorite(id: string, favorite: boolean): Promise<void> {
+  await db.eqPresets.update(id, { favorite })
+}
+
 export async function deleteEqPreset(id: string): Promise<void> {
   await db.eqPresets.delete(id)
 }

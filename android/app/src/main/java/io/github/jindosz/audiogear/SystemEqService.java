@@ -16,7 +16,7 @@ import android.media.audiofx.AudioEffect;
 import android.media.audiofx.DynamicsProcessing;
 import android.os.Build;
 import android.os.IBinder;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -34,6 +34,8 @@ public class SystemEqService extends Service {
 
     public static final String ACTION_APPLY = "io.github.jindosz.audiogear.EQ_APPLY";
     public static final String ACTION_OFF = "io.github.jindosz.audiogear.EQ_OFF";
+    /** 저장해 둔 마지막 EQ를 다시 건다(폰을 다시 켰을 때 BootReceiver가 보냄). 꺼짐으로 저장돼 있으면 아무것도 안 함 */
+    public static final String ACTION_RESTORE = "io.github.jindosz.audiogear.EQ_RESTORE";
     public static final String EXTRA_NAME = "name";
     public static final String EXTRA_CUTOFFS = "cutoffs";
     public static final String EXTRA_GAINS = "gains";
@@ -41,6 +43,8 @@ public class SystemEqService extends Service {
 
     private static final String CHANNEL_ID = "system_eq";
     private static final int NOTIFICATION_ID = 1;
+    /** 재생 앱 신호 방식에서 동시에 들고 있을 효과의 최대 개수(신호를 마구 보내는 앱이 있어도 메모리가 새지 않게) */
+    private static final int MAX_SESSIONS = 16;
     /** 효과끼리 경쟁할 때 우선순위. 높을수록 이긴다 */
     private static final int PRIORITY = Integer.MAX_VALUE;
     /** 마지막으로 건 EQ를 저장해 두는 곳(3단계: 폰을 다시 켰을 때 복원용) */
@@ -80,6 +84,11 @@ public class SystemEqService extends Service {
         listener = l;
     }
 
+    /** l이 지금 등록된 리스너일 때만 지운다 */
+    public static synchronized void clearListener(Listener l) {
+        if (listener == l) listener = null;
+    }
+
     private static void publish(boolean on, String name, String mode, String error) {
         Listener l;
         Status snapshot;
@@ -95,7 +104,7 @@ public class SystemEqService extends Service {
     }
 
     private DynamicsProcessing globalEffect;
-    private final Map<Integer, DynamicsProcessing> sessionEffects = new HashMap<>();
+    private final Map<Integer, DynamicsProcessing> sessionEffects = new LinkedHashMap<>();
     private boolean receiverRegistered = false;
 
     private String name = "";
@@ -111,6 +120,12 @@ public class SystemEqService extends Service {
             if (session == AudioEffect.ERROR_BAD_VALUE) return;
             if (AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION.equals(intent.getAction())) {
                 if (sessionEffects.containsKey(session)) return;
+                // 너무 많으면 가장 먼저 연 것부터 해제(LinkedHashMap이라 넣은 순서가 유지됨)
+                while (sessionEffects.size() >= MAX_SESSIONS) {
+                    Integer oldest = sessionEffects.keySet().iterator().next();
+                    DynamicsProcessing old = sessionEffects.remove(oldest);
+                    if (old != null) old.release();
+                }
                 try {
                     sessionEffects.put(session, createEffect(session));
                 } catch (Throwable t) {
@@ -132,8 +147,12 @@ public class SystemEqService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         // startForegroundService로 불렀으면 5초 안에 알림을 띄워야 해서, 무슨 명령이든 먼저 띄운다
         startInForeground();
-        String action = intent != null ? intent.getAction() : null;
-        if (ACTION_APPLY.equals(action)) {
+        // intent가 null = 시스템이 서비스를 정리했다가 다시 살린 경우(START_STICKY). 마지막 EQ를 다시 건다
+        String action = intent != null ? intent.getAction() : ACTION_RESTORE;
+        if (ACTION_RESTORE.equals(action)) {
+            if (loadLast()) applyEq();
+            else publish(false, null, null, null);
+        } else if (ACTION_APPLY.equals(action)) {
             name = intent.getStringExtra(EXTRA_NAME);
             if (name == null) name = "EQ";
             float[] c = intent.getFloatArrayExtra(EXTRA_CUTOFFS);
@@ -151,7 +170,8 @@ public class SystemEqService extends Service {
         } else {
             updateNotification();
         }
-        return START_NOT_STICKY;
+        // START_STICKY: 메모리가 모자라 시스템이 서비스를 정리하면 나중에 다시 살려 준다(위의 복원으로 이어짐)
+        return START_STICKY;
     }
 
     @Override
@@ -282,6 +302,32 @@ public class SystemEqService extends Service {
             e.putFloat("inputGain", inputGain);
         }
         e.apply();
+    }
+
+    /** 저장해 둔 마지막 EQ를 읽는다. 꺼짐으로 저장됐거나 값이 망가졌으면 false */
+    private boolean loadLast() {
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (!p.getBoolean("on", false)) return false;
+        float[] c = split(p.getString("cutoffs", ""));
+        float[] g = split(p.getString("gains", ""));
+        if (c.length == 0 || c.length != g.length) return false;
+        name = p.getString("name", "EQ");
+        cutoffs = c;
+        gains = g;
+        inputGain = Math.min(0f, p.getFloat("inputGain", 0f));
+        return true;
+    }
+
+    private static float[] split(String text) {
+        if (text == null || text.isEmpty()) return new float[0];
+        String[] parts = text.split(",");
+        float[] out = new float[parts.length];
+        try {
+            for (int i = 0; i < parts.length; i++) out[i] = Float.parseFloat(parts[i]);
+        } catch (NumberFormatException e) {
+            return new float[0];
+        }
+        return out;
     }
 
     private static String join(float[] values) {

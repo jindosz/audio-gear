@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.jindosz.audiogear.eqspike"
         minSdk = 28 // DynamicsProcessing(자유로운 밴드 EQ)이 안드로이드 9(API 28)부터 있음
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1-spike"
+        versionCode = 2
+        versionName = "0.2-spike"
     }
 
     compileOptions {

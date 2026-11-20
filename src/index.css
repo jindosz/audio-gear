@@ -2065,3 +2065,42 @@ button:has(> .icon) {
 button.settings-row {
   justify-content: space-between;
 }
+
+/* ---- 목록 줄의 보유 버튼(찜 별과 같은 규칙: 마우스를 올리면 보이고, 켜져 있거나 터치 화면이면 늘 보임) ---- */
+.own-btn {
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 2px 4px;
+  visibility: hidden;
+}
+
+.own-btn.on {
+  visibility: visible;
+  color: var(--accent);
+}
+
+.device-row:hover .own-btn,
+.own-btn:focus-visible {
+  visibility: visible;
+}
+
+@media (hover: none) {
+  .own-btn {
+    visibility: visible;
+  }
+}
+
+@media (pointer: coarse) {
+  .own-btn {
+    min-width: 44px;
+    min-height: 40px;
+  }
+}
+
+@media (pointer: fine) {
+  .own-btn {
+    min-width: 24px;
+    min-height: 24px;
+  }
+}

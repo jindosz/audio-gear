@@ -15,7 +15,7 @@ import {
 } from '../listFilter'
 import { readPref, writePref } from '../localPrefs'
 import { displaySpecs, specHint } from '../specHints'
-import { addDevice, setDeviceWishlist, toggleSelection } from '../repo'
+import { addDevice, setDeviceOwned, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Device, DeviceCategory } from '../types'
 import { useCatalogDevices } from '../useCatalogDevices'
@@ -25,7 +25,7 @@ import { DeviceDetailDialog } from './DeviceDetailDialog'
 import { ListFilterBar } from './ListFilterBar'
 import { ListGrip } from './ListGrip'
 import { VirtualList } from './VirtualList'
-import { ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, MoreIcon, PlusIcon, StarIcon } from './Icons'
+import { ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
 
 interface Props {
   category: DeviceCategory
@@ -260,6 +260,24 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
     }
   }
 
+  /** 아직 받지 않은 목록 기기를 보유로: 측정치까지 받아 보유 기기로 저장 */
+  async function handleOwnCatalog(entry: CatalogDevice) {
+    setNotice('')
+    if (pendingName) return
+    setPendingName(entry.name)
+    try {
+      const target = entryFor(entry, filter.measurer) ?? entry.primary
+      const deviceId = target
+        ? (await addFromCatalog(target, true)).deviceId
+        : await addDevice({ ...splitBrand(entry.name), category: entry.category, owned: true, notes: '' })
+      await setDeviceOwned(deviceId, true)
+    } catch (err) {
+      setNotice(`${entry.name}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setPendingName(null)
+    }
+  }
+
   async function handleUnselect(measurementId: string) {
     setNotice('')
     if (tabId) await toggleSelection(tabId, measurementId)
@@ -318,6 +336,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     sub={measurementLabel(measurement)}
                     colorIndex={selection.colorIndex}
                     starred={device.wishlist}
+                    onOwn={() => setDeviceOwned(device.id, !device.owned)}
                     onClick={() => handleUnselect(selection.measurementId)}
                     onMore={() => setDetailId(device.id)}
                   />
@@ -339,6 +358,8 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     key={d.id}
                     name={deviceName(d)}
                     {...deviceSub(d, measurementsByDevice.has(d.id))}
+                    owned
+                    onOwn={() => setDeviceOwned(d.id, false)}
                     onClick={() => handleSelectMine(d)}
                     onMore={() => setDetailId(d.id)}
                   />
@@ -362,6 +383,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     {...deviceSub(d, measurementsByDevice.has(d.id))}
                     starred
                     onStar={() => setDeviceWishlist(d.id, false)}
+                    onOwn={() => setDeviceOwned(d.id, true)}
                     onClick={() => handleSelectMine(d)}
                     onMore={() => setDetailId(d.id)}
                   />
@@ -398,6 +420,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                   name={item.name}
                   {...deviceSub(item.device, measurementsByDevice.has(item.device.id), true)}
                   onStar={() => setDeviceWishlist(item.device.id, true)}
+                  onOwn={() => setDeviceOwned(item.device.id, true)}
                   onClick={() => handleSelectMine(item.device)}
                   onMore={() => setDetailId(item.device.id)}
                 />
@@ -408,6 +431,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                   name={item.name}
                   {...catalogSub(item.entry, pendingName === item.name)}
                   onStar={() => handleWishCatalog(item.entry)}
+                  onOwn={() => handleOwnCatalog(item.entry)}
                   onClick={() => handleSelectCatalog(item.entry)}
                 />
               )
@@ -473,6 +497,8 @@ interface RowProps {
   starred?: boolean
   /** 별(찜) 버튼을 눌렀을 때. 없으면 별 버튼을 그리지 않는다 */
   onStar?: () => void
+  /** 보유 버튼을 눌렀을 때(켜고 끄기). 없으면 보유 버튼을 그리지 않는다 */
+  onOwn?: () => void
   /** 가상 스크롤용 한 줄 모양(높이 고정) */
   compact?: boolean
   style?: CSSProperties
@@ -481,7 +507,7 @@ interface RowProps {
   onMore?: () => void
 }
 
-function Row({ name, sub, subEstimated, owned, starred, onStar, colorIndex, compact, style, onClick, onMore }: RowProps) {
+function Row({ name, sub, subEstimated, owned, starred, onStar, onOwn, colorIndex, compact, style, onClick, onMore }: RowProps) {
   const isSelected = colorIndex !== undefined
   const className = ['device-row', isSelected && 'selected', compact && 'compact'].filter(Boolean).join(' ')
   // --c: 이 줄의 색. CSS에서 배경(연한 색)과 왼쪽 띠(진한 색)에 쓴다
@@ -501,6 +527,17 @@ function Row({ name, sub, subEstimated, owned, starred, onStar, colorIndex, comp
           </span>
         )}
       </button>
+      {onOwn && (
+        <button
+          className={owned ? 'own-btn on' : 'own-btn'}
+          onClick={onOwn}
+          aria-pressed={owned ?? false}
+          title={owned ? '보유 해제' : '보유 기기로'}
+          aria-label={owned ? '보유 해제' : '보유 기기로'}
+        >
+          <OwnedIcon filled={!!owned} />
+        </button>
+      )}
       {onStar && (
         <button
           className={starred ? 'star-btn on' : 'star-btn'}

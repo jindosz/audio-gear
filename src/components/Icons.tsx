@@ -178,3 +178,13 @@ export function AlertIcon({ size }: SmallIconProps) {
     </svg>
   )
 }
+
+/** 보유(동그라미 안 체크). filled면 칠한 동그라미에 빈 체크 */
+export function OwnedIcon({ size, filled }: SmallIconProps & { filled?: boolean }) {
+  return (
+    <svg {...small(size)}>
+      <circle cx="12" cy="12" r="9" fill={filled ? 'currentColor' : 'none'} />
+      <path d="m8.5 12.5 2.5 2.5 4.5-5" stroke={filled ? 'var(--card)' : 'currentColor'} />
+    </svg>
+  )
+}

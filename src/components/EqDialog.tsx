@@ -173,7 +173,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
         </Suspense>
       </div>
 
-      <EqExport eq={eq} name={wish.label} />
+      <EqExport eq={eq} name={`${current.name} → ${wish.name}`} />
 
       <div className="row">
         {saved?.pair === pair ? (

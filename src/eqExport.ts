@@ -1,7 +1,6 @@
 // 만든 EQ를 기기 전체 EQ 앱이 읽는 글자 형식으로 바꾸고, 지금 기기(OS)에 맞는 앱을 골라 준다.
 // 웹앱은 Spotify 같은 다른 앱의 소리를 바꿀 수 없어서, EQ 앱에 넘겨 그 앱에서 켜고 끄는 방식으로 미리 듣는다.
 import { peakResponse, type EqResult } from './eq'
-import { logGrid } from './curve'
 
 export type Platform = 'windows' | 'android' | 'mac' | 'ios' | 'other'
 export type EqApp = 'equalizer-apo' | 'wavelet' | 'manual'
@@ -71,14 +70,31 @@ export function toParametricText(eq: EqSettings): string {
 }
 
 /**
+ * Wavelet이 받는 GraphicEQ 주파수 127개(AutoEq 출력과 같은 목록).
+ * Wavelet 문서(github.com/Pittvandewitt/Wavelet, docs/Import.md): 주파수를 더하거나 바꾸거나 빼면 가져오기가 실패한다.
+ * 그래서 계산으로 만들지 않고 문서의 목록을 그대로 적어 둔다
+ */
+export const GRAPHIC_EQ_FREQS: readonly number[] = [
+  20, 21, 22, 23, 24, 26, 27, 29, 30, 32, 34, 36, 38, 40, 43, 45, 48, 50, 53, 56, 59, 63, 66, 70, 74, 78, 83,
+  87, 92, 97, 103, 109, 115, 121, 128, 136, 143, 151, 160, 169, 178, 188, 199, 210, 222, 235, 248, 262, 277,
+  292, 309, 326, 345, 364, 385, 406, 429, 453, 479, 506, 534, 565, 596, 630, 665, 703, 743, 784, 829, 875,
+  924, 977, 1032, 1090, 1151, 1216, 1284, 1357, 1433, 1514, 1599, 1689, 1784, 1885, 1991, 2103, 2221, 2347,
+  2479, 2618, 2766, 2921, 3086, 3260, 3443, 3637, 3842, 4058, 4287, 4528, 4783, 5052, 5337, 5637, 5955, 6290,
+  6644, 7018, 7414, 7831, 8272, 8738, 9230, 9749, 10298, 10878, 11490, 12137, 12821, 13543, 14305, 15110,
+  15961, 16860, 17809, 18812, 19871,
+]
+
+/**
  * AutoEq GraphicEQ 형식: "GraphicEQ: 주파수 dB; 주파수 dB; ..." 한 줄.
- * 필터를 모두 건 결과를 1/12옥타브 간격으로 적고, 프리앰프를 미리 더해 둔다(가장 큰 값이 0dB 이하)
+ * 필터를 모두 건 결과를 위 127개 주파수에서 적고, 프리앰프를 미리 더해 둔다(가장 큰 값이 0dB 이하)
  */
 export function toGraphicText(eq: EqSettings): string {
-  const freqs = logGrid(20, 20000, 12).map((f) => Math.round(f))
+  const freqs = [...GRAPHIC_EQ_FREQS]
   const total = freqs.map(() => eq.preamp)
   for (const filter of eq.filters) peakResponse(filter, freqs).forEach((v, i) => (total[i] += v))
-  return 'GraphicEQ: ' + freqs.map((f, i) => `${f} ${total[i].toFixed(1)}`).join('; ') + '\n'
+  // toFixed는 -0.04 같은 값을 "-0.0"으로 적어서, 0이 되는 값은 "0.0"으로 고친다
+  const fmt = (v: number) => (Math.abs(v) < 0.05 ? '0.0' : v.toFixed(1))
+  return 'GraphicEQ: ' + freqs.map((f, i) => `${f} ${fmt(total[i])}`).join('; ') + '\n'
 }
 
 export function eqText(app: EqApp, eq: EqSettings): string {

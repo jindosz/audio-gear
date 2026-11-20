@@ -1,4 +1,4 @@
-// 설정 팝업: 화면 테마, 백업 내보내기/가져오기, 브라우저 저장소 영구 보존
+// 설정 팝업: 보통 앱 설정처럼 한 줄짜리 항목 목록. 화면 테마 → 데이터(백업) → 고급(접힘: 기기 정리, 저장 공간 보존) → 버전
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { backupFileName, parseBackup, summarize, type BackupData } from '../backup'
 import { cleanupStoredDevices, exportAll, importAll } from '../repo'
@@ -7,7 +7,6 @@ import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { buildLabel } from '../buildInfo'
-import { Help } from './Help'
 
 interface Props {
   open: boolean
@@ -17,32 +16,36 @@ interface Props {
 export function SettingsDialog({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="설정">
-      <div className="detail settings">
-        <ThemeSection />
-        <BackupSection />
-        <CleanupSection />
-        {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
-        {!isAndroidApp() && <StorageSection />}
+      <div className="settings">
+        <ThemeRow />
+        <BackupGroup />
+        {/* 자주 안 쓰는 항목은 접어 둔다 */}
+        <details className="settings-advanced">
+          <summary className="settings-group-title">고급</summary>
+          <CleanupRow />
+          {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
+          {!isAndroidApp() && <StorageRow />}
+        </details>
         {/* 지금 쓰는 앱이 몇 번째 빌드인지(업데이트가 됐는지 확인용) */}
-        <p className="muted small">버전: {buildLabel()}</p>
+        <p className="settings-version">audio-gear · {buildLabel()}</p>
       </div>
     </Modal>
   )
 }
 
 const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
-  { value: 'system', label: '시스템 설정' },
+  { value: 'system', label: '시스템' },
   { value: 'light', label: '라이트' },
   { value: 'dark', label: '다크' },
 ]
 
-function ThemeSection() {
+function ThemeRow() {
   const pref = useThemePref()
   return (
-    <section>
-      <h3>화면 테마</h3>
+    <div className="settings-row">
+      <span>화면 테마</span>
       {/* 세 버튼 중 하나만 눌린 상태가 되는 "세그먼트 버튼". aria-pressed로 눌림 상태를 알린다 */}
-      <div className="segmented" role="group" aria-label="화면 테마">
+      <div className="segmented small" role="group" aria-label="화면 테마">
         {THEME_OPTIONS.map((o) => (
           <button
             key={o.value}
@@ -55,11 +58,11 @@ function ThemeSection() {
           </button>
         ))}
       </div>
-    </section>
+    </div>
   )
 }
 
-function BackupSection() {
+function BackupGroup() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   // 가져올 파일을 읽어 검사까지 마친 내용. 사용자가 방식을 고르고 확인하면 DB에 넣는다
@@ -73,7 +76,7 @@ function BackupSection() {
       // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
       const result = await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
       if (result === 'cancelled') {
-        setMessage('내보내기를 취소했습니다. 백업 파일은 저장되지 않았습니다.')
+        setMessage('내보내기를 취소했어요.')
         return
       }
     } catch (e) {
@@ -81,10 +84,7 @@ function BackupSection() {
       return
     }
     const s = summarize(data)
-    setMessage(
-      `내보냈습니다: 기기 ${s.devices}개, 측정치 ${s.measurements}개, 타깃 ${s.targets}개, 탭 ${s.tabs}개, EQ ${s.eqPresets}개` +
-        (isAndroidApp() ? ' (공유 창에서 저장할 곳을 고르세요: 내 파일, 드라이브 등)' : ''),
-    )
+    setMessage(`내보냈어요: 기기 ${s.devices}개, 측정치 ${s.measurements}개, EQ ${s.eqPresets}개`)
   }
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
@@ -106,7 +106,7 @@ function BackupSection() {
     if (mode === 'replace' && !confirm('지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿉니다. 계속할까요?')) return
     try {
       await importAll(pending.data, mode)
-      setMessage(`${pending.fileName}을(를) 가져왔습니다.`)
+      setMessage('가져왔어요.')
       setPending(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -116,30 +116,25 @@ function BackupSection() {
   const summary = pending && summarize(pending.data)
 
   return (
-    <section>
-      <h3>백업</h3>
-      <Help>기기·측정치·타깃·비교 탭·저장한 EQ를 파일 하나로 저장하거나 불러옵니다. 가끔 내보내 두세요. AutoEQ 목록은 다시 받을 수 있어서 넣지 않습니다.</Help>
-      <div className="row">
-        <button type="button" onClick={handleExport}>
-          내보내기
-        </button>
-        {/* 파일 선택 칸은 숨기고, 버튼처럼 보이는 label을 눌러 연다 */}
-        <label className="file-button">
-          가져오기…
-          <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
-        </label>
-      </div>
+    <section className="settings-group">
+      <h3 className="settings-group-title">데이터</h3>
+      <button type="button" className="settings-row settings-link" onClick={handleExport}>
+        <span>백업 내보내기</span>
+        <span aria-hidden="true">›</span>
+      </button>
+      {/* 파일 선택 칸은 숨기고, 한 줄 항목처럼 보이는 label을 눌러 연다 */}
+      <label className="settings-row settings-link">
+        <span>백업 가져오기</span>
+        <span aria-hidden="true">›</span>
+        <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
+      </label>
 
       {pending && summary && (
         <div className="import-box">
           <p className="small">
-            <strong>{pending.fileName}</strong>: 기기 {summary.devices}개, 측정치 {summary.measurements}개, 타깃{' '}
-            {summary.targets}개, 탭 {summary.tabs}개, EQ {summary.eqPresets}개
-            {pending.data.exportedAt && (
-              <span className="muted"> · {new Date(pending.data.exportedAt).toLocaleString()}에 내보냄</span>
-            )}
+            <strong>{pending.fileName}</strong> · 기기 {summary.devices}개, 측정치 {summary.measurements}개, EQ {summary.eqPresets}개
           </p>
-          <div className="segmented" role="group" aria-label="가져오는 방식">
+          <div className="segmented small" role="group" aria-label="가져오는 방식">
             <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
               합치기
             </button>
@@ -147,9 +142,6 @@ function BackupSection() {
               모두 바꾸기
             </button>
           </div>
-          <p className="muted small">
-            {mode === 'merge' ? '지금 데이터에 더하고, 같은 항목은 백업 내용으로' : '지금 데이터를 모두 지우고 백업으로'}
-          </p>
           <div className="row">
             <button type="button" className="primary" onClick={handleImport}>
               가져오기
@@ -168,12 +160,12 @@ function BackupSection() {
 }
 
 /** 저장된 기기 이름 정리. 앱을 처음 열 때 한 번 자동으로 하지만, 백업을 가져온 뒤 등에 다시 할 수 있게 둔다 */
-function CleanupSection() {
+function CleanupRow() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function handleCleanup() {
-    if (!confirm('이름을 정리하고, 같은 기기는 하나로 합치고, 기기가 아닌 항목(구분선 등)은 지웁니다. 계속할까요?')) return
+    if (!confirm('저장된 기기 이름을 정리하고, 이름이 같아진 기기는 하나로 합칩니다(보유·찜·메모·측정치 유지). 기기가 아닌 항목(구분선 등)은 지웁니다. 계속할까요?')) return
     setBusy(true)
     try {
       setMessage(describeCleanup(await cleanupStoredDevices()))
@@ -185,14 +177,13 @@ function CleanupSection() {
   }
 
   return (
-    <section>
-      <h3>기기 정리</h3>
-      <Help>저장된 기기 이름을 목록과 같은 규칙으로 정리합니다. 이름이 같아진 기기는 하나로 합치고(보유·찜·메모·측정치 유지), 기기가 아닌 항목은 지웁니다.</Help>
-      <button type="button" onClick={handleCleanup} disabled={busy}>
-        {busy ? '정리 중…' : '저장된 기기 정리'}
+    <>
+      <button type="button" className="settings-row settings-link" onClick={handleCleanup} disabled={busy}>
+        <span>{busy ? '정리 중…' : '저장된 기기 정리'}</span>
+        <span aria-hidden="true">›</span>
       </button>
       {message && <p className="notice small">{message}</p>}
-    </section>
+    </>
   )
 }
 
@@ -201,7 +192,7 @@ function CleanupSection() {
  * 브라우저는 저장 공간이 부족하면 오래 안 쓴 사이트 데이터를 지울 수 있다(특히 iOS Safari).
  * navigator.storage.persist()로 "지우지 말아 달라"고 요청할 수 있다. 허락 여부는 브라우저가 정한다.
  */
-function StorageSection() {
+function StorageRow() {
   const supported = typeof navigator !== 'undefined' && !!navigator.storage?.persist
   const [persisted, setPersisted] = useState<boolean | null>(null)
   const [usage, setUsage] = useState<string>('')
@@ -210,7 +201,7 @@ function StorageSection() {
     if (!supported) return
     navigator.storage.persisted().then(setPersisted)
     navigator.storage.estimate().then((e) => {
-      if (e.usage !== undefined) setUsage(`${(e.usage / 1024 / 1024).toFixed(1)}MB 사용 중`)
+      if (e.usage !== undefined) setUsage(`${(e.usage / 1024 / 1024).toFixed(1)}MB`)
     })
   }, [supported])
 
@@ -218,27 +209,24 @@ function StorageSection() {
     setPersisted(await navigator.storage.persist())
   }
 
+  // 브라우저가 지우지 않게 "영구 보존"을 요청한다. 꺼져 있어도 평소에는 데이터가 유지되지만, 홈 화면에 설치하면 허락되기 쉽다
   return (
-    <section>
-      <h3>저장소</h3>
+    <div className="settings-row">
+      <span>
+        저장 공간 보존
+        {usage && <span className="muted small"> · {usage}</span>}
+      </span>
       {!supported ? (
-        <p className="muted small">이 브라우저는 영구 보존을 지원하지 않아요. 백업을 자주 내보내 두세요.</p>
+        <span className="muted small">지원 안 함</span>
+      ) : persisted ? (
+        <span className="muted small">켜짐</span>
+      ) : persisted === false ? (
+        <button type="button" className="small" onClick={handleRequest}>
+          켜기
+        </button>
       ) : (
-        <>
-          <p className="small">
-            영구 보존: <strong>{persisted === null ? '확인 중…' : persisted ? '켜짐' : '꺼짐'}</strong>
-            {usage && <span className="muted"> · {usage}</span>}
-          </p>
-          {persisted === false && (
-            <>
-              <button type="button" onClick={handleRequest}>
-                영구 보존 요청
-              </button>
-              <Help>브라우저가 거절할 수 있어요(홈 화면에 설치하면 허락되기 쉬움). 꺼져 있어도 평소에는 데이터가 유지되지만 백업을 함께 해 두세요.</Help>
-            </>
-          )}
-        </>
+        <span className="muted small">확인 중…</span>
       )}
-    </section>
+    </div>
   )
 }

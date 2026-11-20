@@ -14,6 +14,7 @@
 
 - React + TypeScript + Vite (템플릿 `react-ts`)
 - 테스트: `npm test`(vitest, 순수 함수용 `src/*.test.ts`)
+- 디자인 참고 스킬: `.claude/skills/ui-ux-pro-max/`(2026-11-20 설치, github.com/nextlevelbuilder/ui-ux-pro-max-skill 커밋 2de1134, MIT, 테스트 폴더 제외). UI를 고칠 때 `SKILL.md`·`references/`의 규칙을 참고. 검색 스크립트는 프로젝트 기준 `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<검색어>" --domain <분야>`(SKILL.md의 `${CLAUDE_PLUGIN_ROOT}` 경로 대신, 외부 스크립트라 실행은 권한 허용 필요)
 - 저장: 브라우저 IndexedDB, Dexie.js(`dexie`, `dexie-react-hooks`)로 접근
 - Chart.js(FR 그래프, 로그 축, `React.lazy`로 따로 불러옴), vite-plugin-pwa(설치·오프라인). 배포는 GitHub Pages(2026-11-07 결정, 주소 https://jindosz.github.io/audio-gear/). `vite.config.ts`의 `base`는 빌드·`npm run preview`일 때만 `/audio-gear/`, 개발 서버는 `/`(Vite는 preview도 command가 `serve`라 `isPreview`로 구분). main에 푸시하면 `.github/workflows/deploy.yml`이 빌드해서 올림(저장소 Settings → Pages → Source = GitHub Actions). 무료 플랜은 공개 저장소만 Pages 가능. 배포한 사이트는 localhost와 출처(origin)가 달라 IndexedDB·localStorage가 따로라, 기존 데이터는 설정의 JSON 백업 내보내기 → 가져오기로 옮김
 - 저장소: https://github.com/jindosz/audio-gear (main 브랜치)

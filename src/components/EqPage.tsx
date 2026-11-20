@@ -23,9 +23,12 @@ import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { Device, DeviceCategory, EqPreset, FrCurve, Measurement, Target } from '../types'
 import { EqBandTable } from './EqBandTable'
 import { EqExport } from './EqExport'
+import { EqPresetPicker } from './EqPresetPicker'
+import { Modal } from './Modal'
 import { Help } from './Help'
 import { PhoneEqControl, PhoneEqStatusBar } from './PhoneEqControl'
-import { AlertIcon, PlusIcon } from './Icons'
+import { AlertIcon, ChevronDownIcon } from './Icons'
+import { findSamePreset } from '../eqPresetList'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -62,6 +65,8 @@ export function EqPage() {
   const measurements = useLiveQuery(listMeasurements)
   // 지금 고른 EQ id는 이 브라우저에 기억한다
   const [activeId, setActiveId] = useState<string>(() => readPref(EQ_ACTIVE_KEY, ''))
+  // 폰: "EQ 고르기" 시트가 열려 있는지
+  const [pickerOpen, setPickerOpen] = useState(false)
   useEffect(() => writePref(EQ_ACTIVE_KEY, activeId), [activeId])
 
   // 예전 방식(EQ 하나를 localStorage에 기억)으로 만들던 EQ가 있으면 목록의 첫 EQ로 옮긴다
@@ -91,6 +96,8 @@ export function EqPage() {
     .sort((a, b) => a.label.localeCompare(b.label))
 
   const active = presets.find((p) => p.id === activeId) ?? presets[0]
+  /** 측정치 id → 지금 쓰는 기기 이름(EQ 목록 묶음·검색용) */
+  const deviceNameOf = (measurementId: string) => currentOption(options, measurementId)?.name ?? '기기 없음'
 
   async function handleNew() {
     // 새 EQ는 첫 보유 기기 측정치에 빈 밴드로 시작한다
@@ -131,32 +138,39 @@ export function EqPage() {
       <PhoneEqStatusBar />
 
       <div className="eq-layout">
-        <aside className="eq-list">
-          <button type="button" className="primary" onClick={handleNew} disabled={options.length === 0}>
-            <PlusIcon size={16} /> 새 EQ
-          </button>
-          <ul>
-            {presets.map((p) => {
-              const device = currentOption(options, p.measurementId)
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    className={p === active ? 'eq-item active' : 'eq-item'}
-                    aria-pressed={p === active}
-                    onClick={() => setActiveId(p.id)}
-                  >
-                    <span className="eq-item-name">{p.name}</span>
-                    <span className="muted small">
-                      {device?.name ?? '기기 없음'} · 밴드 {p.filters.length}개
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-          {presets.length === 0 && <p className="muted small">아직 EQ가 없습니다.</p>}
+        {/* PC: 왼쪽 칸에 EQ 목록(검색·즐겨찾기·기기별 묶음) */}
+        <aside className="eq-list desktop-only">
+          <EqPresetPicker
+            presets={presets}
+            deviceNameOf={deviceNameOf}
+            activeId={active?.id}
+            onSelect={setActiveId}
+            onNew={handleNew}
+            newDisabled={options.length === 0}
+          />
         </aside>
+
+        {/* 폰: 지금 고른 EQ 이름 버튼 → 누르면 "EQ 고르기" 시트 */}
+        <button type="button" className="eq-current mobile-only" onClick={() => setPickerOpen(true)}>
+          <span>{active?.name ?? 'EQ 고르기'}</span>
+          <ChevronDownIcon />
+        </button>
+        <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} title="EQ 고르기">
+          <EqPresetPicker
+            presets={presets}
+            deviceNameOf={deviceNameOf}
+            activeId={active?.id}
+            onSelect={(id) => {
+              setActiveId(id)
+              setPickerOpen(false)
+            }}
+            onNew={async () => {
+              await handleNew()
+              setPickerOpen(false)
+            }}
+            newDisabled={options.length === 0}
+          />
+        </Modal>
 
         <section className="eq-editor">
           {options.length === 0 ? (
@@ -167,6 +181,8 @@ export function EqPage() {
               key={active.id}
               preset={active}
               options={options}
+              presets={presets}
+              onOpenPreset={setActiveId}
               onDuplicate={() => handleDuplicate(active)}
               onDelete={() => handleDelete(active)}
             />
@@ -185,11 +201,16 @@ type Draft = Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'>
 function EqEditor({
   preset,
   options,
+  presets,
+  onOpenPreset,
   onDuplicate,
   onDelete,
 }: {
   preset: EqPreset
   options: MeasurementOption[]
+  /** 모든 EQ(같은 조합 알림용) */
+  presets: EqPreset[]
+  onOpenPreset: (id: string) => void
   onDuplicate: () => void
   onDelete: () => void
 }) {
@@ -228,6 +249,7 @@ function EqEditor({
     setDraft((d) => ({ ...d, ...patch }))
   }
 
+  const sameAs = findSamePreset(presets, draft.measurementId, draft.goal, preset.id)
   const goalTargetId = draft.goal.startsWith('t:') ? draft.goal.slice(2) : null
   const goalTarget = useLiveQuery(() => (goalTargetId ? getTarget(goalTargetId) : undefined), [goalTargetId])
 
@@ -363,6 +385,15 @@ function EqEditor({
         {loadingTarget && <span className="muted small">타깃 받는 중…</span>}
       </div>
       {error && <p className="error small">{error}</p>}
+      {/* 같은 "기기 → 목표" 조합이 다른 EQ에 있으면 알려 준다(같은 EQ를 또 만들지 않게) */}
+      {sameAs && (
+        <p className="notice small">
+          같은 조합의 EQ가 있어요: <strong>{sameAs.name}</strong>{' '}
+          <button type="button" className="link" onClick={() => onOpenPreset(sameAs.id)}>
+            열기
+          </button>
+        </p>
+      )}
 
       {goal && goal.category !== category && (
         <p className="warning small" title="헤드폰과 이어폰은 측정 방식이 달라 EQ 결과가 부정확합니다">

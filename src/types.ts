@@ -126,6 +126,8 @@ export interface EqPreset {
   /** 자동 계산 목표: '' (없음) | 'm:측정치 id' | 't:타깃 id' */
   goal: string
   filters: PeakFilter[]
+  /** 즐겨찾기(목록 맨 위에 고정). 예전 데이터엔 없음 */
+  favorite?: boolean
   createdAt: number
   updatedAt: number
 }

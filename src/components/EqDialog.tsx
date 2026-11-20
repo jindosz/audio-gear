@@ -7,7 +7,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { fitPeq, MAX_BOOST, targetEq } from '../eq'
 import { applyPreset, getEqEngine } from '../eqEngine'
 import { categoryLabels, sourceLabel } from '../labels'
-import { addEqPreset, listDevices, listMeasurements } from '../repo'
+import { addEqPreset, listDevices, listEqPresets, listMeasurements } from '../repo'
+import { findSamePreset } from '../eqPresetList'
 import { FINE_GRID } from '../similarity'
 import type { DeviceCategory, FrCurve, Target } from '../types'
 import type { SelectedItem } from '../useCompareData'
@@ -56,7 +57,8 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
   const [currentKey, setCurrentKey] = useState('')
   const [wishKey, setWishKey] = useState('')
   // 방금 저장한 EQ. pair(지금 기기|들어볼 소리)가 바뀌면 안내를 감춘다
-  const [saved, setSaved] = useState<{ pair: string; id: string; name: string } | null>(null)
+  // 저장한(또는 이미 있던) EQ. existing: 같은 조합이 이미 있어서 새로 만들지 않음
+  const [saved, setSaved] = useState<{ pair: string; id: string; name: string; existing?: boolean } | null>(null)
   const [saveError, setSaveError] = useState('')
   // 안드로이드 앱: [폰에 적용] 결과 한 줄
   const [phoneMessage, setPhoneMessage] = useState('')
@@ -110,6 +112,12 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
     // EQ 화면의 자동 계산과 같은 이름 규칙("기기 → 목표")
     const name = `${current.name} → ${wish.name}`
     try {
+      // 같은 "기기 → 목표" EQ가 이미 있으면 새로 만들지 않고 그것을 쓴다(같은 EQ가 쌓이지 않게)
+      const same = findSamePreset(await listEqPresets(), current.key, wish.goal)
+      if (same) {
+        setSaved({ pair, id: same.id, name: same.name, existing: true })
+        return { id: same.id, name: same.name }
+      }
       const id = await addEqPreset({ name, measurementId: current.key, goal: wish.goal, filters: eq.filters })
       setSaved({ pair, id, name })
       return { id, name }
@@ -209,7 +217,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
       </div>
       {(phoneMessage || saved?.pair === pair || saveError) && (
         <p className="small" role="status">
-          {saveError ? <span className="error">저장하지 못했어요: {saveError}</span> : phoneMessage || `저장했어요: ${saved?.name}`}
+          {saveError ? <span className="error">저장하지 못했어요: {saveError}</span> : phoneMessage || (saved?.existing ? `이미 있는 EQ를 썼어요: ${saved.name}` : `저장했어요: ${saved?.name}`)}
         </p>
       )}
 

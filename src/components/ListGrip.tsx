@@ -24,6 +24,14 @@ export function ListGrip() {
     else root.style.setProperty('--list-h', `${px}px`)
   }
 
+  /** 목록 위쪽 부품(손잡이·헤드폰/이어폰·검색창·필터)의 높이 = 목록 칸 맨 위에서 스크롤 칸 시작까지. 이보다 낮추면 부품이 눌려 겹친다 */
+  function headerHeight(el: HTMLElement) {
+    const col = listCol(el)
+    const scroll = col?.querySelector<HTMLElement>('.list-scroll')
+    if (!col || !scroll) return 0
+    return scroll.getBoundingClientRect().top - col.getBoundingClientRect().top
+  }
+
   function currentHeight(el: HTMLElement) {
     return listCol(el)?.getBoundingClientRect().height ?? 0
   }
@@ -40,7 +48,7 @@ export function ListGrip() {
     const dy = d.startY - e.clientY // 위로 올리면 양수 → 목록이 커진다
     if (!d.moved && Math.abs(dy) < DRAG_THRESHOLD) return
     d.moved = true
-    setHeight(e.currentTarget, clampListHeight(d.startHeight + dy, window.innerHeight))
+    setHeight(e.currentTarget, clampListHeight(d.startHeight + dy, window.innerHeight, headerHeight(e.currentTarget)))
   }
 
   function handlePointerUp(e: PointerEvent<HTMLButtonElement>) {
@@ -53,7 +61,7 @@ export function ListGrip() {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     const step = e.key === 'ArrowUp' ? KEY_STEP : -KEY_STEP
-    setHeight(e.currentTarget, clampListHeight(currentHeight(e.currentTarget) + step, window.innerHeight))
+    setHeight(e.currentTarget, clampListHeight(currentHeight(e.currentTarget) + step, window.innerHeight, headerHeight(e.currentTarget)))
   }
 
   return (

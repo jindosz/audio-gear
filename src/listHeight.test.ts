@@ -10,6 +10,10 @@ describe('clampListHeight: 끌어서 정한 높이를 범위 안으로', () => {
     expect(LIST_MIN_PX).toBe(150)
     expect(clampListHeight(20, 800)).toBe(150)
   })
+  it('목록 위쪽 부품(손잡이·헤드폰/이어폰·검색창)이 더 높으면 그 높이가 최소', () => {
+    expect(clampListHeight(20, 800, 190)).toBe(190)
+    expect(clampListHeight(20, 800, 100)).toBe(150) // 기본 최소보다 낮게는 안 내려감
+  })
   it('최대는 화면 높이의 88%', () => {
     expect(clampListHeight(10000, 800)).toBe(704)
   })

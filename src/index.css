@@ -1493,3 +1493,26 @@ body.resizing {
     --list-base: 38dvh;
   }
 }
+
+/* ---- 안드로이드 앱: EQ 화면의 [폰에 적용] (PhoneEqControl.tsx) ---- */
+.phone-eq {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.phone-eq .error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* 글자처럼 보이는 버튼(문장 안의 "끄기") */
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+}

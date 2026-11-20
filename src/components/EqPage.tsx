@@ -23,6 +23,7 @@ import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { Device, DeviceCategory, EqPreset, FrCurve, Measurement, Target } from '../types'
 import { EqBandTable } from './EqBandTable'
 import { EqExport } from './EqExport'
+import { PhoneEqControl } from './PhoneEqControl'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -293,6 +294,9 @@ function EqEditor({
           삭제
         </button>
       </div>
+
+      {/* 안드로이드 앱에서만 보임: 이 EQ를 폰 전체 소리에 걸기 */}
+      <PhoneEqControl presetId={preset.id} name={draft.name} eq={{ filters, preamp }} />
 
       <div className="row eq-pickers">
         <label>

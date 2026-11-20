@@ -39,6 +39,10 @@ jobs:
       - run: npm ci
       # 웹 코드를 안드로이드용(상대 경로, 서비스 워커 없음)으로 빌드하고 android/ 안에 넣는다
       - run: npm run build:android
+        env:
+          # 앱 설정 화면 맨 아래에 보이는 빌드 번호·커밋(src/buildInfo.ts)
+          VITE_BUILD_NUMBER: ${{ github.run_number }}
+          VITE_COMMIT: ${{ github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -75,14 +79,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
-          name: audio-gear 안드로이드 앱 (최신)
+          name: audio-gear 안드로이드 앱 0.1.${{ github.run_number }} (빌드 ${{ github.run_number }})
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
           body: |
             audio-gear 안드로이드 앱 최신 빌드입니다. 아래 audio-gear.apk를 폰에서 받아 설치하세요.
             처음 설치·데이터 옮기기 안내: docs/android-install.md
-            버전: 0.1.${{ github.run_number }} · 커밋: ${{ github.sha }}
+            버전: 0.1.${{ github.run_number }} (빌드 ${{ github.run_number }}) · 커밋: ${{ github.sha }}
           files: audio-gear.apk
 
       # 작업 브랜치: 합치기 전 미리 보기(android-preview). 정식 링크를 덮어쓰지 않는다
@@ -90,11 +94,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-preview
-          name: audio-gear 안드로이드 앱 (미리 보기, 합치기 전)
+          name: audio-gear 안드로이드 앱 미리 보기 0.1.${{ github.run_number }} (빌드 ${{ github.run_number }})
           prerelease: true
           make_latest: false
           target_commitish: ${{ github.sha }}
           body: |
             main에 합치기 전 작업 브랜치(${{ github.ref_name }})의 시험 빌드입니다. 확인용으로만 설치하세요.
-            버전: 0.1.${{ github.run_number }} · 커밋: ${{ github.sha }}
+            버전: 0.1.${{ github.run_number }} (빌드 ${{ github.run_number }}) · 커밋: ${{ github.sha }}
           files: audio-gear.apk

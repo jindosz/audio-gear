@@ -6,6 +6,7 @@ import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
+import { buildLabel } from '../buildInfo'
 
 interface Props {
   open: boolean
@@ -20,6 +21,8 @@ export function SettingsDialog({ open, onClose }: Props) {
         <BackupSection />
         <CleanupSection />
         <StorageSection />
+        {/* 지금 쓰는 앱이 몇 번째 빌드인지(업데이트가 됐는지 확인용) */}
+        <p className="muted small">버전: {buildLabel()}</p>
       </div>
     </Modal>
   )

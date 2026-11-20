@@ -1275,9 +1275,12 @@ body.resizing {
 }
 
 @media (max-width: 768px) {
-  /* --list-h: 접었을 때 목록 높이. 그래프 높이 계산에도 같이 쓴다 */
+  /* --list-base: 기본 목록 높이. 그래프 높이는 이것으로 정한다(목록을 끌어도 그래프 크기는 그대로).
+     --list-h: 지금 목록 높이. 손잡이로 끌면 ListGrip.tsx가 이 값만 px로 바꾼다 →
+     목록을 내리면 그래프 칸이 넓어져 그래프 아래 툴바·안내가 보인다 */
   .app {
-    --list-h: 45dvh;
+    --list-base: 45dvh;
+    --list-h: var(--list-base);
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas: 'top' 'main' 'list';
@@ -1325,12 +1328,12 @@ body.resizing {
     order: 1;
   }
 
-  /* 그래프 높이는 폰 화면 높이에 맞춘다. 화면 높이에서 목록(--list-h)과
+  /* 그래프 높이는 폰 화면 높이에 맞춘다. 화면 높이에서 기본 목록 높이(--list-base)와
      메뉴 줄·탭·범례 몫(약 140px)을 뺀 만큼이라, 처음 화면에서 그래프가 칸에 꼭 맞게 보인다.
      아주 작은 화면에서도 160px 아래로는 줄이지 않는다.
      flex: none: 칸 크기에 맞춰 줄어들지 않고 이 높이를 지킨다. 툴바는 그 아래로 밀려 스크롤로 본다 */
   .main-col {
-    --chart-h: max(160px, calc(100dvh - var(--list-h) - 140px));
+    --chart-h: max(160px, calc(100dvh - var(--list-base) - 140px));
   }
 
   .main-col > .chart-box {
@@ -1487,6 +1490,6 @@ body.resizing {
 /* 높이가 낮은 폰(예: iPhone SE)은 목록을 조금 줄여 그래프 자리를 확보한다 */
 @media (max-width: 768px) and (max-height: 700px) {
   .app {
-    --list-h: 38dvh;
+    --list-base: 38dvh;
   }
 }

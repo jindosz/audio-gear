@@ -7,6 +7,7 @@ import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { buildLabel } from '../buildInfo'
+import { Help } from './Help'
 
 interface Props {
   open: boolean
@@ -54,7 +55,6 @@ function ThemeSection() {
           </button>
         ))}
       </div>
-      <p className="muted small">시스템 설정을 고르면 운영체제의 라이트/다크 설정을 따라 자동으로 바뀝니다.</p>
     </section>
   )
 }
@@ -118,17 +118,14 @@ function BackupSection() {
   return (
     <section>
       <h3>백업</h3>
-      <p className="muted small">
-        기기·측정치·타깃·비교 탭·저장한 EQ를 JSON 파일로 저장하거나 불러옵니다. 브라우저 데이터가 지워질 때를 대비해 가끔
-        내보내 두세요. (AutoEQ 목록은 다시 받을 수 있어서 백업에 넣지 않습니다.)
-      </p>
+      <Help>기기·측정치·타깃·비교 탭·저장한 EQ를 파일 하나로 저장하거나 불러옵니다. 가끔 내보내 두세요. AutoEQ 목록은 다시 받을 수 있어서 넣지 않습니다.</Help>
       <div className="row">
         <button type="button" onClick={handleExport}>
-          백업 파일 내보내기
+          내보내기
         </button>
         {/* 파일 선택 칸은 숨기고, 버튼처럼 보이는 label을 눌러 연다 */}
         <label className="file-button">
-          백업 파일 가져오기…
+          가져오기…
           <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
         </label>
       </div>
@@ -144,14 +141,14 @@ function BackupSection() {
           </p>
           <div className="segmented" role="group" aria-label="가져오는 방식">
             <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
-              지금 데이터에 합치기
+              합치기
             </button>
             <button type="button" className={mode === 'replace' ? 'active' : undefined} aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
-              모두 지우고 바꾸기
+              모두 바꾸기
             </button>
           </div>
           <p className="muted small">
-            {mode === 'merge' ? '지금 데이터는 두고, 같은 항목은 백업 내용으로 바뀝니다.' : '지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿉니다.'}
+            {mode === 'merge' ? '지금 데이터에 더하고, 같은 항목은 백업 내용으로' : '지금 데이터를 모두 지우고 백업으로'}
           </p>
           <div className="row">
             <button type="button" className="primary" onClick={handleImport}>
@@ -190,10 +187,7 @@ function CleanupSection() {
   return (
     <section>
       <h3>기기 정리</h3>
-      <p className="muted small">
-        저장된 기기 이름을 목록과 같은 규칙으로 정리합니다. 이름이 같아진 기기는 먼저 저장한 기기로 합치고(보유·찜·메모·측정치
-        유지), 기기가 아닌 항목은 지웁니다.
-      </p>
+      <Help>저장된 기기 이름을 목록과 같은 규칙으로 정리합니다. 이름이 같아진 기기는 하나로 합치고(보유·찜·메모·측정치 유지), 기기가 아닌 항목은 지웁니다.</Help>
       <button type="button" onClick={handleCleanup} disabled={busy}>
         {busy ? '정리 중…' : '저장된 기기 정리'}
       </button>
@@ -228,7 +222,7 @@ function StorageSection() {
     <section>
       <h3>저장소</h3>
       {!supported ? (
-        <p className="muted small">이 브라우저는 저장소 보존 요청을 지원하지 않습니다. 백업을 자주 내보내 두세요.</p>
+        <p className="muted small">이 브라우저는 영구 보존을 지원하지 않아요. 백업을 자주 내보내 두세요.</p>
       ) : (
         <>
           <p className="small">
@@ -240,10 +234,7 @@ function StorageSection() {
               <button type="button" onClick={handleRequest}>
                 영구 보존 요청
               </button>
-              <p className="muted small">
-                브라우저가 거절할 수 있습니다(사이트를 자주 쓰거나 홈 화면에 설치하면 허락되기 쉬움). 꺼져 있어도
-                평소에는 데이터가 유지되지만, 백업을 함께 해 두는 것이 안전합니다.
-              </p>
+              <Help>브라우저가 거절할 수 있어요(홈 화면에 설치하면 허락되기 쉬움). 꺼져 있어도 평소에는 데이터가 유지되지만 백업을 함께 해 두세요.</Help>
             </>
           )}
         </>

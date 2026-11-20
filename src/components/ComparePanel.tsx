@@ -94,39 +94,44 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
   return (
     <main className="main-col">
       {tabBar}
+      {/* 자주 쓰는 일(EQ·비슷한 기기)을 먼저, 그래프 설정(타깃·차이·정규화)은 그 아래 */}
       <div className="toolbar">
-        <label>
-          정규화 기준{' '}
-          <select
-            value={normalizeHz ?? ''}
-            onChange={(e) => setNormalizeHz(tab.id, e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">끔</option>
-            {NORMALIZE_OPTIONS.map((hz) => (
-              <option key={hz} value={hz}>
-                {hz >= 1000 ? `${hz / 1000}kHz` : `${hz}Hz`}
-              </option>
-            ))}
-          </select>
-        </label>
-        <TargetSelect tabId={tab.id} targetId={targetId} category={category} />
-        <label>
-          차이 기준{' '}
-          <select value={reference?.key ?? ''} onChange={(e) => setDiffRef(tab.id, e.target.value || null)}>
-            <option value="">끔</option>
-            {curves.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={() => setRecommendOpen(true)}>
-          비슷한 기기 찾기
-        </button>
-        <button type="button" onClick={() => setEqOpen(true)}>
-          EQ로 들어보기
-        </button>
+        <div className="toolbar-actions">
+          <button type="button" className="primary" onClick={() => setEqOpen(true)}>
+            EQ로 들어보기
+          </button>
+          <button type="button" onClick={() => setRecommendOpen(true)}>
+            비슷한 기기 찾기
+          </button>
+        </div>
+        <div className="toolbar-settings">
+          <TargetSelect tabId={tab.id} targetId={targetId} category={category} />
+          <label>
+            차이 기준{' '}
+            <select value={reference?.key ?? ''} onChange={(e) => setDiffRef(tab.id, e.target.value || null)}>
+              <option value="">끔</option>
+              {curves.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            정규화 기준{' '}
+            <select
+              value={normalizeHz ?? ''}
+              onChange={(e) => setNormalizeHz(tab.id, e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">끔</option>
+              {NORMALIZE_OPTIONS.map((hz) => (
+                <option key={hz} value={hz}>
+                  {hz >= 1000 ? `${hz / 1000}kHz` : `${hz}Hz`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
       <RecommendDialog
         open={recommendOpen}

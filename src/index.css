@@ -2205,3 +2205,25 @@ button.settings-row {
 .list-col > .list-filter {
   flex-shrink: 0;
 }
+
+/* 그래프 툴바: 자주 쓰는 버튼 줄(위) + 그래프 설정 줄(아래) */
+.toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.toolbar-actions,
+.toolbar-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* 폰: 두 버튼이 한 줄을 반씩 */
+@media (max-width: 768px) {
+  .toolbar-actions > button {
+    flex: 1 1 0;
+  }
+}

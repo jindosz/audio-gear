@@ -1,6 +1,6 @@
 // 3단 화면: 왼쪽 메뉴 | 기기 목록 | 메인(비교 탭·그래프)
 import { useEffect, useState, type CSSProperties } from 'react'
-import { loadAccountIfSignedIn } from './account'
+import { loadAccountIfSignedIn, setupAutoSync } from './account'
 import { ComparePanel } from './components/ComparePanel'
 import { ConfirmHost } from './components/ConfirmHost'
 import { ToastHost } from './components/ToastHost'
@@ -35,6 +35,7 @@ function App() {
   useEffect(() => setupAutoUpdate(), [])
   // 로그인해 둔 기기면 서버를 불러와 동기화(account.ts). 로그인한 적 없으면 Firebase를 불러오지 않음
   useEffect(() => loadAccountIfSignedIn(), [])
+  useEffect(() => setupAutoSync(), [])
   // 측정치 미리 받기에서 실패했던 것: 앱을 열고 10초 뒤(처음 화면 그리기와 겹치지 않게)·인터넷이 다시 연결될 때 다시 시도
   useEffect(() => {
     const retry = () => void retryFailedSummaries()

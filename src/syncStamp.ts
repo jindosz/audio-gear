@@ -30,6 +30,11 @@ function syncable(table: SyncTable, obj: unknown): boolean {
   return table !== 'targets' || !!(obj as { isCustom?: boolean } | undefined)?.isCustom
 }
 
+/** 동기화 테이블 밖에서 바뀐 것(내 귀 설정 등)도 자동 동기화에 알린다 */
+export function notifyLocalChange(): void {
+  changed()
+}
+
 function changed() {
   // 훅 안에서 바로 부르면 아직 저장이 안 끝났을 수 있어 한 박자 뒤에
   setTimeout(() => listeners.forEach((l) => l()), 0)

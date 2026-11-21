@@ -8,6 +8,12 @@ import { planMerge, recordUpdatedAt, type SyncDoc } from './sync'
 import type { SyncBackend } from './syncBackend'
 import { runAsRemote } from './syncStamp'
 import { SYNC_TABLES, type SyncTable } from './types'
+import { applyRemoteEarBalance, getEarBalance, type EarBalance } from './earBalanceStore'
+import { applyRemoteEarProfile, getEarProfile } from './earEqStore'
+import type { EarProfile } from './earEq'
+
+/** 내 귀 설정도 동기화할지(설정의 계정 칸, 기본 꺼짐: 건강 정보에 가까워서) */
+export const SYNC_EAR_KEY = 'sync.ear'
 
 interface SyncState {
   /** 서버 시계 기준, 마지막으로 받은 문서의 syncedAt */
@@ -20,7 +26,14 @@ interface SyncState {
 const DELETION_KEEP_MS = 30 * 24 * 60 * 60 * 1000
 
 const stateKey = (uid: string) => `sync.state.${uid}`
-export const readSyncState = (uid: string) => readPref<SyncState>(stateKey(uid), { lastPulledAt: 0, lastPushedAt: 0 })
+const earStateKey = (uid: string) => `sync.earState.${uid}`
+
+/** 내 귀 설정 동기화를 켤 때: 처음부터 다시 맞추게(켜기 전 값도 올라가고, 서버 값도 다시 받음) */
+export function resetEarSyncState(uid: string): void {
+  writePref(earStateKey(uid), null)
+}
+export const readSyncState = (uid: string): SyncState =>
+  readPref<SyncState | null>(stateKey(uid), null) ?? { lastPulledAt: 0, lastPushedAt: 0 }
 
 type AnyRecord = { id: string; updatedAt?: number; createdAt?: number; isCustom?: boolean }
 
@@ -71,10 +84,36 @@ export async function runSync(backend: SyncBackend, uid: string): Promise<{ pull
     pushed += r.pushed
     newest = Math.max(newest, r.newest)
   }
+  if (readPref<boolean>(SYNC_EAR_KEY, false)) {
+    // 내 귀 설정은 켠 때부터 따로 셈(켜기 전에 저장한 값도 처음 한 번은 올라가게)
+    // 켤 때 null로 비워 두므로 비었으면 처음부터
+    const earState = readPref<SyncState | null>(earStateKey(uid), null) ?? { lastPulledAt: 0, lastPushedAt: 0 }
+    const r = await syncEar(backend, uid, earState)
+    pulled += r.pulled
+    pushed += r.pushed
+    writePref(earStateKey(uid), { lastPulledAt: Math.max(earState.lastPulledAt, r.newest), lastPushedAt: startedAt } satisfies SyncState)
+  }
   writePref(stateKey(uid), { lastPulledAt: newest, lastPushedAt: startedAt } satisfies SyncState)
   // 올린 지 오래된 지우기 표시 정리
   await db.deletions.where('deletedAt').below(startedAt - DELETION_KEEP_MS).delete()
   return { pulled, pushed }
+}
+
+/** 내 귀 설정(균형·보정): 'ear' 묶음의 문서 balance·profile. localStorage에 있어서 테이블과 따로 */
+async function syncEar(backend: SyncBackend, uid: string, state: SyncState) {
+  const remote = await backend.pullSince(uid, 'ear', state.lastPulledAt)
+  const local: SyncDoc[] = []
+  const balance = getEarBalance()
+  const profile = getEarProfile()
+  if (balance) local.push({ id: 'balance', updatedAt: balance.updatedAt ?? 0, data: { ...balance } })
+  if (profile) local.push({ id: 'profile', updatedAt: profile.updatedAt ?? 0, data: { ...profile } })
+  const plan = planMerge(local, [], remote, state.lastPushedAt)
+  for (const d of plan.putLocal) {
+    if (d.id === 'balance') await applyRemoteEarBalance({ ...(d.data as unknown as EarBalance), updatedAt: d.updatedAt })
+    if (d.id === 'profile') await applyRemoteEarProfile({ ...(d.data as unknown as EarProfile), updatedAt: d.updatedAt })
+  }
+  if (plan.pushRemote.length) await backend.push(uid, 'ear', plan.pushRemote)
+  return { pulled: plan.putLocal.length, pushed: plan.pushRemote.length, newest: Math.max(0, ...remote.map((d) => d.syncedAt ?? 0)) }
 }
 
 /** 이 기기에 동기화할 내 데이터가 있는지(다른 계정으로 로그인할 때 합칠지 물어보려고) */

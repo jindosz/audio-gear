@@ -5,6 +5,7 @@ import { askConfirm } from './confirm'
 import { readPref, writePref } from './localPrefs'
 import { authErrorText, errorCode, getSyncBackend, type SyncBackend, type SyncUser } from './syncBackend'
 import { hasLocalData, runSync } from './syncRunner'
+import { onLocalChange } from './syncStamp'
 import { showToast } from './toast'
 
 export interface AccountState {
@@ -131,6 +132,69 @@ export async function syncNow(manual = false): Promise<void> {
     again = false
     await syncNow()
   }
+}
+
+// ---- 자동 동기화 ----
+
+/** 고친 뒤 이만큼 더 고치지 않으면 맞춘다(EQ 슬라이더처럼 자주 바뀌는 걸 모아서 서버 쓰기 횟수를 아낌) */
+const IDLE_MS = 30_000
+/** 화면을 다시 볼 때 맞추는 최소 간격(앱을 자주 왔다 갔다 해도 읽기 횟수를 아낌) */
+const VISIBLE_MIN_MS = 60_000
+
+let dirtyTimer: ReturnType<typeof setTimeout> | null = null
+let dirty = false
+
+/**
+ * App이 한 번 부른다. 로그인해 있을 때만 맞춘다:
+ * - 로컬에서 고치면 마지막으로 고친 뒤 30초
+ * - 화면을 떠날 때(고친 게 있으면 바로), 다시 볼 때(1분에 한 번까지), 인터넷이 다시 연결될 때
+ * 앱을 열 때·로그인할 때는 handleUser가 맞춘다
+ */
+export function setupAutoSync(): () => void {
+  const flush = () => {
+    if (dirtyTimer) clearTimeout(dirtyTimer)
+    dirtyTimer = null
+    dirty = false
+    void syncNow()
+  }
+  const stopChange = onLocalChange(() => {
+    if (!state.user) return
+    dirty = true
+    if (dirtyTimer) clearTimeout(dirtyTimer)
+    dirtyTimer = setTimeout(flush, IDLE_MS)
+  })
+  const onVisibility = () => {
+    if (!state.user) return
+    if (document.visibilityState === 'hidden') {
+      if (dirty) flush()
+    } else if (!state.lastSyncAt || Date.now() - state.lastSyncAt > VISIBLE_MIN_MS) {
+      void syncNow()
+    }
+  }
+  const onOnline = () => {
+    if (state.user) void syncNow()
+  }
+  document.addEventListener('visibilitychange', onVisibility)
+  window.addEventListener('online', onOnline)
+  return () => {
+    stopChange()
+    document.removeEventListener('visibilitychange', onVisibility)
+    window.removeEventListener('online', onOnline)
+    if (dirtyTimer) clearTimeout(dirtyTimer)
+  }
+}
+
+/** 계정 삭제: 서버의 내 데이터를 지우고 계정을 지운다(이 기기 데이터는 그대로) */
+export async function deleteAccountAndData(): Promise<void> {
+  const user = state.user
+  if (!user) return
+  await withBackend(async (b) => {
+    await b.deleteAllData(user.uid)
+    await b.deleteAccount()
+  })
+  writePref(LAST_UID_KEY, null)
+  writePref(LAST_AT_KEY, null)
+  set({ lastSyncAt: null })
 }
 
 /** 로그인·가입 등: 실패하면 화면 문구를 담은 오류를 던진다 */

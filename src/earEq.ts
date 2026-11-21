@@ -44,6 +44,8 @@ export interface EarProfile {
   /** 보정 세기 0~1 */
   strength: number
   on: boolean
+  /** 마지막으로 고친 시각(동기화용) */
+  updatedAt?: number
 }
 
 /** 안드로이드에 걸 귀마다의 보정(eqDevice.ts의 127개 주파수 순서, dB) */

@@ -3111,3 +3111,6 @@ button.select-option:active {
   padding: 4px 0;
   color: var(--accent);
 }
+.settings-row.danger-text {
+  color: var(--danger);
+}

@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from 'react'
 import { setBalanceProvider, syncEar } from './eqEngine'
 import { readPref, writePref } from './localPrefs'
+import { notifyLocalChange } from './syncStamp'
 
 export interface EarBalance {
   /** "오른쪽을 왼쪽보다 몇 dB 크게"(earBalance.ts 참고) */
@@ -13,6 +14,8 @@ export interface EarBalance {
   on: boolean
   /** 잰 날짜(ISO) */
   measuredAt: string
+  /** 마지막으로 고친 시각(동기화용) */
+  updatedAt?: number
 }
 
 const KEY = 'ear.balance'
@@ -25,7 +28,12 @@ setBalanceProvider({
   on: () => !!current?.on,
 })
 
-function set(next: EarBalance | null) {
+/** fromRemote: 동기화로 받은 값(고친 시각을 그대로 둠). 아니면 지금 시각을 찍고 자동 동기화에 알림 */
+function set(next: EarBalance | null, fromRemote = false) {
+  if (next && !fromRemote) {
+    next = { ...next, updatedAt: Date.now() }
+    notifyLocalChange()
+  }
   current = next
   writePref(KEY, next)
   subscribers.forEach((n) => n())
@@ -60,6 +68,12 @@ export async function setEarBalanceOn(on: boolean): Promise<void> {
 /** 백업에서 가져온 균형을 그대로 넣고 폰에 맞춘다 */
 export async function restoreEarBalance(b: EarBalance): Promise<void> {
   set(b)
+  await syncEar()
+}
+
+/** 동기화로 받은 균형을 넣고 폰에 맞춘다(syncRunner.ts) */
+export async function applyRemoteEarBalance(b: EarBalance): Promise<void> {
+  set(b, true)
   await syncEar()
 }
 

@@ -8,6 +8,7 @@ import { DEVICE_EQ_FREQS } from './eqDevice'
 import { setEarLayerProvider, syncEar } from './eqEngine'
 import type { EarResult } from './hearingTest'
 import { readPref, writePref } from './localPrefs'
+import { notifyLocalChange } from './syncStamp'
 
 const KEY = 'ear.profile'
 let current = readPref<EarProfile | null>(KEY, null)
@@ -35,7 +36,12 @@ export function currentLayer(): EarLayer | null {
 // eqEngine이 EQ를 걸 때 층을 물어볼 수 있게 등록(main.tsx가 앱 시작 때 이 파일을 불러옴)
 setEarLayerProvider(currentLayer)
 
-function set(next: EarProfile | null) {
+/** fromRemote: 동기화로 받은 값(고친 시각을 그대로 둠). 아니면 지금 시각을 찍고 자동 동기화에 알림 */
+function set(next: EarProfile | null, fromRemote = false) {
+  if (next && !fromRemote) {
+    next = { ...next, updatedAt: Date.now() }
+    notifyLocalChange()
+  }
   current = next
   writePref(KEY, next)
   subscribers.forEach((n) => n())
@@ -58,6 +64,12 @@ export function useEarProfile(): EarProfile | null {
 /** 결과를 저장하고 폰에 적용 */
 export async function saveEarProfile(p: EarProfile): Promise<void> {
   set(p)
+  await syncEar()
+}
+
+/** 동기화로 받은 결과를 넣고 폰에 맞춘다(syncRunner.ts) */
+export async function applyRemoteEarProfile(p: EarProfile): Promise<void> {
+  set(p, true)
   await syncEar()
 }
 

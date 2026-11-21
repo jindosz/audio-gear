@@ -12,6 +12,12 @@ describe('sheetSnaps: 세 자리', () => {
   it('높이 700px 이하 폰은 중간이 38%(CSS --list-base와 같게)', () => {
     expect(sheetSnaps(700, 24).middle).toBe(266)
   })
+  it('메뉴 줄 아래 끝을 주면 펼침 = 메뉴 줄 바로 아래까지(틈 6px)', () => {
+    expect(sheetSnaps(839, 48, 56).top).toBe(839 - 56 - 6)
+  })
+  it('메뉴 줄이 너무 커도 펼침은 중간보다 높게', () => {
+    expect(sheetSnaps(400, 36, 300).top).toBeGreaterThan(sheetSnaps(400, 36, 300).middle)
+  })
 })
 
 describe('clampListHeight: 끄는 중', () => {

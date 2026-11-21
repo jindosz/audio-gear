@@ -1,7 +1,10 @@
 // 성향 태그(순수 함수): FR 곡선을 기준 타깃(Harman 등)과 비교해 "저음 강함", "고음 어두움", "치찰음 피크" 같은 짧은 말로.
 // 그래프를 읽지 않아도 소리를 짐작할 수 있게 목록·그래프·추천 결과에 붙인다.
 // 값은 prepare(곡선, SUMMARY_GRID)를 거친 것(300Hz~3kHz 평균 = 0dB, 1/6옥타브 스무딩)을 쓴다.
-// 왜 타깃과 비교하나: 사람 귀 때문에 거의 모든 기기가 3kHz 근처가 솟아 있어서, 곡선만 보면 다 "중고음 쏨"이 된다
+// 왜 기준과 비교하나: 사람 귀 때문에 거의 모든 기기가 3kHz 근처가 솟아 있어서, 곡선만 보면 다 "중고음 쏨"이 된다.
+// 기준은 "같은 측정자가 잰 같은 종류 기기들의 중앙값"(peerReference)이 우선이다. 측정자마다 리그·보정이 달라
+// Harman 타깃 하나와 비교하면 측정 차이까지 태그에 섞였다(Innerfidelity는 68%가 "고음 어두움", oratory1990은 29%).
+// 같은 측정자 기기가 적으면(PEER_MIN 미만) Harman 타깃과 비교한다
 import { features, type BandKey, type Values } from './similarity'
 import type { DeviceCategory, Rig } from './types'
 
@@ -35,7 +38,14 @@ const signed = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}dB`
  * 성향 태그(차이가 큰 순서로 최대 3개).
  * values·reference: 같은 grid로 prepare한 값. referenceName: 근거 문구에 쓰는 기준 이름(예: "Harman")
  */
-export function soundTags(values: Values, reference: Values, grid: number[], referenceName = '타깃'): SoundTag[] {
+export function soundTags(
+  values: Values,
+  reference: Values,
+  grid: number[],
+  referenceName = '타깃',
+  /** 두드러진 게 없을 때의 말. 타깃이면 "타깃에 가까움", 같은 측정자 평균이면 "평균적" */
+  neutralLabel = '타깃에 가까움',
+): SoundTag[] {
   const mine = features(values, grid)
   const ref = features(reference, grid)
   const found: (SoundTag & { size: number })[] = []
@@ -80,7 +90,7 @@ export function soundTags(values: Values, reference: Values, grid: number[], ref
     })
     const rms = diffs.length ? Math.sqrt(diffs.reduce((s, d) => s + d * d, 0) / diffs.length) : Infinity
     return rms < NEUTRAL_RMS_DB
-      ? [{ label: '타깃에 가까움', kind: 'neutral', detail: `${referenceName}와 평균 차이 ${rms.toFixed(1)}dB` }]
+      ? [{ label: neutralLabel, kind: 'neutral', detail: `${referenceName}와 평균 차이 ${rms.toFixed(1)}dB` }]
       : []
   }
 
@@ -98,4 +108,23 @@ export function soundTags(values: Values, reference: Values, grid: number[], ref
 export function tagReferenceId(category: DeviceCategory, rig: Rig): string {
   if (category === 'iem') return 'autoeq:harman-ie-2019'
   return rig === '5128' ? 'autoeq:lmg-5128' : 'autoeq:harman-oe-2018'
+}
+
+/** 같은 측정자 기기가 이만큼은 있어야 그 중앙값을 기준으로 쓴다 */
+export const PEER_MIN = 30
+
+/** 여러 곡선(같은 grid로 다듬은 값)의 칸별 중앙값. 몇몇 튀는 기기에 덜 흔들리게 평균 대신 중앙값 */
+export function medianValues(list: Values[]): Values {
+  if (list.length === 0) return []
+  return list[0].map((_, i) => {
+    const column = list.map((v) => v[i]).filter((x): x is number => x !== null).sort((a, b) => a - b)
+    if (column.length === 0) return null
+    const mid = column.length >> 1
+    return column.length % 2 ? column[mid] : (column[mid - 1] + column[mid]) / 2
+  })
+}
+
+/** 측정치 출처("AutoEQ · oratory1990")에서 측정자 이름. AutoEQ가 아니면 null(요약값은 AutoEQ만 있음) */
+export function autoEqMeasurer(source: string): string | null {
+  return source.startsWith('AutoEQ · ') ? source.slice('AutoEQ · '.length) : null
 }

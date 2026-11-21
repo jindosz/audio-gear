@@ -35,6 +35,7 @@ import { PlusIcon } from './Icons'
 import { askConfirm } from '../confirm'
 import { SoundTagList } from './SoundTagList'
 import { useSoundTagger } from '../useSoundTagger'
+import { autoEqMeasurer } from '../soundTags'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -126,7 +127,7 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
                 <span className="muted">
                   {sourceLabel(m.source)} · {m.curve.length}포인트
                 </span>
-                <SoundTagList tags={tagger({ curve: m.curve }, device.category, m.rig)} />
+                <SoundTagList tags={tagger({ curve: m.curve, measurer: autoEqMeasurer(m.source) }, device.category, m.rig)} />
               </span>
               <span className="measurement-actions">
                 <button className="small" onClick={() => handleToggle(m.id)} aria-pressed={selected} disabled={!tabId}>

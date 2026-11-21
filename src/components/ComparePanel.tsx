@@ -15,6 +15,7 @@ import { TabBar } from './TabBar'
 import { TargetSelect } from './TargetSelect'
 import { SoundTagList } from './SoundTagList'
 import { useSoundTagger } from '../useSoundTagger'
+import { autoEqMeasurer } from '../soundTags'
 import { AlertIcon } from './Icons'
 
 // 그래프(Chart.js, 앱 코드의 절반 가까운 크기)는 필요할 때 따로 불러온다(lazy).
@@ -180,7 +181,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
               <span className="muted small"> · {sourceLabel(item.measurement.source)}</span>
             )}
             {/* 성향 태그: 기준 타깃(Harman 등)과 비교한 소리 성향 */}
-            <SoundTagList tags={tagger({ curve: item.measurement.curve }, item.device.category, item.measurement.rig)} />
+            <SoundTagList tags={tagger({ curve: item.measurement.curve, measurer: autoEqMeasurer(item.measurement.source) }, item.device.category, item.measurement.rig)} />
           </li>
         ))}
         {target && (

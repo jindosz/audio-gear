@@ -5,6 +5,8 @@ import { cleanupStoredDevices, exportAll, importAll } from '../repo'
 import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
+import { CatalogDataBox } from './CatalogDataBox'
+import { Help } from './Help'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { checkForUpdate, PREVIEW_UPDATES_KEY, previewUpdatesOn } from '../appUpdate'
 import { buildLabel } from '../buildInfo'
@@ -25,6 +27,16 @@ export function SettingsDialog({ open, onClose }: Props) {
       <div className="settings">
         <ThemeRow />
         <BackupGroup />
+        {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
+        <section className="settings-group">
+          <h3 className="settings-group-title">측정치 미리 받기</h3>
+          <CatalogDataBox category="headphone" title="헤드폰" />
+          <CatalogDataBox category="iem" title="이어폰" />
+          <Help>
+            AutoEQ의 기기별 추천 측정치를 요약(곡선마다 숫자 60개 정도)해서 저장해요. 받아 두면 목록에 성향 태그가 보이고 비슷한
+            기기 찾기 후보가 돼요. 헤드폰 약 1,900개는 몇 분 걸리고, 화면을 닫아도 계속 받아요. 한 번에 한 종류씩 받아요.
+          </Help>
+        </section>
         {/* 자주 안 쓰는 항목은 접어 둔다 */}
         <details className="settings-advanced">
           <summary className="settings-group-title">

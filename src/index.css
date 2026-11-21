@@ -2871,3 +2871,34 @@ button.select-option:active {
 .legend .sound-tags {
   margin-left: 0;
 }
+
+/* 목록 줄: 설명(유선·밀폐형 등) + 성향 태그를 한 줄에. 자리가 모자라면 설명이 먼저 …로 줄고, 태그는 줄바꿈 없이 */
+.device-subline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.device-subline .device-sub {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.device-subline .sound-tags {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  margin-left: 0;
+}
+
+.device-row.compact .device-subline {
+  flex: 0 20 auto;
+}
+
+/* 높이가 자유로운 줄(선택됨·보유·찜)은 태그가 모자라면 다음 줄로(잘리지 않게) */
+.device-row:not(.compact) .device-subline {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}

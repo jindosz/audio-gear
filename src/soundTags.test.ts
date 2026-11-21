@@ -1,7 +1,7 @@
 // soundTags.ts 테스트(성향 태그). 실행: npm test
 import { describe, expect, it } from 'vitest'
 import { SUMMARY_GRID } from './similarity'
-import { soundTags, tagReferenceId } from './soundTags'
+import { autoEqMeasurer, medianValues, soundTags, tagReferenceId } from './soundTags'
 
 const flat = SUMMARY_GRID.map(() => 0)
 /** 기준(0dB)에서 lo~hi Hz만 db만큼 올리거나 내린 곡선 */
@@ -50,5 +50,27 @@ describe('tagReferenceId', () => {
     expect(tagReferenceId('headphone', 'gras')).toBe('autoeq:harman-oe-2018')
     expect(tagReferenceId('headphone', '5128')).toBe('autoeq:lmg-5128')
     expect(tagReferenceId('iem', '711')).toBe('autoeq:harman-ie-2019')
+  })
+})
+
+describe('medianValues', () => {
+  it('칸별 중앙값(홀수·짝수 개, 빈칸 무시)', () => {
+    expect(medianValues([[1, 5], [3, null], [2, 7]])).toEqual([2, 6])
+    expect(medianValues([[1], [4]])).toEqual([2.5])
+    expect(medianValues([])).toEqual([])
+  })
+})
+
+describe('autoEqMeasurer', () => {
+  it('AutoEQ 출처에서 측정자 이름', () => {
+    expect(autoEqMeasurer('AutoEQ · oratory1990')).toBe('oratory1990')
+    expect(autoEqMeasurer('squig.link · 어딘가')).toBeNull()
+    expect(autoEqMeasurer('local')).toBeNull()
+  })
+})
+
+describe('기준 이름·평균적', () => {
+  it('두드러진 게 없을 때 말을 바꿀 수 있다', () => {
+    expect(soundTags(flat, flat, SUMMARY_GRID, 'oratory1990 헤드폰 중앙값', '평균적')[0].label).toBe('평균적')
   })
 })

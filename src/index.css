@@ -2319,3 +2319,31 @@ button.settings-row {
   white-space: nowrap;
   overflow-wrap: normal;
 }
+
+/* 폰: 아래 목록 시트를 화면 위에 띄운다(position: fixed). 예전처럼 따로 한 칸을 차지하면
+   위쪽 둥근 모서리 옆이 바탕색으로 채워져 그래프가 잘려 보였다 → 이제 모서리 옆으로 그래프가 비쳐 보인다.
+   그래프 칸은 화면 아래 끝까지 늘리고, 시트에 가려지는 만큼(--list-h) 아래 여백을 줘서 끝까지 밀어 볼 수 있게 한다.
+   높이는 접힘·중간·펼침 자리로 스르륵(transition) 움직이고, 손가락으로 끄는 동안(.sheet-dragging)은 바로 따라온다 */
+@media (max-width: 768px) {
+  .app {
+    grid-template-rows: auto minmax(0, 1fr) 0;
+  }
+
+  .list-col {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    overflow: hidden; /* 접힘 자리에서는 손잡이만 보이고 나머지는 시트 안에 숨는다 */
+    transition: height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .app.sheet-dragging .list-col {
+    transition: none;
+  }
+
+  .main-col {
+    padding-bottom: calc(var(--list-h) + 16px);
+  }
+}

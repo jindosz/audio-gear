@@ -1,25 +1,63 @@
-// 폰 화면에서 아래쪽 기기 목록의 높이(px) 계산. 순수 함수.
-// 손잡이를 끌면 clampListHeight, 끌지 않고 누르면 tapTarget을 쓴다.
+// 폰 화면 아래쪽 기기 목록(시트)의 높이(px) 계산. 순수 함수.
+// 시트는 세 자리(접힘·중간·펼침) 중 하나에 멈춘다(snap: 놓으면 가까운 자리로 착 붙는 것).
+// - 끄는 동안: clampListHeight로 범위 안에서 손가락을 따라감
+// - 놓았을 때: releaseSnap(빨리 툭 밀었으면 그 방향 다음 자리, 아니면 가장 가까운 자리)
+// - 끌지 않고 누름: tapSnap(접힘→중간, 중간→펼침, 펼침→중간)
 
-/** 가장 낮게 내렸을 때의 기본값(실제로는 위쪽 부품 높이를 재서 더 클 수 있음) */
-export const LIST_MIN_PX = 150
-/** 가장 높게 올렸을 때: 화면 높이의 이 비율(위에 메뉴 줄과 탭이 조금 남게) */
-const MAX_RATIO = 0.88
-/** 누르면 펼칠 높이(화면 비율) */
-const EXPANDED_RATIO = 0.8
-/** 이보다 높으면 "펼친 상태"로 보고, 누르면 기본 높이로 돌린다 */
-const TALL_RATIO = 0.6
-
-/**
- * minPx: 목록 위쪽 부품(손잡이·헤드폰/이어폰·검색창)의 실제 높이. 화면마다(터치용으로 커진 버튼 등) 달라서
- * 화면에서 재서 넘긴다. LIST_MIN_PX보다 낮게는 내려가지 않는다
- */
-export function clampListHeight(px: number, viewportHeight: number, minPx = LIST_MIN_PX): number {
-  const min = Math.max(LIST_MIN_PX, minPx)
-  return Math.round(Math.min(viewportHeight * MAX_RATIO, Math.max(min, px)))
+/** 세 자리. collapsed: 손잡이만 보임, middle: 기본(화면의 45%, 낮은 폰 38%), top: 화면의 88% */
+export interface SheetSnaps {
+  collapsed: number
+  middle: number
+  top: number
 }
 
-/** 누른 뒤의 높이(px). null이면 CSS 기본 높이(화면의 45%, 낮은 폰은 38%)로 돌린다 */
-export function tapTarget(currentPx: number, viewportHeight: number): number | null {
-  return currentPx < viewportHeight * TALL_RATIO ? Math.round(viewportHeight * EXPANDED_RATIO) : null
+/** 펼쳤을 때 화면 높이 비율(위에 메뉴 줄과 탭이 조금 남게) */
+const TOP_RATIO = 0.88
+/** 기본 높이 비율. index.css의 --list-base와 같은 값(높이 700px 이하 폰은 38%) */
+const MIDDLE_RATIO = 0.45
+const MIDDLE_RATIO_SHORT = 0.38
+const SHORT_VIEWPORT = 700
+/** 이보다 빨리(px/ms) 놓으면 "툭 민 것"으로 보고 그 방향 다음 자리로 보낸다 */
+export const FLICK_SPEED = 0.4
+
+/** collapsedPx: 접혔을 때 높이 = 손잡이 높이(화면에서 재서 넘긴다. 터치 화면은 손잡이가 더 크다) */
+export function sheetSnaps(viewportHeight: number, collapsedPx: number): SheetSnaps {
+  const ratio = viewportHeight <= SHORT_VIEWPORT ? MIDDLE_RATIO_SHORT : MIDDLE_RATIO
+  return {
+    collapsed: Math.round(collapsedPx),
+    middle: Math.round(viewportHeight * ratio),
+    top: Math.round(viewportHeight * TOP_RATIO),
+  }
+}
+
+/** 끄는 중의 높이: 접힘~펼침 사이로 자른다(정수 px) */
+export function clampListHeight(px: number, snaps: SheetSnaps): number {
+  return Math.round(Math.min(snaps.top, Math.max(snaps.collapsed, px)))
+}
+
+const order = (s: SheetSnaps) => [s.collapsed, s.middle, s.top]
+
+/** 지금 높이에서 가장 가까운 자리의 순번(0 접힘, 1 중간, 2 펼침) */
+function nearestIndex(px: number, snaps: SheetSnaps): number {
+  const list = order(snaps)
+  let best = 0
+  for (let i = 1; i < list.length; i++) if (Math.abs(list[i] - px) < Math.abs(list[best] - px)) best = i
+  return best
+}
+
+/**
+ * 손가락을 놓았을 때 갈 자리(px).
+ * velocity: 놓기 직전 속도(px/ms, 위로 올리면 양수). 빠르면 그 방향의 다음 자리,
+ * 느리면(천천히 끌다 놓음) 가장 가까운 자리
+ */
+export function releaseSnap(px: number, velocity: number, snaps: SheetSnaps): number {
+  const list = order(snaps)
+  if (velocity >= FLICK_SPEED) return list.find((s) => s > px + 1) ?? snaps.top
+  if (velocity <= -FLICK_SPEED) return [...list].reverse().find((s) => s < px - 1) ?? snaps.collapsed
+  return list[nearestIndex(px, snaps)]
+}
+
+/** 끌지 않고 눌렀을 때 갈 자리(px): 접힘→중간, 중간→펼침, 펼침→중간 */
+export function tapSnap(px: number, snaps: SheetSnaps): number {
+  return nearestIndex(px, snaps) === 1 ? snaps.top : snaps.middle
 }

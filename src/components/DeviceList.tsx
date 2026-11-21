@@ -314,9 +314,13 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
         </button>
       </div>
 
-      {filterOpen && (
-        <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} measurers={measurers} />
-      )}
+      {/* 필터 칸은 늘 그려 두고 열고 닫기만 해서, 스르륵 펼쳐지고 접히게 한다(.collapse, index.css).
+          inert: 닫혀 있는 동안 안의 버튼을 누르거나 키보드로 옮겨 갈 수 없게 */}
+      <div className={filterOpen ? 'collapse open' : 'collapse'} inert={!filterOpen}>
+        <div className="collapse-inner">
+          <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} measurers={measurers} />
+        </div>
+      </div>
 
       <div className="list-scroll" ref={scrollRef} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 600)}>
         {notice && <p className="list-notice small">{notice}</p>}

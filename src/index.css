@@ -2712,3 +2712,28 @@ button.select-option:active {
     flex: 1;
   }
 }
+
+/* 펼치고 접는 칸(필터 등): 높이 0 ↔ 내용 높이를 grid 줄 크기(0fr ↔ 1fr)로 스르륵 바꾼다.
+   height: auto는 애니메이션이 안 돼서 쓰는 방법. 안쪽(.collapse-inner)이 overflow: hidden으로 잘린다 */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease;
+}
+
+.collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.list-col > .collapse {
+  flex-shrink: 0;
+}

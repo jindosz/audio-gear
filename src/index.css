@@ -2919,8 +2919,15 @@ button.select-option:active {
   font-variant-numeric: tabular-nums;
 }
 .ear-balance-slider {
+  /* 입력칸 공통 모양(바탕·안쪽 여백)이 붙으면 팝업 밖으로 삐져나가서 지운다 */
+  box-sizing: border-box;
   width: 100%;
-  margin-top: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  height: 32px;
 }
 .ear-balance-ends {
   display: flex;
@@ -2943,4 +2950,10 @@ button.select-option:active {
     flex: 1;
     min-height: 48px;
   }
+}
+.settings-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }

@@ -17,6 +17,10 @@ import { SegmentedGroup } from './SegmentedGroup'
 import { askConfirm } from '../confirm'
 import { ToggleButton } from './ToggleButton'
 import { writePref } from '../localPrefs'
+import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
+import { balanceLabel } from '../earBalance'
+import { useEqStatus } from '../eqEngine'
+import { EarBalanceDialog } from './EarBalanceDialog'
 
 interface Props {
   open: boolean
@@ -29,6 +33,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       <div className="settings">
         <ThemeRow />
         <SoundTagsRow />
+        <EarBalanceRow />
         <BackupGroup />
         {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
         <section className="settings-group">
@@ -307,6 +312,41 @@ function SoundTagsRow() {
       <ToggleButton small on={on} onChange={setSoundTagsEnabled}>
         {on ? '켜짐' : '꺼짐'}
       </ToggleButton>
+    </div>
+  )
+}
+
+/**
+ * 내 귀 균형: 잰 값, 켜고 끄기(안드로이드 앱), [재기].
+ * 알림의 "끄기"로 폰 효과를 다 껐으면 설정은 켜짐이어도 "꺼짐"으로 보이고, 누르면 다시 건다
+ */
+function EarBalanceRow() {
+  const balance = useEarBalance()
+  const status = useEqStatus()
+  const [testing, setTesting] = useState(false)
+  const android = isAndroidApp()
+  const on = !!balance?.on && !!status?.on
+  return (
+    <div className="settings-row">
+      <span>
+        내 귀 균형
+        <span className="muted small">
+          {' · '}
+          {balance ? balanceLabel(balance.db) : '아직 안 쟀어요'}
+          {balance && !android && ' (안드로이드 앱에서 적용돼요)'}
+        </span>
+      </span>
+      <span className="settings-row-actions">
+        {balance && android && (
+          <ToggleButton small on={on} onChange={(next) => void setEarBalanceOn(next)}>
+            {on ? '켜짐' : '꺼짐'}
+          </ToggleButton>
+        )}
+        <button type="button" className="small" onClick={() => setTesting(true)}>
+          재기
+        </button>
+      </span>
+      <EarBalanceDialog open={testing} onClose={() => setTesting(false)} />
     </div>
   )
 }

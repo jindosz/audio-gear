@@ -4,7 +4,16 @@
 //   (EQ 목록을 다 지워도 앱 안에서 끌 수 있게)
 // - PhoneEqControl: 편집 칸. [폰에 적용] 켜고 끄기. 걸어 둔 EQ를 고치면 0.3초 멈춘 뒤 폰에도 자동으로 다시 건다(끊김 없음)
 import { useEffect, useState } from 'react'
-import { applyPreset, eqSignature, getEqEngine, turnOffPhoneEq, useAppliedEq, useEqStatus } from '../eqEngine'
+import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
+import {
+  applyPreset,
+  EAR_BALANCE_NAME,
+  eqSignature,
+  getEqEngine,
+  turnOffPhoneEq,
+  useAppliedEq,
+  useEqStatus,
+} from '../eqEngine'
 import type { EqSettings } from '../eqExport'
 import { ToggleButton } from './ToggleButton'
 
@@ -29,15 +38,22 @@ function useAction() {
 
 export function PhoneEqStatusBar() {
   const status = useEqStatus()
+  const balance = useEarBalance()
   const { busy, error, run } = useAction()
   if (getEqEngine().kind === 'none' || !status?.on) return null
+  // 균형만 걸린 상태면 "끄기" = 균형 끄기(EQ 끄기는 균형만 남기므로 그대로면 아무 일도 안 일어남)
+  const balanceOnly = status.name === EAR_BALANCE_NAME
+  const off = balanceOnly ? () => setEarBalanceOn(false).then(() => ({})) : turnOffPhoneEq
   return (
     <div className="phone-eq-status small">
       <span>
         지금 폰에 적용 중: <strong>{status.name}</strong>
         {status.mode === 'sessions' && ' (재생 앱 신호 방식)'}
+        {!balanceOnly && balance?.on && balance.db !== 0 && (
+          <span className="muted"> · 균형 {balance.db > 0 ? '왼쪽' : '오른쪽'} −{Math.abs(balance.db)}dB</span>
+        )}
       </span>
-      <button type="button" onClick={() => run(turnOffPhoneEq)} disabled={busy}>
+      <button type="button" onClick={() => run(off)} disabled={busy}>
         끄기
       </button>
       {error && <span className="error">{error}</span>}

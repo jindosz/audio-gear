@@ -14,6 +14,26 @@ import { showToast } from './toast'
 
 /** 정식 빌드가 올라가는 릴리스(main 푸시 → .github/workflows/android.yml) */
 const RELEASE_URL = 'https://api.github.com/repos/jindosz/audio-gear/releases/tags/android-latest'
+
+// ---- 시험용: 미리 보기 빌드까지 업데이트(설정 → 고급, 나중에 지울 것. 이 묶음과 SettingsDialog의 PreviewUpdateRow) ----
+/** 작업 브랜치 빌드가 올라가는 릴리스 */
+const PREVIEW_RELEASE_URL = 'https://api.github.com/repos/jindosz/audio-gear/releases/tags/android-preview'
+export const PREVIEW_UPDATES_KEY = 'update.preview'
+export const previewUpdatesOn = () => readPref<boolean>(PREVIEW_UPDATES_KEY, false)
+// ---- 시험용 끝 ----
+
+/** 확인할 릴리스들의 파일을 한데 모은다(정식 + 켜져 있으면 미리 보기). 미리 보기를 못 받아도 정식만으로 */
+async function fetchReleaseAssets(): Promise<ReleaseInfo> {
+  const get = async (url: string) => {
+    const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return (await res.json()) as ReleaseInfo
+  }
+  const stable = await get(RELEASE_URL)
+  if (!previewUpdatesOn()) return stable
+  const preview = await get(PREVIEW_RELEASE_URL).catch(() => ({ assets: [] }))
+  return { assets: [...stable.assets, ...preview.assets] }
+}
 /** 마지막으로 확인한 시각(ms) */
 const LAST_CHECK_KEY = 'update.lastCheck'
 
@@ -57,9 +77,7 @@ export async function checkForUpdate({ force = false, manual = false }: CheckOpt
 
   busy = true
   try {
-    const res = await fetch(RELEASE_URL, { headers: { Accept: 'application/vnd.github+json' } })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const release = (await res.json()) as ReleaseInfo
+    const release = await fetchReleaseAssets()
     writePref(LAST_CHECK_KEY, Date.now())
     const update = findUpdate(release, current)
     if (!update) {

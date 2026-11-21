@@ -6,11 +6,13 @@ import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
-import { checkForUpdate } from '../appUpdate'
+import { checkForUpdate, PREVIEW_UPDATES_KEY, previewUpdatesOn } from '../appUpdate'
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
 import { askConfirm } from '../confirm'
+import { ToggleButton } from './ToggleButton'
+import { writePref } from '../localPrefs'
 
 interface Props {
   open: boolean
@@ -31,6 +33,7 @@ export function SettingsDialog({ open, onClose }: Props) {
           <CleanupRow />
           {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
           {!isAndroidApp() && <StorageRow />}
+          {isAndroidApp() && <PreviewUpdateRow />}
         </details>
         {/* 안드로이드 앱: 새 정식 버전이 있는지 바로 확인(평소에는 앱을 열 때 자동으로 확인) */}
         {isAndroidApp() && (
@@ -254,6 +257,26 @@ function StorageRow() {
       ) : (
         <span className="muted small">확인 중…</span>
       )}
+    </div>
+  )
+}
+
+/** 시험용(나중에 지울 것): 켜면 앱 안 업데이트가 미리 보기 빌드(android-preview)까지 확인한다 */
+function PreviewUpdateRow() {
+  const [on, setOn] = useState(previewUpdatesOn)
+  return (
+    <div className="settings-row">
+      <span>미리 보기 빌드도 업데이트(시험용)</span>
+      <ToggleButton
+        small
+        on={on}
+        onChange={(next) => {
+          setOn(next)
+          writePref(PREVIEW_UPDATES_KEY, next)
+        }}
+      >
+        {on ? '켜짐' : '꺼짐'}
+      </ToggleButton>
     </div>
   )
 }

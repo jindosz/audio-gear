@@ -1992,9 +1992,18 @@ button:focus-visible,
 select:focus-visible,
 summary:focus-visible,
 a:focus-visible,
-.settings-link:focus-within {
+.settings-link:has(:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* 손가락 화면: 키보드로 옮겨 다니는 일이 거의 없는데, 안드로이드 앱 화면은 누른 뒤에도 포커스 테두리를 띄울 때가 있어
+   파란 네모가 남아 보였다 → 손가락 화면에서는 포커스 테두리를 끈다 */
+@media (pointer: coarse) {
+  :focus-visible,
+  .settings-link:has(:focus-visible) {
+    outline: none;
+  }
 }
 
 /* 손가락으로 쓰는 화면(폰·태블릿)에서만 누르는 영역을 넓힌다(안드로이드 기준 48dp, 최소 44px).

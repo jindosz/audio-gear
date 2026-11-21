@@ -123,6 +123,16 @@ export function MoreIcon({ size }: SmallIconProps) {
   )
 }
 
+/** 돋보기(검색) */
+export function SearchIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </svg>
+  )
+}
+
 /** 더하기 */
 export function PlusIcon({ size }: SmallIconProps) {
   return (

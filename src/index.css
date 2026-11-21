@@ -2379,6 +2379,8 @@ button.settings-row {
     bottom: 0;
     z-index: 5;
     overflow: hidden; /* 접힘 자리에서는 손잡이만 보이고 나머지는 시트 안에 숨는다 */
+    /* 펼친 높이는 px로 기억해 두는데, 키보드가 올라와 화면이 줄어도 위쪽(손잡이·검색창)이 화면 밖으로 나가지 않게 */
+    max-height: calc(100dvh - 8px);
     transition: height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 

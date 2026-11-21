@@ -3093,3 +3093,21 @@ button.select-option:active {
     animation: none;
   }
 }
+
+/* ---- 로그인 팝업(SignInDialog.tsx) ---- */
+.sign-in {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sign-in label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sign-in .link {
+  align-self: flex-start;
+  background: none;
+  padding: 4px 0;
+  color: var(--accent);
+}

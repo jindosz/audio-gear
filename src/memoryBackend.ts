@@ -3,6 +3,8 @@ import type { SyncDoc } from './sync'
 import type { SyncBackend, SyncCollection, SyncUser } from './syncBackend'
 
 interface Server {
+  /** 서버 시계(올릴 때마다 1씩, 실제 시각 대신) */
+  clock: number
   users: Map<string, { password: string; uid: string }>
   /** uid → 묶음 → id → 문서 */
   data: Map<string, Map<SyncCollection, Map<string, SyncDoc>>>
@@ -10,7 +12,7 @@ interface Server {
 
 const authError = (code: string) => Object.assign(new Error(code), { code })
 
-export function createMemoryBackend(server: Server = { users: new Map(), data: new Map() }): SyncBackend {
+export function createMemoryBackend(server: Server = { clock: 0, users: new Map(), data: new Map() }): SyncBackend {
   let user: SyncUser | null = null
   const listeners = new Set<(u: SyncUser | null) => void>()
   const setUser = (u: SyncUser | null) => {
@@ -51,10 +53,10 @@ export function createMemoryBackend(server: Server = { users: new Map(), data: n
       setUser(null)
     },
     async pullSince(uid, c, since) {
-      return [...box(uid, c).values()].filter((d) => d.updatedAt > since).map((d) => structuredClone(d))
+      return [...box(uid, c).values()].filter((d) => (d.syncedAt ?? 0) > since).map((d) => structuredClone(d))
     },
     async push(uid, c, docs) {
-      for (const d of docs) box(uid, c).set(d.id, structuredClone(d))
+      for (const d of docs) box(uid, c).set(d.id, { ...structuredClone(d), syncedAt: ++server.clock })
     },
     async deleteAllData(uid) {
       server.data.delete(uid)
@@ -65,6 +67,6 @@ export function createMemoryBackend(server: Server = { users: new Map(), data: n
 /** 개발 서버 화면 확인용: 한 페이지 안에서 같은 가짜 서버를 쓴다(window.__memoryServer로 들여다볼 수 있음) */
 export function sharedMemoryBackend(): SyncBackend {
   const g = globalThis as { __memoryServer?: Server }
-  g.__memoryServer ??= { users: new Map(), data: new Map() }
+  g.__memoryServer ??= { clock: 0, users: new Map(), data: new Map() }
   return createMemoryBackend(g.__memoryServer)
 }

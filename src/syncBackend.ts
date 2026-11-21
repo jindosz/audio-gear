@@ -22,9 +22,9 @@ export interface SyncBackend {
   signOut(): Promise<void>
   /** 계정 지우기(서버 데이터는 deleteAllData로 먼저 지운다) */
   deleteAccount(): Promise<void>
-  /** since(ms)보다 나중에 고친 문서만 */
+  /** 서버가 since(ms, 서버 시계)보다 나중에 받은 문서만(syncedAt이 채워져 옴) */
   pullSince(uid: string, collection: SyncCollection, since: number): Promise<SyncDoc[]>
-  /** 같은 id는 덮어씀 */
+  /** 같은 id는 덮어씀. 서버가 syncedAt을 찍는다 */
   push(uid: string, collection: SyncCollection, docs: SyncDoc[]): Promise<void>
   deleteAllData(uid: string): Promise<void>
 }

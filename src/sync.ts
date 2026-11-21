@@ -12,6 +12,11 @@ export interface SyncDoc {
   deleted?: boolean
   /** 레코드 내용(지운 항목이면 없음) */
   data?: Record<string, unknown>
+  /**
+   * 서버가 받은 시각(ms, 서버 시계). 받을 때는 이것 기준으로 "지난번 뒤에 올라온 것"만 받는다.
+   * 기기 시계(updatedAt)로 받으면 시계가 늦은 기기가 나중에 올린 변경을 놓칠 수 있어서
+   */
+  syncedAt?: number
 }
 
 export interface MergePlan {

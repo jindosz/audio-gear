@@ -19,14 +19,14 @@ describe('memoryBackend', () => {
     await b.signOut()
     await expect(b.signIn('a@test.com', 'nope')).rejects.toMatchObject({ code: 'auth/invalid-credential' })
   })
-  it('올린 것은 받을 때 나오고, since 이후 것만', async () => {
+  it('올린 것은 받을 때 나오고, 서버가 받은 시각(syncedAt) 기준으로 since 이후 것만', async () => {
     const b = createMemoryBackend()
-    await b.push('u1', 'devices', [
-      { id: 'a', updatedAt: 10, data: { id: 'a' } },
-      { id: 'b', updatedAt: 20, deleted: true },
-    ])
-    expect((await b.pullSince('u1', 'devices', 0)).map((d) => d.id).sort()).toEqual(['a', 'b'])
-    expect((await b.pullSince('u1', 'devices', 10)).map((d) => d.id)).toEqual(['b'])
+    await b.push('u1', 'devices', [{ id: 'a', updatedAt: 10, data: { id: 'a' } }])
+    const first = await b.pullSince('u1', 'devices', 0)
+    expect(first.map((d) => d.id)).toEqual(['a'])
+    // 기기 시계가 늦어 updatedAt이 더 작아도 나중에 올렸으면 받아야 함
+    await b.push('u1', 'devices', [{ id: 'b', updatedAt: 5, deleted: true }])
+    expect((await b.pullSince('u1', 'devices', first[0].syncedAt ?? 0)).map((d) => d.id)).toEqual(['b'])
   })
   it('다른 사람 데이터는 안 보임', async () => {
     const b = createMemoryBackend()

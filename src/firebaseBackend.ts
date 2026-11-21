@@ -11,7 +11,18 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth'
-import { collection, doc, getDocs, initializeFirestore, query, where, writeBatch, type Firestore } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getDocs,
+  initializeFirestore,
+  query,
+  serverTimestamp,
+  Timestamp,
+  where,
+  writeBatch,
+  type Firestore,
+} from 'firebase/firestore'
 import type { FirebaseConfig } from './firebaseConfig'
 import type { SyncDoc } from './sync'
 import type { SyncBackend, SyncCollection } from './syncBackend'
@@ -48,16 +59,20 @@ export function createFirebaseBackend(config: FirebaseConfig): SyncBackend {
       if (auth.currentUser) await deleteUser(auth.currentUser)
     },
     async pullSince(uid, c, since) {
-      const snap = await getDocs(query(col(uid, c), where('updatedAt', '>', since)))
-      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SyncDoc, 'id'>) }))
+      const snap = await getDocs(query(col(uid, c), where('syncedAt', '>', Timestamp.fromMillis(since))))
+      return snap.docs.map((d) => {
+        const v = d.data() as Omit<SyncDoc, 'id' | 'syncedAt'> & { syncedAt?: Timestamp }
+        return { ...v, id: d.id, syncedAt: v.syncedAt?.toMillis() ?? 0 }
+      })
     },
     async push(uid, c, docs) {
       for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
         const batch = writeBatch(db)
         for (const d of docs.slice(i, i + BATCH_LIMIT)) {
-          const payload: Omit<SyncDoc, 'id'> = d.deleted
-            ? { updatedAt: d.updatedAt, deleted: true }
-            : { updatedAt: d.updatedAt, data: d.data }
+          // syncedAt은 서버가 받은 시각(serverTimestamp)으로 찍는다
+          const payload = d.deleted
+            ? { updatedAt: d.updatedAt, deleted: true, syncedAt: serverTimestamp() }
+            : { updatedAt: d.updatedAt, data: d.data, syncedAt: serverTimestamp() }
           batch.set(doc(col(uid, c), d.id), payload)
         }
         await batch.commit()

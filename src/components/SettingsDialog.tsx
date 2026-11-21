@@ -5,6 +5,7 @@ import { cleanupStoredDevices, exportAll, importAll } from '../repo'
 import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
+import { AccountGroup } from './AccountGroup'
 import { CatalogDataBox } from './CatalogDataBox'
 import { startAllSummaryJobs, useSummaryJob } from '../summaryJob'
 import { setSoundTagsEnabled, useSoundTagsEnabled } from '../useSoundTagger'
@@ -36,6 +37,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="설정">
       <div className="settings">
+        <AccountGroup />
         <ThemeRow />
         <SoundTagsRow />
         <EarBalanceRow />

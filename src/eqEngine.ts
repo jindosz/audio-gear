@@ -5,6 +5,7 @@
 // - 일반 브라우저·PWA: 다른 앱 소리를 바꿀 수 없어 "없음"(화면은 내보내기만 보여준다)
 import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 import { useEffect, useState } from 'react'
+import type { EarLayer } from './earEq'
 import { toDeviceEq } from './eqDevice'
 import type { EqSettings } from './eqExport'
 import { EQ_APPLIED_KEY, readPref, writePref } from './localPrefs'
@@ -25,7 +26,7 @@ export interface EqEngine {
    * EQ를 건다. 이미 켜져 있으면 바꾼다(끊김 없이). 결과 상태를 돌려준다.
    * balanceDb: 내 귀 균형(earBalance.ts의 값, 0이면 없음). 큰 쪽 채널만 줄인다
    */
-  apply(name: string, eq: EqSettings, balanceDb?: number): Promise<EqStatus>
+  apply(name: string, eq: EqSettings, balanceDb?: number, layer?: EarLayer | null): Promise<EqStatus>
   off(): Promise<EqStatus>
   status(): Promise<EqStatus>
   /** 켜져 있으면 균형 값만 바꾼다(EQ는 그대로). 꺼져 있으면 아무것도 안 함 */
@@ -38,7 +39,14 @@ export interface EqEngine {
 
 /** 네이티브 플러그인이 받는 형식(SystemEqPlugin.java와 맞춰야 한다) */
 interface SystemEqPlugin {
-  apply(options: { name: string; cutoffs: number[]; gains: number[]; inputGain: number; balanceDb: number }): Promise<void>
+  apply(options: {
+    name: string
+    cutoffs: number[]
+    gains: number[]
+    gainsRight?: number[]
+    inputGain: number
+    balanceDb: number
+  }): Promise<void>
   setBalance(options: { balanceDb: number }): Promise<void>
   setBypass(options: { on: boolean }): Promise<void>
   off(): Promise<void>
@@ -93,9 +101,9 @@ function androidEngine(): EqEngine {
 
   return {
     kind: 'android',
-    async apply(name, eq, balanceDb = 0) {
+    async apply(name, eq, balanceDb = 0, layer = null) {
       const result = nextStatus()
-      await plugin.apply({ name, ...toDeviceEq(eq), balanceDb })
+      await plugin.apply({ name, ...toDeviceEq(eq, layer), balanceDb })
       return result
     },
     async off() {
@@ -147,6 +155,9 @@ export interface AppliedEq {
   id: string
   /** 건 값(이름·필터·프리앰프)의 서명. 지금 값과 비교한다 */
   signature: string
+  /** 건 이름·값(내 귀 균형·보정이 바뀌면 다시 걸려고). 예전 기록엔 없음 */
+  name?: string
+  eq?: EqSettings
 }
 
 /** 이름·필터·프리앰프가 같으면 같은 문자열 */
@@ -163,10 +174,13 @@ function setApplied(next: AppliedEq | null) {
   appliedListeners.forEach((l) => l())
 }
 
-// ---- 내 귀 균형(earBalanceStore.ts가 값을 알려 준다. 이 파일이 스토어를 import하면 서로 물려서 거꾸로 등록받음) ----
+// ---- 내 귀 균형·보정(earBalanceStore.ts·earEqStore.ts가 값을 알려 준다. 이 파일이 스토어를 import하면 서로 물려서 거꾸로 등록받음) ----
 
-/** 균형만 걸려 있을 때(EQ 없이) 폰 상태·알림에 보이는 이름 */
-export const EAR_BALANCE_NAME = '내 귀 균형'
+/** EQ 없이 내 귀 균형·보정만 걸려 있을 때 폰 상태·알림에 보이는 이름 */
+export const EAR_ONLY_NAME = '내 귀 보정'
+/** 예전(내 귀 균형만 있던 때) 이름. 이 이름으로 걸려 있어도 같은 상태로 본다 */
+const LEGACY_EAR_ONLY_NAME = '내 귀 균형'
+export const isEarOnly = (s: EqStatus | null) => !!s?.on && (s.name === EAR_ONLY_NAME || s.name === LEGACY_EAR_ONLY_NAME)
 
 interface BalanceProvider {
   /** 지금 걸 균형 값(꺼져 있으면 0) */
@@ -175,31 +189,67 @@ interface BalanceProvider {
   on(): boolean
 }
 let balanceProvider: BalanceProvider = { db: () => 0, on: () => false }
+/** 지금 걸 내 귀 보정 층(꺼져 있으면 null) */
+let layerProvider: () => EarLayer | null = () => null
 
 export function setBalanceProvider(p: BalanceProvider): void {
   balanceProvider = p
 }
 
-/** 평평한 EQ로 균형만 건다 */
-export async function applyBalanceOnly(): Promise<EqStatus> {
-  const result = await getEqEngine().apply(EAR_BALANCE_NAME, { filters: [], preamp: 0 }, balanceProvider.db())
+export function setEarLayerProvider(p: () => EarLayer | null): void {
+  layerProvider = p
+}
+
+/** 균형이나 보정 중 하나라도 켜져 있는지 */
+const earActive = () => balanceProvider.on() || layerProvider() !== null
+
+/** 지금 균형·보정을 붙여서 건다 */
+const applyWithEar = (name: string, eq: EqSettings) => getEqEngine().apply(name, eq, balanceProvider.db(), layerProvider())
+
+/** 평평한 EQ로 내 귀 균형·보정만 건다 */
+export async function applyEarOnly(): Promise<EqStatus> {
+  const result = await applyWithEar(EAR_ONLY_NAME, { filters: [], preamp: 0 })
   setApplied(null)
   return result
 }
 
-/** 이 EQ를 폰에 건다(이미 켜져 있으면 끊김 없이 바꿈). 성공하면 무엇을 걸었는지 기억한다 */
+/** 이 EQ를 폰에 건다(이미 켜져 있으면 끊김 없이 바꿈). 성공하면 무엇을 걸었는지 기억한다(균형·보정이 바뀌면 다시 걸려고) */
 export async function applyPreset(id: string, name: string, eq: EqSettings): Promise<EqStatus> {
-  const result = await getEqEngine().apply(name, eq, balanceProvider.db())
-  setApplied(result.on ? { id, signature: eqSignature(name, eq) } : null)
+  const result = await applyWithEar(name, eq)
+  setApplied(result.on ? { id, signature: eqSignature(name, eq), name, eq } : null)
   return result
 }
 
-/** EQ 끄기. 내 귀 균형이 켜져 있으면 다 끄지 않고 균형만 남긴다 */
+/** EQ 끄기. 내 귀 균형·보정이 켜져 있으면 다 끄지 않고 그것만 남긴다 */
 export async function turnOffPhoneEq(): Promise<EqStatus> {
-  if (balanceProvider.on()) return applyBalanceOnly()
+  if (earActive()) return applyEarOnly()
   const result = await getEqEngine().off()
   if (!result.on) setApplied(null)
   return result
+}
+
+/**
+ * 균형·보정 설정이 바뀌었을 때 지금 폰 상태에 맞춘다.
+ * - EQ가 걸려 있으면 그 EQ를 새 균형·보정으로 다시 건다(값만 바뀌어 끊김 없음)
+ * - "내 귀 보정"만 걸려 있으면: 둘 다 꺼졌으면 끄고, 아니면 다시 건다
+ * - 아무것도 안 걸려 있고 하나라도 켜졌으면 "내 귀 보정"만 건다
+ */
+export async function syncEar(): Promise<void> {
+  const engine = getEqEngine()
+  if (engine.kind === 'none') return
+  const status = await engine.status()
+  if (!status.on) {
+    if (earActive()) await applyEarOnly()
+    return
+  }
+  if (isEarOnly(status)) {
+    if (earActive()) await applyEarOnly()
+    else await turnOffPhoneEq()
+    return
+  }
+  // 예전에 저장된 기록(eq 없음)이면 다시 걸 수 없어 균형 값만 바꾼다
+  if (applied?.eq && applied.name) await applyWithEar(applied.name, applied.eq)
+  else await engine.setBalance(balanceProvider.db())
 }
 
 /** 화면용: 마지막으로 건 EQ. 폰 EQ가 꺼져 있으면(알림에서 끈 경우 등) null */

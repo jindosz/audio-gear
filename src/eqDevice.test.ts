@@ -37,6 +37,27 @@ describe('toDeviceEq', () => {
     expect(toDeviceEq({ filters: [{ freq: 1000, gain: -40, q: 1 }], preamp: 0 }).gains[nearest(1000)]).toBe(-24)
   })
 
+  it('내 귀 보정 층: 귀마다 따로 더하고, 입력 게인은 가장 큰 부스트만큼 낮춤', () => {
+    const left = DEVICE_EQ_FREQS.map((f) => (f === DEVICE_EQ_FREQS[nearest(4000)] ? 3 : 0))
+    const right = DEVICE_EQ_FREQS.map(() => 0)
+    const d = toDeviceEq({ filters: [], preamp: 0 }, { left, right })
+    expect(d.gains[nearest(4000)]).toBeCloseTo(3, 6)
+    expect(d.gainsRight?.[nearest(4000)]).toBeCloseTo(0, 6)
+    expect(d.inputGain).toBeCloseTo(-3, 6)
+  })
+
+  it('층이 없으면 오른쪽 따로 값이 없음(양쪽 같음)', () => {
+    expect(toDeviceEq({ filters: [], preamp: 0 }).gainsRight).toBeUndefined()
+    expect(toDeviceEq({ filters: [], preamp: 0 }, null).gainsRight).toBeUndefined()
+  })
+
+  it('EQ와 층을 합치면 +12dB까지 허용(각각 +6 상한)', () => {
+    const six = DEVICE_EQ_FREQS.map(() => 6)
+    const d = toDeviceEq({ filters: [{ freq: 1000, gain: 20, q: 1 }], preamp: -6 }, { left: six, right: six })
+    expect(d.gains[nearest(1000)]).toBe(12)
+    expect(d.inputGain).toBe(-12)
+  })
+
   it('입력 게인은 올리지 않는다(최대 0dB)', () => {
     expect(toDeviceEq({ filters: [], preamp: 2 }).inputGain).toBe(0)
   })

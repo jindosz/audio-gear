@@ -39,6 +39,8 @@ public class SystemEqService extends Service {
     public static final String EXTRA_NAME = "name";
     public static final String EXTRA_CUTOFFS = "cutoffs";
     public static final String EXTRA_GAINS = "gains";
+    /** 오른쪽 귀 게인(내 귀 보정이 켜져 있을 때만). 없으면 양쪽에 EXTRA_GAINS */
+    public static final String EXTRA_GAINS_R = "gainsRight";
     public static final String EXTRA_INPUT_GAIN = "inputGain";
     /** 내 귀 균형만 바꾼다(EQ 값은 그대로). 꺼져 있으면 아무것도 안 함 */
     public static final String ACTION_BALANCE = "io.github.jindosz.audiogear.EQ_BALANCE";
@@ -117,6 +119,8 @@ public class SystemEqService extends Service {
     private String name = "";
     private float[] cutoffs = new float[0];
     private float[] gains = new float[0];
+    /** 오른쪽 귀 게인. null이면 양쪽 같음 */
+    private float[] gainsRight = null;
     private float inputGain = 0f;
     private float balanceDb = 0f;
     /** 시험 중이라 효과를 잠깐 끈 상태 */
@@ -169,6 +173,8 @@ public class SystemEqService extends Service {
             float[] g = intent.getFloatArrayExtra(EXTRA_GAINS);
             cutoffs = c != null ? c : new float[0];
             gains = g != null ? g : new float[0];
+            float[] gr = intent.getFloatArrayExtra(EXTRA_GAINS_R);
+            gainsRight = gr != null && gr.length == gains.length ? gr : null;
             inputGain = Math.min(0f, intent.getFloatExtra(EXTRA_INPUT_GAIN, 0f));
             balanceDb = intent.getFloatExtra(EXTRA_BALANCE, 0f);
             // 시험 중에 앱이 닫혀 잠깐 끈 상태가 남았더라도 새로 걸면 다시 켠다
@@ -277,12 +283,17 @@ public class SystemEqService extends Service {
 
     // ---- DynamicsProcessing ----
 
-    private DynamicsProcessing.Eq makeEq() {
+    private DynamicsProcessing.Eq makeEq(float[] bandGains) {
         DynamicsProcessing.Eq eq = new DynamicsProcessing.Eq(true, true, cutoffs.length);
         for (int i = 0; i < cutoffs.length; i++) {
-            eq.setBand(i, new DynamicsProcessing.EqBand(true, cutoffs[i], gains[i]));
+            eq.setBand(i, new DynamicsProcessing.EqBand(true, cutoffs[i], bandGains[i]));
         }
         return eq;
+    }
+
+    /** 오른쪽(채널 1) 게인: 내 귀 보정이 있으면 따로, 없으면 왼쪽과 같음 */
+    private float[] rightGains() {
+        return gainsRight != null ? gainsRight : gains;
     }
 
     private DynamicsProcessing createEffect(int session) {
@@ -294,7 +305,8 @@ public class SystemEqService extends Service {
                 false, 0, // 뒷단 EQ 안 씀
                 false // 리미터 안 씀
         ).build();
-        config.setPreEqAllChannelsTo(makeEq());
+        config.setPreEqByChannelIndex(0, makeEq(gains));
+        config.setPreEqByChannelIndex(1, makeEq(rightGains()));
         config.setInputGainByChannelIndex(0, leftGain());
         config.setInputGainByChannelIndex(1, rightGain());
         DynamicsProcessing effect = new DynamicsProcessing(PRIORITY, session, config);
@@ -323,7 +335,8 @@ public class SystemEqService extends Service {
     /** 밴드 수가 같으면 값만 바꾸고(끊김 없음), 다르면 새로 만든다 */
     private DynamicsProcessing updateOrRecreate(DynamicsProcessing effect, int session) {
         if (effect.getConfig().getPreEqBandCount() == cutoffs.length) {
-            effect.setPreEqAllChannelsTo(makeEq());
+            effect.setPreEqByChannelIndex(0, makeEq(gains));
+            effect.setPreEqByChannelIndex(1, makeEq(rightGains()));
             effect.setInputGainbyChannel(0, leftGain());
             effect.setInputGainbyChannel(1, rightGain());
             return effect;
@@ -341,6 +354,7 @@ public class SystemEqService extends Service {
             e.putString("name", name);
             e.putString("cutoffs", join(cutoffs));
             e.putString("gains", join(gains));
+            e.putString("gainsRight", gainsRight != null ? join(gainsRight) : "");
             e.putFloat("inputGain", inputGain);
             e.putFloat("balanceDb", balanceDb);
         }
@@ -357,6 +371,8 @@ public class SystemEqService extends Service {
         name = p.getString("name", "EQ");
         cutoffs = c;
         gains = g;
+        float[] gr = split(p.getString("gainsRight", ""));
+        gainsRight = gr.length == g.length ? gr : null;
         inputGain = Math.min(0f, p.getFloat("inputGain", 0f));
         balanceDb = p.getFloat("balanceDb", 0f);
         return true;

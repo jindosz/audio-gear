@@ -2820,6 +2820,18 @@ button.select-option:active {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+/* popover 기본 모양(가운데 상자·테두리)을 없애고 위의 자리·모양을 그대로 쓴다 */
+.quick-toast[popover] {
+  inset: auto;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  margin: 0;
+  border: 0;
+  overflow: visible;
+}
+.quick-toast[popover]:not(:popover-open) {
+  display: block;
+}
 
 /* 성향 태그(SoundTagList.tsx): 작은 알약. 많음=따뜻한 색, 적음=차가운 색, 좁은 피크=경고색, 타깃에 가까움=초록 */
 .sound-tags {
@@ -2984,5 +2996,195 @@ button.select-option:active {
 @media (pointer: coarse) {
   .ear-balance-ends {
     padding: 0 56px;
+  }
+}
+
+/* ---- 내 귀 보정(EarEqDialog.tsx·EarEqResult.tsx) ---- */
+.ear-eq-device {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ear-eq-hear {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: var(--radius-xl);
+  touch-action: manipulation;
+  user-select: none;
+}
+.ear-eq-hear.flash {
+  filter: brightness(0.8);
+}
+@media (pointer: coarse) {
+  .ear-eq-hear {
+    min-height: 40vh;
+  }
+}
+.ear-eq-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ear-eq-chart {
+  height: 180px;
+}
+.ear-eq-chart.small-chart {
+  height: 140px;
+}
+.ear-eq-strength {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ear-eq-legend {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+.ear-eq-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ear-eq-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.ear-eq-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ear-eq-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ear-eq-progress p {
+  margin: 0;
+}
+.ear-eq-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--field);
+  overflow: hidden;
+}
+.ear-eq-bar > div {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.ear-eq-listening {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ear-eq-listening i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ear-eq-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ear-eq-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ear-eq-listening i {
+    animation: none;
+  }
+}
+
+/* ---- 로그인 팝업(SignInDialog.tsx) ---- */
+.sign-in {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sign-in label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sign-in .link {
+  align-self: flex-start;
+  background: none;
+  padding: 4px 0;
+  color: var(--accent);
+}
+.settings-row.danger-text {
+  color: var(--danger);
+}
+
+/* ---- 설정의 계정 칸(AccountGroup.tsx) ---- */
+.account-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.account-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-row > button {
+  flex-shrink: 0;
+}
+/* 접힌 "계정 관리" 아래 빈 틈 없애기(제목 여백을 줄임) */
+.account-manage > summary.settings-group-title {
+  margin: 0;
+}
+/* 접기 제목(고급·계정 관리): 손가락 화면에서 누르는 영역을 키우면 글자가 위에 붙고 아래가 비어 보여서 가운데로 */
+.settings-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* 로그인 팝업의 [로그인 | 가입]: 폭 전체, 두 칸 반반 */
+.sign-in .segmented {
+  display: flex;
+  width: 100%;
+}
+.sign-in .segmented > button {
+  flex: 1;
+}
+.sign-in-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+@media (pointer: coarse) {
+  .sign-in-submit {
+    min-height: 48px;
+  }
+}
+/* 설정 맨 위 계정 줄: 이메일이 길면 … */
+.account-entry .account-entry-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+/* 접힌 제목(측정치 미리 받기·고급) 위 여백을 줄여 한 줄 항목처럼 */
+.settings-advanced > summary.settings-group-title {
+  margin-top: 0;
+}
+/* 비교 칸: 손가락 화면에서 위아래 스크롤은 브라우저가, 옆으로 미는 건 탭 넘기기(useSwipeTabs.ts)가 받게 */
+@media (pointer: coarse) {
+  .main-col {
+    touch-action: pan-y;
   }
 }

@@ -40,9 +40,12 @@ public class SystemEqPlugin extends Plugin {
     public void apply(PluginCall call) {
         float[] cutoffs;
         float[] gains;
+        float[] gainsRight;
         try {
             cutoffs = toFloats(call.getArray("cutoffs"));
             gains = toFloats(call.getArray("gains"));
+            // 내 귀 보정이 켜져 있을 때만 온다(없으면 빈 배열 → 양쪽 같음)
+            gainsRight = toFloats(call.getArray("gainsRight"));
         } catch (JSONException e) {
             call.reject("EQ 값을 읽지 못했습니다: " + e.getMessage());
             return;
@@ -57,6 +60,7 @@ public class SystemEqPlugin extends Plugin {
                 .putExtra(SystemEqService.EXTRA_NAME, call.getString("name", "EQ"))
                 .putExtra(SystemEqService.EXTRA_CUTOFFS, cutoffs)
                 .putExtra(SystemEqService.EXTRA_GAINS, gains)
+                .putExtra(SystemEqService.EXTRA_GAINS_R, gainsRight.length == gains.length ? gainsRight : null)
                 .putExtra(SystemEqService.EXTRA_INPUT_GAIN, call.getFloat("inputGain", 0f))
                 .putExtra(SystemEqService.EXTRA_BALANCE, call.getFloat("balanceDb", 0f));
         getContext().startForegroundService(intent);

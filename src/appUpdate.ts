@@ -63,7 +63,12 @@ interface CheckOptions {
 }
 
 export async function checkForUpdate({ force = false, manual = false }: CheckOptions = {}): Promise<void> {
-  if (!isAndroidApp() || busy) return
+  if (!isAndroidApp()) return
+  if (busy) {
+    // 앱을 열 때 하는 자동 확인이 아직 도는 중: 눌렀는데 아무 반응이 없으면 안 되니 알려 준다
+    if (manual) showToast('업데이트를 확인하는 중이에요')
+    return
+  }
   const current = currentBuildNumber()
   if (current === null) {
     if (manual) showToast('개발용 빌드라 업데이트를 확인하지 않아요')

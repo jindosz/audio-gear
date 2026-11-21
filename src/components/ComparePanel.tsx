@@ -1,5 +1,6 @@
 // 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃, 차이 기준) + 리그 경고 + 범례 + FR 그래프 + 차이 그래프
-import { lazy, Suspense, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { useSwipeTabs } from './useSwipeTabs'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { diffValues, logGrid, normalizeAt, resample } from '../curve'
 import { measurementLabel, rigLabels, sourceLabel } from '../labels'
@@ -45,6 +46,9 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
   const mainRef = useRef<HTMLElement>(null)
   const tagger = useSoundTagger()
   useTabSwitchAnimation(mainRef, tabs, tab?.id)
+  // 탭이 여럿이면 손가락으로 빠르게 옆으로 밀어 넘긴다(그래프·툴바 어디서든, 탭 줄은 제외)
+  const tabIds = useMemo(() => tabs.map((t) => t.id), [tabs])
+  useSwipeTabs(mainRef, tabIds, activeId, onSelectTab)
 
   // 같은 기기가 여러 번 선택됐는지 센다(그러면 이름 뒤에 구성/출처를 붙여 구분)
   const deviceCount = new Map<string, number>()

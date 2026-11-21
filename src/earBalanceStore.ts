@@ -3,8 +3,9 @@
 // 폰에 거는 일은 eqEngine.ts가 한다: EQ를 걸 때 균형 값을 함께 넘기고, EQ를 끄면 균형만 남긴다.
 // 계산은 earBalance.ts(순수 함수)
 import { useSyncExternalStore } from 'react'
-import { applyBalanceOnly, EAR_BALANCE_NAME, getEqEngine, setBalanceProvider, turnOffPhoneEq } from './eqEngine'
+import { setBalanceProvider, syncEar } from './eqEngine'
 import { readPref, writePref } from './localPrefs'
+import { notifyLocalChange } from './syncStamp'
 
 export interface EarBalance {
   /** "오른쪽을 왼쪽보다 몇 dB 크게"(earBalance.ts 참고) */
@@ -13,6 +14,8 @@ export interface EarBalance {
   on: boolean
   /** 잰 날짜(ISO) */
   measuredAt: string
+  /** 마지막으로 고친 시각(동기화용) */
+  updatedAt?: number
 }
 
 const KEY = 'ear.balance'
@@ -25,7 +28,12 @@ setBalanceProvider({
   on: () => !!current?.on,
 })
 
-function set(next: EarBalance | null) {
+/** fromRemote: 동기화로 받은 값(고친 시각을 그대로 둠). 아니면 지금 시각을 찍고 자동 동기화에 알림 */
+function set(next: EarBalance | null, fromRemote = false) {
+  if (next && !fromRemote) {
+    next = { ...next, updatedAt: Date.now() }
+    notifyLocalChange()
+  }
   current = next
   writePref(KEY, next)
   subscribers.forEach((n) => n())
@@ -57,20 +65,17 @@ export async function setEarBalanceOn(on: boolean): Promise<void> {
   await syncEarBalance()
 }
 
-/**
- * 지금 폰 상태에 균형 설정을 맞춘다.
- * - EQ가 걸려 있으면 균형 값만 바꿈(EQ 그대로). 균형만 걸린 상태에서 균형을 끄면 다 끔
- * - 아무것도 안 걸려 있고 균형이 켜져 있으면 균형만 건다
- */
-export async function syncEarBalance(): Promise<void> {
-  const engine = getEqEngine()
-  if (engine.kind === 'none') return
-  const status = await engine.status()
-  const on = !!current?.on
-  if (status.on) {
-    if (status.name === EAR_BALANCE_NAME && !on) await turnOffPhoneEq()
-    else await engine.setBalance(on && current ? current.db : 0)
-  } else if (on) {
-    await applyBalanceOnly()
-  }
+/** 백업에서 가져온 균형을 그대로 넣고 폰에 맞춘다 */
+export async function restoreEarBalance(b: EarBalance): Promise<void> {
+  set(b)
+  await syncEar()
 }
+
+/** 동기화로 받은 균형을 넣고 폰에 맞춘다(syncRunner.ts) */
+export async function applyRemoteEarBalance(b: EarBalance): Promise<void> {
+  set(b, true)
+  await syncEar()
+}
+
+/** 지금 폰 상태에 균형 설정을 맞춘다(eqEngine.syncEar) */
+export const syncEarBalance = syncEar

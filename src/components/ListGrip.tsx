@@ -5,6 +5,7 @@
 // 끄는 동안에는 .app에 sheet-dragging을 붙여 효과를 꺼서 손가락을 바로 따라오게 한다.
 // 끝을 알 수 없는 마우스·손가락 동작을 한 번에 다루려고 포인터 이벤트(pointerdown/move/up)를 쓴다
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import { swallowNextClick } from '../swallowClick'
 import { clampListHeight, releaseSnap, sheetSnaps, tapSnap, type SheetSnaps } from '../listHeight'
 
 /** 끌었다고 볼 최소 이동 거리(px). 이보다 적게 움직이면 "누름"으로 본다 */
@@ -18,20 +19,6 @@ interface Drag {
   moved: boolean
   /** 최근 위치 기록(속도 계산용) */
   samples: { t: number; y: number }[]
-}
-
-/**
- * 손잡이를 누르고 뗀 직후 브라우저가 보내는 "클릭"을 한 번 버린다.
- * 시트가 움직이는 사이 손가락 아래로 기기 줄이 들어와, 그 줄이 눌린 것처럼 선택되는 일을 막는다
- */
-function swallowNextClick() {
-  const stop = (e: MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-  }
-  window.addEventListener('click', stop, { capture: true, once: true })
-  // 클릭이 오지 않는 경우(끌다가 화면 밖에서 뗌 등)를 위해 잠시 뒤 지운다
-  setTimeout(() => window.removeEventListener('click', stop, { capture: true }), 400)
 }
 
 export function ListGrip() {

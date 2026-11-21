@@ -5,6 +5,7 @@ import { cleanupStoredDevices, exportAll, importAll } from '../repo'
 import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
+import { AccountRow } from './AccountGroup'
 import { CatalogDataBox } from './CatalogDataBox'
 import { startAllSummaryJobs, useSummaryJob } from '../summaryJob'
 import { setSoundTagsEnabled, useSoundTagsEnabled } from '../useSoundTagger'
@@ -17,10 +18,15 @@ import { SegmentedGroup } from './SegmentedGroup'
 import { askConfirm } from '../confirm'
 import { ToggleButton } from './ToggleButton'
 import { writePref } from '../localPrefs'
-import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
+import { getEarBalance, restoreEarBalance, setEarBalanceOn, useEarBalance } from '../earBalanceStore'
 import { balanceLabel } from '../earBalance'
 import { useEqStatus } from '../eqEngine'
 import { EarBalanceDialog } from './EarBalanceDialog'
+import { EarEqDialog } from './EarEqDialog'
+import { EarEqResult } from './EarEqResult'
+import { getEarProfile, saveEarProfile, setEarEqOn, useEarProfile } from '../earEqStore'
+import { readPref } from '../localPrefs'
+import { showToast } from '../toast'
 
 interface Props {
   open: boolean
@@ -31,13 +37,19 @@ export function SettingsDialog({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="설정">
       <div className="settings">
+        <AccountRow />
         <ThemeRow />
         <SoundTagsRow />
         <EarBalanceRow />
+        <EarEqRow />
         <BackupGroup />
         {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
-        <section className="settings-group">
-          <h3 className="settings-group-title">측정치 미리 받기</h3>
+        {/* 자주 안 여는 칸이라 접어 둔다(받는 중이면 제목 옆에 진행 표시) */}
+        <details className="settings-advanced">
+          <summary className="settings-group-title">
+            <ChevronRightIcon size={14} /> 측정치 미리 받기
+            <SummaryJobBadge />
+          </summary>
           <AllDownloadRow />
           <CatalogDataBox category="headphone" title="헤드폰" />
           <CatalogDataBox category="iem" title="이어폰" />
@@ -46,7 +58,7 @@ export function SettingsDialog({ open, onClose }: Props) {
             있는 기기는 squig.link 측정치를 받아요. 받아 두면 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 돼요. 이어폰은 1만 개가
             넘어 시간이 꽤 걸리지만, 화면을 닫아도 계속 받고 멈췄다가 이어 받을 수 있어요. 한 번에 한 종류씩 받아요.
           </Help>
-        </section>
+        </details>
         {/* 자주 안 쓰는 항목은 접어 둔다 */}
         <details className="settings-advanced">
           <summary className="settings-group-title">
@@ -100,16 +112,26 @@ function ThemeRow() {
   )
 }
 
+/** 백업에 내 귀 설정을 넣을지(이 기기에 기억) */
+const EXPORT_EAR_KEY = 'backup.ear'
+
 function BackupGroup() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   // 가져올 파일을 읽어 검사까지 마친 내용. 사용자가 방식을 고르고 확인하면 DB에 넣는다
   const [pending, setPending] = useState<{ fileName: string; data: BackupData } | null>(null)
   const [mode, setMode] = useState<'merge' | 'replace'>('merge')
+  // 내 귀 설정(균형·보정): 내보낼 때 넣을지(이 기기에 기억, 기본 안 넣음), 가져올 때 받을지(기본 받음)
+  const earBalance = useEarBalance()
+  const earProfile = useEarProfile()
+  const hasEar = !!earBalance || !!earProfile
+  const [exportEar, setExportEar] = useState(() => readPref<boolean>(EXPORT_EAR_KEY, false))
+  const [importEar, setImportEar] = useState(true)
 
   async function handleExport() {
     setError('')
     const data = await exportAll()
+    if (exportEar && hasEar) data.ear = { balance: getEarBalance(), profile: getEarProfile() }
     try {
       // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
       const result = await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
@@ -122,7 +144,7 @@ function BackupGroup() {
       return
     }
     const s = summarize(data)
-    setMessage(`내보냈어요: 기기 ${s.devices}개, 측정치 ${s.measurements}개, EQ ${s.eqPresets}개`)
+    setMessage(`내보냈어요: 기기 ${s.devices}개, 측정치 ${s.measurements}개, EQ ${s.eqPresets}개${data.ear ? ', 내 귀 설정' : ''}`)
   }
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
@@ -131,6 +153,7 @@ function BackupGroup() {
     setMessage('')
     setError('')
     setPending(null)
+    setImportEar(true)
     if (!file) return
     try {
       setPending({ fileName: file.name, data: parseBackup(await file.text()) })
@@ -153,7 +176,10 @@ function BackupGroup() {
       return
     try {
       await importAll(pending.data, mode)
-      setMessage('가져왔어요.')
+      const ear = importEar ? pending.data.ear : undefined
+      if (ear?.balance) await restoreEarBalance(ear.balance)
+      if (ear?.profile) await saveEarProfile(ear.profile)
+      setMessage(ear ? '가져왔어요(내 귀 설정 포함).' : '가져왔어요.')
       setPending(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -175,12 +201,38 @@ function BackupGroup() {
         <ChevronRightIcon />
         <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
       </label>
+      {hasEar && (
+        <div className="settings-row">
+          <span>백업에 내 귀 설정 넣기</span>
+          <ToggleButton
+            small
+            on={exportEar}
+            onChange={(next) => {
+              setExportEar(next)
+              writePref(EXPORT_EAR_KEY, next)
+            }}
+          >
+            {exportEar ? '넣음' : '안 넣음'}
+          </ToggleButton>
+        </div>
+      )}
 
       {pending && summary && (
         <div className="import-box">
           <p className="small">
             <strong>{pending.fileName}</strong> · 기기 {summary.devices}개, 측정치 {summary.measurements}개, EQ {summary.eqPresets}개
           </p>
+          {pending.data.ear && (
+            <div className="settings-row">
+              <span className="small">
+                내 귀 설정도 가져오기
+                <span className="muted"> · 지금 설정을 덮어써요</span>
+              </span>
+              <ToggleButton small on={importEar} onChange={setImportEar}>
+                {importEar ? '가져옴' : '안 가져옴'}
+              </ToggleButton>
+            </div>
+          )}
           <SegmentedGroup className="small" label="가져오는 방식">
             <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
               합치기
@@ -349,6 +401,67 @@ function EarBalanceRow() {
       <EarBalanceDialog open={testing} onClose={() => setTesting(false)} />
     </div>
   )
+}
+
+/**
+ * 내 귀 보정: 잰 날짜·기기, 켜고 끄기(안드로이드 앱), [결과](그래프·세기), [재기].
+ * 알림의 "끄기"로 폰 효과를 다 껐으면 설정은 켜짐이어도 "꺼짐"으로 보이고, 누르면 다시 건다
+ */
+function EarEqRow() {
+  const profile = useEarProfile()
+  const status = useEqStatus()
+  const [testing, setTesting] = useState(false)
+  const [viewing, setViewing] = useState(false)
+  const android = isAndroidApp()
+  const on = !!profile?.on && !!status?.on
+  const when = profile ? new Date(profile.measuredAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : ''
+  return (
+    <div className="settings-row">
+      <span>
+        내 귀 보정
+        <span className="muted small">
+          {' · '}
+          {profile ? `${when}${profile.device ? ` · ${profile.device.label}` : ''}` : '아직 안 쟀어요'}
+          {profile && !android && ' (안드로이드 앱에서 적용돼요)'}
+        </span>
+      </span>
+      <span className="settings-row-actions">
+        {profile && android && (
+          <ToggleButton small on={on} onChange={(next) => void setEarEqOn(next)}>
+            {on ? '켜짐' : '꺼짐'}
+          </ToggleButton>
+        )}
+        {profile && (
+          <button type="button" className="small" onClick={() => setViewing(true)}>
+            결과
+          </button>
+        )}
+        <button type="button" className="small" onClick={() => setTesting(true)}>
+          재기
+        </button>
+      </span>
+      <EarEqDialog open={testing} onClose={() => setTesting(false)} />
+      <Modal open={viewing} onClose={() => setViewing(false)} title="내 귀 보정 결과">
+        {profile && (
+          <EarEqResult
+            profile={profile}
+            saveLabel="저장"
+            onSave={(p) => {
+              void saveEarProfile(p).then(() => showToast('저장했어요'))
+              setViewing(false)
+            }}
+          />
+        )}
+      </Modal>
+    </div>
+  )
+}
+
+/** 접힌 "측정치 미리 받기" 제목 옆: 받는 중이면 "받는 중"(접혀 있어도 돌고 있는 걸 알 수 있게) */
+function SummaryJobBadge() {
+  const job = useSummaryJob()
+  if (job.status !== 'running' && job.status !== 'stopping') return null
+  return <span className="muted small"> · 받는 중</span>
 }
 
 /** [전체 받기]: 헤드폰 → 이어폰을 차례로(이미 받은 것은 건너뜀). 받는 중에는 누를 수 없고, 멈추기는 각 상자에서 */

@@ -37,6 +37,8 @@ export interface Device {
   anc?: boolean
   notes: string
   createdAt: number
+  /** 마지막으로 고친 시각(동기화용, syncStamp.ts가 자동으로 붙임). 예전 데이터엔 없음 */
+  updatedAt?: number
 }
 
 /** 기기 하나에 대한 측정치 하나. 구성(variant)별로 여러 개가 있을 수 있다 */
@@ -50,6 +52,8 @@ export interface Measurement {
   source: string
   channel: Channel
   curve: FrCurve
+  /** 마지막으로 고친 시각(동기화용) */
+  updatedAt?: number
 }
 
 /** 타깃 커브(Harman OE/IE 등) */
@@ -60,6 +64,8 @@ export interface Target {
   rig: Rig
   isCustom: boolean
   curve: FrCurve
+  /** 마지막으로 고친 시각(동기화용, 내 타깃만) */
+  updatedAt?: number
 }
 
 /**
@@ -109,6 +115,8 @@ export interface CompareTab {
    */
   diffRef?: string | null
   createdAt: number
+  /** 마지막으로 고친 시각(동기화용) */
+  updatedAt?: number
 }
 
 /** EQ 밴드 하나(파라메트릭 EQ의 피크 필터) */
@@ -134,4 +142,15 @@ export interface EqPreset {
   favorite?: boolean
   createdAt: number
   updatedAt: number
+}
+
+/** 동기화하는 테이블(sync.ts·syncStamp.ts) */
+export const SYNC_TABLES = ['devices', 'measurements', 'targets', 'tabs', 'eqPresets'] as const
+export type SyncTable = (typeof SYNC_TABLES)[number]
+
+/** 지운 항목 표시: 다른 기기에서도 지워지게 동기화 때 서버에 알린다(DB version 5의 deletions 테이블) */
+export interface Deletion {
+  table: SyncTable
+  id: string
+  deletedAt: number
 }

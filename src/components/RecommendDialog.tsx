@@ -27,6 +27,7 @@ import { displaySpecs, specHint } from '../specHints'
 import { useCatalogDevices } from '../useCatalogDevices'
 import type { SelectedItem } from '../useCompareData'
 import { Modal } from './Modal'
+import { Select } from './Select'
 import { Help } from './Help'
 import { SpecFilterFields } from './ListFilterBar'
 
@@ -205,13 +206,13 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
       <div className="row">
         <label>
           기준{' '}
-          <select value={base.key} onChange={(e) => setRefKey(e.target.value)}>
+          <Select value={base.key} onChange={(e) => setRefKey(e.target.value)}>
             {bases.map((b) => (
               <option key={b.key} value={b.key}>
                 {b.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 

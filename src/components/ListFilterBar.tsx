@@ -2,6 +2,7 @@
 import { EMPTY_FILTER, activeCount, type ListFilter } from '../listFilter'
 import type { DeviceCategory } from '../types'
 import { ToggleButton } from './ToggleButton'
+import { Select } from './Select'
 
 interface Props {
   category: DeviceCategory
@@ -47,7 +48,7 @@ export function ListFilterBar({ category, filter, onChange, brands, measurers }:
 
   return (
     <div className="list-filter">
-      <select
+      <Select
         value={filter.brand ?? ''}
         onChange={(e) => set({ brand: e.target.value || null })}
         aria-label="브랜드"
@@ -58,9 +59,9 @@ export function ListFilterBar({ category, filter, onChange, brands, measurers }:
             {b.label} ({b.count})
           </option>
         ))}
-      </select>
+      </Select>
       {/* 같은 측정자끼리 비교하려고: 고르면 그 측정자가 잰 기기만 남고, 누르면 그 측정자의 측정치를 받는다 */}
-      <select
+      <Select
         value={filter.measurer ?? ''}
         onChange={(e) => set({ measurer: e.target.value || null })}
         aria-label="측정자"
@@ -71,7 +72,7 @@ export function ListFilterBar({ category, filter, onChange, brands, measurers }:
             {m.label} ({m.count})
           </option>
         ))}
-      </select>
+      </Select>
       {filter.measurer && <p className="muted small">기기를 누르면 이 측정자의 측정치를 그래프에 올립니다.</p>}
       <SpecFilterFields category={category} filter={filter} onChange={onChange} />
       {activeCount(filter) > 0 && (

@@ -123,6 +123,15 @@ export function MoreIcon({ size }: SmallIconProps) {
   )
 }
 
+/** 체크(고른 항목 표시) */
+export function CheckIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </svg>
+  )
+}
+
 /** 돋보기(검색) */
 export function SearchIcon({ size }: SmallIconProps) {
   return (

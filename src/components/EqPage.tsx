@@ -22,6 +22,7 @@ import { FINE_GRID, prepare } from '../similarity'
 import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { Device, DeviceCategory, EqPreset, FrCurve, Measurement, Target } from '../types'
 import { EqBandTable } from './EqBandTable'
+import { Select } from './Select'
 import { EqExport } from './EqExport'
 import { EqPresetPicker } from './EqPresetPicker'
 import { Modal } from './Modal'
@@ -331,7 +332,7 @@ function EqEditor({
         <div className="eq-pick-group">
           <label>
             지금 쓰는 기기{' '}
-            <select value={current.measurement.id} onChange={(e) => update({ measurementId: e.target.value })}>
+            <Select value={current.measurement.id} onChange={(e) => update({ measurementId: e.target.value })}>
               {ownedOptions.length > 0 && (
                 <optgroup label="보유 기기">
                   {ownedOptions.map((o) => (
@@ -350,7 +351,7 @@ function EqEditor({
                   ))}
                 </optgroup>
               )}
-            </select>
+            </Select>
           </label>
           <button
             type="button"
@@ -365,7 +366,7 @@ function EqEditor({
         <div className="eq-pick-group">
           <label>
             목표{' '}
-            <select value={draft.goal} onChange={(e) => handleGoal(e.target.value)} disabled={loadingTarget}>
+            <Select value={draft.goal} onChange={(e) => handleGoal(e.target.value)} disabled={loadingTarget}>
               <option value="">없음 (직접 조정)</option>
               <optgroup label="기기 측정치">
                 {options
@@ -394,7 +395,7 @@ function EqEditor({
                   ))}
                 </optgroup>
               ))}
-            </select>
+            </Select>
           </label>
           <button
             type="button"

@@ -27,6 +27,7 @@ import { PALETTE_SIZE, seriesColor } from '../selection'
 import { specHint } from '../specHints'
 import type { Acoustic, Codec, Connection, Device } from '../types'
 import { MeasurementUpload } from './MeasurementUpload'
+import { Select } from './Select'
 import { Modal } from './Modal'
 import { ToggleButton } from './ToggleButton'
 import { Help } from './Help'
@@ -168,7 +169,7 @@ function SpecsEditor({ device }: { device: Device }) {
       <div className="row">
         <label>
           연결{' '}
-          <select
+          <Select
             value={device.connection ?? ''}
             onChange={(e) => updateDeviceSpecs(device.id, { connection: (e.target.value || undefined) as Connection | undefined })}
           >
@@ -178,11 +179,11 @@ function SpecsEditor({ device }: { device: Device }) {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
           구조{' '}
-          <select
+          <Select
             value={device.acoustic ?? ''}
             onChange={(e) => updateDeviceSpecs(device.id, { acoustic: (e.target.value || undefined) as Acoustic | undefined })}
           >
@@ -192,7 +193,7 @@ function SpecsEditor({ device }: { device: Device }) {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {wireless && (
           <ToggleButton on={device.anc ?? false} onChange={(on) => updateDeviceSpecs(device.id, { anc: on })}>

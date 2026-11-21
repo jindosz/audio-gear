@@ -4,6 +4,7 @@ import { parseFrCsv, type ParseResult } from '../csv'
 import { channelLabels, rigLabels } from '../labels'
 import { addMeasurement } from '../repo'
 import type { Channel, Rig } from '../types'
+import { Select } from './Select'
 
 interface Props {
   deviceId: string
@@ -64,20 +65,20 @@ export function MeasurementUpload({ deviceId, onDone }: Props) {
 
       <div className="row">
         <input placeholder="구성 (예: 기본 팁, 벨루어 패드)" value={variant} onChange={(e) => setVariant(e.target.value)} />
-        <select value={rig} onChange={(e) => setRig(e.target.value as Rig)} title="측정 리그">
+        <Select value={rig} onChange={(e) => setRig(e.target.value as Rig)} title="측정 리그">
           {Object.entries(rigLabels).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
-        <select value={channel} onChange={(e) => setChannel(e.target.value as Channel)} title="채널">
+        </Select>
+        <Select value={channel} onChange={(e) => setChannel(e.target.value as Channel)} title="채널">
           {Object.entries(channelLabels).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
+        </Select>
         <input placeholder="출처" value={source} onChange={(e) => setSource(e.target.value)} title="출처 (직접 측정이면 local)" />
       </div>
       <button type="submit" disabled={!parsed}>

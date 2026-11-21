@@ -8,6 +8,7 @@ import { seriesColor } from '../selection'
 import type { CompareTab, DeviceCategory } from '../types'
 import { useCompareData, type SelectedItem } from '../useCompareData'
 import type { ChartSeries } from './FrChart'
+import { Select } from './Select'
 import { EqDialog } from './EqDialog'
 import { RecommendDialog } from './RecommendDialog'
 import { TabBar } from './TabBar'
@@ -108,18 +109,18 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
           <TargetSelect tabId={tab.id} targetId={targetId} category={category} />
           <label>
             차이 기준{' '}
-            <select value={reference?.key ?? ''} onChange={(e) => setDiffRef(tab.id, e.target.value || null)}>
+            <Select value={reference?.key ?? ''} onChange={(e) => setDiffRef(tab.id, e.target.value || null)}>
               <option value="">끔</option>
               {curves.map((c) => (
                 <option key={c.key} value={c.key}>
                   {c.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label>
             정규화 기준{' '}
-            <select
+            <Select
               value={normalizeHz ?? ''}
               onChange={(e) => setNormalizeHz(tab.id, e.target.value ? Number(e.target.value) : null)}
             >
@@ -129,7 +130,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
                   {hz >= 1000 ? `${hz / 1000}kHz` : `${hz}Hz`}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
       </div>

@@ -67,12 +67,14 @@ export function Modal({ open, onClose, title, children }: Props) {
       // Esc·뒤로 가기(backButton.ts)는 "cancel" 신호를 보낸다. 바로 닫지 않고 부모에게 닫아 달라고 해서
       // 위의 사라지는 애니메이션을 거치게 한다
       onCancel={(e) => {
+        // 팝업 위에 팝업(선택 시트 등)이 떠 있을 때 React가 신호를 바깥 팝업에도 전달하므로 내 것만 처리
+        if (e.target !== e.currentTarget) return
         e.preventDefault()
         onClose()
       }}
       // 혹시 다른 방법으로 바로 닫혔을 때도 부모의 open 상태를 false로 맞춘다
-      onClose={() => {
-        if (open) onClose()
+      onClose={(e) => {
+        if (e.target === e.currentTarget && open) onClose()
       }}
       // 팝업 바깥(어두운 배경)을 누르면 닫기. 배경을 눌러도 클릭 대상은 <dialog> 자신이라,
       // 누른 위치가 팝업 상자 밖인지로 판단한다(팝업 안의 빈 곳을 눌러 닫히지 않게)

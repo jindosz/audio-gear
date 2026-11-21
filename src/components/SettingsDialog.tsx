@@ -17,13 +17,14 @@ import { SegmentedGroup } from './SegmentedGroup'
 import { askConfirm } from '../confirm'
 import { ToggleButton } from './ToggleButton'
 import { writePref } from '../localPrefs'
-import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
+import { getEarBalance, restoreEarBalance, setEarBalanceOn, useEarBalance } from '../earBalanceStore'
 import { balanceLabel } from '../earBalance'
 import { useEqStatus } from '../eqEngine'
 import { EarBalanceDialog } from './EarBalanceDialog'
 import { EarEqDialog } from './EarEqDialog'
 import { EarEqResult } from './EarEqResult'
-import { saveEarProfile, setEarEqOn, useEarProfile } from '../earEqStore'
+import { getEarProfile, saveEarProfile, setEarEqOn, useEarProfile } from '../earEqStore'
+import { readPref } from '../localPrefs'
 import { showToast } from '../toast'
 
 interface Props {
@@ -105,16 +106,26 @@ function ThemeRow() {
   )
 }
 
+/** 백업에 내 귀 설정을 넣을지(이 기기에 기억) */
+const EXPORT_EAR_KEY = 'backup.ear'
+
 function BackupGroup() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   // 가져올 파일을 읽어 검사까지 마친 내용. 사용자가 방식을 고르고 확인하면 DB에 넣는다
   const [pending, setPending] = useState<{ fileName: string; data: BackupData } | null>(null)
   const [mode, setMode] = useState<'merge' | 'replace'>('merge')
+  // 내 귀 설정(균형·보정): 내보낼 때 넣을지(이 기기에 기억, 기본 안 넣음), 가져올 때 받을지(기본 받음)
+  const earBalance = useEarBalance()
+  const earProfile = useEarProfile()
+  const hasEar = !!earBalance || !!earProfile
+  const [exportEar, setExportEar] = useState(() => readPref<boolean>(EXPORT_EAR_KEY, false))
+  const [importEar, setImportEar] = useState(true)
 
   async function handleExport() {
     setError('')
     const data = await exportAll()
+    if (exportEar && hasEar) data.ear = { balance: getEarBalance(), profile: getEarProfile() }
     try {
       // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
       const result = await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
@@ -127,7 +138,7 @@ function BackupGroup() {
       return
     }
     const s = summarize(data)
-    setMessage(`내보냈어요: 기기 ${s.devices}개, 측정치 ${s.measurements}개, EQ ${s.eqPresets}개`)
+    setMessage(`내보냈어요: 기기 ${s.devices}개, 측정치 ${s.measurements}개, EQ ${s.eqPresets}개${data.ear ? ', 내 귀 설정' : ''}`)
   }
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>) {
@@ -136,6 +147,7 @@ function BackupGroup() {
     setMessage('')
     setError('')
     setPending(null)
+    setImportEar(true)
     if (!file) return
     try {
       setPending({ fileName: file.name, data: parseBackup(await file.text()) })
@@ -158,7 +170,10 @@ function BackupGroup() {
       return
     try {
       await importAll(pending.data, mode)
-      setMessage('가져왔어요.')
+      const ear = importEar ? pending.data.ear : undefined
+      if (ear?.balance) await restoreEarBalance(ear.balance)
+      if (ear?.profile) await saveEarProfile(ear.profile)
+      setMessage(ear ? '가져왔어요(내 귀 설정 포함).' : '가져왔어요.')
       setPending(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -180,12 +195,38 @@ function BackupGroup() {
         <ChevronRightIcon />
         <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
       </label>
+      {hasEar && (
+        <div className="settings-row">
+          <span>백업에 내 귀 설정 넣기</span>
+          <ToggleButton
+            small
+            on={exportEar}
+            onChange={(next) => {
+              setExportEar(next)
+              writePref(EXPORT_EAR_KEY, next)
+            }}
+          >
+            {exportEar ? '넣음' : '안 넣음'}
+          </ToggleButton>
+        </div>
+      )}
 
       {pending && summary && (
         <div className="import-box">
           <p className="small">
             <strong>{pending.fileName}</strong> · 기기 {summary.devices}개, 측정치 {summary.measurements}개, EQ {summary.eqPresets}개
           </p>
+          {pending.data.ear && (
+            <div className="settings-row">
+              <span className="small">
+                내 귀 설정도 가져오기
+                <span className="muted"> · 지금 설정을 덮어써요</span>
+              </span>
+              <ToggleButton small on={importEar} onChange={setImportEar}>
+                {importEar ? '가져옴' : '안 가져옴'}
+              </ToggleButton>
+            </div>
+          )}
           <SegmentedGroup className="small" label="가져오는 방식">
             <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
               합치기

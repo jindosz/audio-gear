@@ -2,7 +2,10 @@
 //
 // 백업에 넣는 것: 기기, 측정치, 타깃, 비교 탭, 저장해 둔 EQ.
 // (EQ는 나중에 추가해서 옛 백업에는 없다. 없으면 빈 목록으로 읽는다. 더하기만 한 변경이라 형식 버전은 그대로)
+// 고르면 넣는 것: 내 귀 설정(균형·보정, localStorage) — 귀·기기마다 달라 기본은 안 넣고, 내보낼 때 사용자가 정한다(2026-11-21).
 // 넣지 않는 것: AutoEQ 목록 보관본(meta) — 언제든 다시 받을 수 있고 크기만 크다.
+import type { EarBalance } from './earBalanceStore'
+import type { EarProfile } from './earEq'
 import type { CompareTab, Device, EqPreset, Measurement, Target } from './types'
 
 export const BACKUP_APP = 'audio-gear'
@@ -18,6 +21,13 @@ export interface BackupData {
   targets: Target[]
   tabs: CompareTab[]
   eqPresets: EqPreset[]
+  /** 내 귀 설정(내보낼 때 고른 경우만) */
+  ear?: EarBackup
+}
+
+export interface EarBackup {
+  balance: EarBalance | null
+  profile: EarProfile | null
 }
 
 export interface BackupSummary {
@@ -87,6 +97,46 @@ function isEqPreset(v: unknown): v is EqPreset {
   )
 }
 
+function isEarResult(v: unknown): boolean {
+  return (
+    isObject(v) &&
+    Array.isArray(v.freqs) &&
+    v.freqs.every(isNumber) &&
+    Array.isArray(v.thresholds) &&
+    v.thresholds.length === v.freqs.length &&
+    v.thresholds.every((t) => t === null || isNumber(t)) &&
+    Array.isArray(v.atLimit) &&
+    isNumber(v.falseAlarms)
+  )
+}
+
+function isEarBalance(v: unknown): v is EarBalance {
+  return isObject(v) && isNumber(v.db) && typeof v.on === 'boolean' && isString(v.measuredAt)
+}
+
+function isEarProfile(v: unknown): v is EarProfile {
+  return (
+    isObject(v) &&
+    isString(v.measuredAt) &&
+    isEarResult(v.left) &&
+    isEarResult(v.right) &&
+    isNumber(v.strength) &&
+    typeof v.on === 'boolean' &&
+    (v.offset === null || (Array.isArray(v.offset) && v.offset.every(isNumber)))
+  )
+}
+
+/** 내 귀 설정: 모양이 틀리면 버린다(기기·측정치 가져오기는 막지 않음) */
+function parseEar(v: unknown): EarBackup | undefined {
+  if (!isObject(v)) return undefined
+  const balance = v.balance ?? null
+  const profile = v.profile ?? null
+  if (balance !== null && !isEarBalance(balance)) return undefined
+  if (profile !== null && !isEarProfile(profile)) return undefined
+  if (balance === null && profile === null) return undefined
+  return { balance, profile }
+}
+
 /** 모든 항목이 검사를 통과하는지. 하나라도 틀리면 몇 번째가 틀렸는지 알려준다 */
 function checkAll<T>(list: unknown, check: (v: unknown) => v is T, label: string): T[] {
   if (!Array.isArray(list)) throw new Error(`${label} 목록이 없습니다.`)
@@ -129,6 +179,7 @@ export function parseBackup(text: string): BackupData {
     targets,
     tabs,
     eqPresets: raw.eqPresets === undefined ? [] : checkAll(raw.eqPresets, isEqPreset, 'EQ'),
+    ear: parseEar(raw.ear),
   }
 }
 

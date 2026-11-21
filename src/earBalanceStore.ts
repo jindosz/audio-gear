@@ -57,5 +57,11 @@ export async function setEarBalanceOn(on: boolean): Promise<void> {
   await syncEarBalance()
 }
 
+/** 백업에서 가져온 균형을 그대로 넣고 폰에 맞춘다 */
+export async function restoreEarBalance(b: EarBalance): Promise<void> {
+  set(b)
+  await syncEar()
+}
+
 /** 지금 폰 상태에 균형 설정을 맞춘다(eqEngine.syncEar) */
 export const syncEarBalance = syncEar

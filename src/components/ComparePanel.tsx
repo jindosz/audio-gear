@@ -1,5 +1,5 @@
 // 오른쪽 메인: 비교 탭 줄 + 그래프 툴바(정규화 기준, 타깃, 차이 기준) + 리그 경고 + 범례 + FR 그래프 + 차이 그래프
-import { lazy, Suspense, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { diffValues, logGrid, normalizeAt, resample } from '../curve'
 import { measurementLabel, rigLabels, sourceLabel } from '../labels'
@@ -40,6 +40,8 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
   const target = useLiveQuery(() => (targetId ? getTarget(targetId) : undefined), [targetId])
   const [recommendOpen, setRecommendOpen] = useState(false)
   const [eqOpen, setEqOpen] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
+  useTabSwitchAnimation(mainRef, tabs, tab?.id)
 
   // 같은 기기가 여러 번 선택됐는지 센다(그러면 이름 뒤에 구성/출처를 붙여 구분)
   const deviceCount = new Map<string, number>()
@@ -83,7 +85,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
 
   if (selected.length === 0 || !tab) {
     return (
-      <main className="main-col">
+      <main className="main-col" ref={mainRef}>
         {tabBar}
         <p className="muted placeholder">목록에서 기기를 클릭하면 여기에서 비교합니다.</p>
       </main>
@@ -93,7 +95,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
   const yTitle = normalizeHz ? `dB (${normalizeHz >= 1000 ? `${normalizeHz / 1000}k` : normalizeHz}Hz = 0)` : 'dB'
 
   return (
-    <main className="main-col">
+    <main className="main-col" ref={mainRef}>
       {tabBar}
       {/* 자주 쓰는 일(EQ·비슷한 기기)을 먼저, 그래프 설정(타깃·차이·정규화)은 그 아래 */}
       <div className="toolbar">
@@ -202,4 +204,32 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
       </Suspense>
     </main>
   )
+}
+
+/**
+ * 비교 탭을 바꿀 때 그래프 칸 내용이 옆으로 스르륵 들어오게 한다.
+ * 오른쪽 탭으로 가면 오른쪽에서, 왼쪽 탭으로 가면 왼쪽에서 들어온다(탭 줄 자체는 그대로).
+ * shownTabId: 화면에 실제로 그려진 탭(새 탭의 데이터가 도착해 내용이 바뀐 순간에 움직이려고, 누른 순간이 아니라 이걸 본다).
+ * 폰 화면은 CSS order로 칸 안 순서를 바꿔 두어서 감싸는 상자를 더하지 않고, 각 부품을 element.animate()로 움직인다
+ */
+function useTabSwitchAnimation(mainRef: RefObject<HTMLElement | null>, tabs: CompareTab[], shownTabId: string | undefined) {
+  const previous = useRef<string | undefined>(shownTabId)
+  useLayoutEffect(() => {
+    const before = previous.current
+    previous.current = shownTabId
+    const main = mainRef.current
+    if (!main || !before || !shownTabId || before === shownTabId) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const direction = tabs.findIndex((t) => t.id === shownTabId) > tabs.findIndex((t) => t.id === before) ? 1 : -1
+    for (const el of main.children) {
+      if (el.classList.contains('tabbar')) continue
+      el.animate(
+        [
+          { opacity: 0, transform: `translateX(${direction * 28}px)` },
+          { opacity: 1, transform: 'none' },
+        ],
+        { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+      )
+    }
+  }, [shownTabId, tabs, mainRef])
 }

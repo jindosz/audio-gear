@@ -2737,3 +2737,11 @@ button.select-option:active {
 .list-col > .collapse {
   flex-shrink: 0;
 }
+
+/* 비교 탭 알약: 고른 탭의 바탕·그림자가 스르륵 바뀌게(탭 내용은 ComparePanel이 옆으로 밀어 넣음) */
+.tab {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}

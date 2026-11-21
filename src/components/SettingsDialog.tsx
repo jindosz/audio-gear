@@ -35,8 +35,9 @@ export function SettingsDialog({ open, onClose }: Props) {
           <CatalogDataBox category="headphone" title="헤드폰" />
           <CatalogDataBox category="iem" title="이어폰" />
           <Help>
-            AutoEQ의 기기별 추천 측정치를 요약(곡선마다 숫자 60개 정도)해서 저장해요. 받아 두면 목록에 성향 태그가 보이고 비슷한
-            기기 찾기 후보가 돼요. 헤드폰 약 1,900개는 몇 분 걸리고, 화면을 닫아도 계속 받아요. 한 번에 한 종류씩 받아요.
+            목록 기기의 측정치를 요약(곡선마다 숫자 60개 정도)해서 저장해요. AutoEQ에 있는 기기는 AutoEQ 추천 측정치, squig.link에만
+            있는 기기는 squig.link 측정치를 받아요. 받아 두면 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 돼요. 이어폰은 1만 개가
+            넘어 시간이 꽤 걸리지만, 화면을 닫아도 계속 받고 멈췄다가 이어 받을 수 있어요. 한 번에 한 종류씩 받아요.
           </Help>
         </section>
         {/* 자주 안 쓰는 항목은 접어 둔다 */}

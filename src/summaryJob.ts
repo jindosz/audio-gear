@@ -1,9 +1,10 @@
-// 추천용 데이터 받기: AutoEQ 기기들의 추천 측정치를 뒤에서 하나씩 받아 요약값만 저장한다.
+// 추천용 데이터(측정치 미리 받기): 목록 기기들의 측정치를 뒤에서 하나씩 받아 요약값만 저장한다.
+// AutoEQ에 있는 기기는 AutoEQ 추천 측정치, squig.link에만 있는 기기는 squig.link 측정치(2026-11-21부터).
 // - 이미 받은 것은 건너뛰어서, 중간에 멈추거나 앱을 껐다 켜도 이어서 받을 수 있다
 // - 전체 곡선은 저장하지 않는다(받자마자 요약값으로 줄이고 버림)
 // - 진행 상황은 이 파일이 들고 있어서 팝업을 닫았다 열어도 그대로 보인다
 import { useSyncExternalStore } from 'react'
-import { fetchCatalogCurve, loadCatalogDevices } from './catalog'
+import { fetchCatalogCurve, groupCatalog, loadAllCatalogEntries } from './catalog'
 import { listSummaryPaths, putSummary } from './repo'
 import { prepare, SUMMARY_GRID } from './similarity'
 import type { DeviceCategory } from './types'
@@ -20,8 +21,8 @@ export interface JobState {
   error?: string
 }
 
-/** 동시에 받는 개수. 너무 많으면 GitHub에 부담을 주고, 너무 적으면 느리다 */
-const CONCURRENCY = 4
+/** 동시에 받는 개수. 너무 많으면 측정 사이트에 부담을 주고, 너무 적으면 느리다(squig.link는 여러 사이트로 흩어짐) */
+const CONCURRENCY = 6
 
 let state: JobState = { status: 'idle', category: null, total: 0, done: 0, failed: 0 }
 const listeners = new Set<() => void>()
@@ -51,8 +52,8 @@ export async function startSummaryJob(category: DeviceCategory): Promise<void> {
   setState({ status: 'running', category, total: 0, done: 0, failed: 0, error: undefined })
 
   try {
-    // 측정치가 공개된 기기만(primary가 있는 것) 대상
-    const devices = (await loadCatalogDevices()).filter((d) => d.category === category && d.primary)
+    // 측정치가 공개된 기기만(primary가 있는 것) 대상. squig.link 목록을 못 받으면 AutoEQ만으로
+    const devices = groupCatalog(await loadAllCatalogEntries()).filter((d) => d.category === category && d.primary)
     const have = new Set(await listSummaryPaths(category))
     const todo = devices.filter((d) => !have.has(d.primary!.path))
     setState({ total: devices.length, done: devices.length - todo.length })
@@ -67,6 +68,8 @@ export async function startSummaryJob(category: DeviceCategory): Promise<void> {
           const curve = await fetchCatalogCurve(entry)
           await putSummary({
             path: entry.path,
+            provider: entry.provider,
+            ...(entry.files ? { files: entry.files } : {}),
             name: device.name,
             category,
             measurer: entry.source,

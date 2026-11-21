@@ -123,8 +123,3 @@ export function medianValues(list: Values[]): Values {
     return column.length % 2 ? column[mid] : (column[mid - 1] + column[mid]) / 2
   })
 }
-
-/** 측정치 출처("AutoEQ · oratory1990")에서 측정자 이름. AutoEQ가 아니면 null(요약값은 AutoEQ만 있음) */
-export function autoEqMeasurer(source: string): string | null {
-  return source.startsWith('AutoEQ · ') ? source.slice('AutoEQ · '.length) : null
-}

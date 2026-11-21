@@ -29,7 +29,8 @@ import { ArrowUpIcon, ChevronDownIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon }
 import { SegmentedGroup } from './SegmentedGroup'
 import { SoundTagList } from './SoundTagList'
 import { useSoundTagger } from '../useSoundTagger'
-import { autoEqMeasurer, type SoundTag } from '../soundTags'
+import type { SoundTag } from '../soundTags'
+import { summarySource } from '../recommend'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 interface Props {
@@ -129,11 +130,11 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   const summaryByPath = useMemo(() => new Map((summaries ?? []).map((sm) => [sm.path, sm])), [summaries])
   const myTags = (d: Device): SoundTag[] | null => {
     const m = measurementsByDevice.get(d.id)?.[0]
-    return m ? tagger({ curve: m.curve, measurer: autoEqMeasurer(m.source) }, d.category, m.rig) : null
+    return m ? tagger({ curve: m.curve, source: m.source }, d.category, m.rig) : null
   }
   const catalogTags = (entry: CatalogDevice): SoundTag[] | null => {
     const sm = entry.primary && summaryByPath.get(entry.primary.path)
-    return sm ? tagger({ values: sm.values, measurer: sm.measurer }, sm.category, sm.rig) : null
+    return sm ? tagger({ values: sm.values, source: summarySource(sm) }, sm.category, sm.rig) : null
   }
 
   /** 내 기기의 측정자들: 저장된 측정치의 출처 + 목록(카탈로그)에서 더 받을 수 있는 측정자 */
@@ -356,7 +357,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     name={deviceName(device)}
                     owned={device.owned}
                     sub={measurementLabel(measurement)}
-                    tags={tagger({ curve: measurement.curve, measurer: autoEqMeasurer(measurement.source) }, device.category, measurement.rig)}
+                    tags={tagger({ curve: measurement.curve, source: measurement.source }, device.category, measurement.rig)}
                     colorIndex={selection.colorIndex}
                     starred={device.wishlist}
                     onOwn={() => setDeviceOwned(device.id, !device.owned)}

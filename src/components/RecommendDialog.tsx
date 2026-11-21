@@ -31,7 +31,6 @@ import { Help } from './Help'
 import { SpecFilterFields } from './ListFilterBar'
 import { SoundTagList } from './SoundTagList'
 import { useSoundTagger } from '../useSoundTagger'
-import { autoEqMeasurer } from '../soundTags'
 
 interface Props {
   open: boolean
@@ -355,7 +354,7 @@ function RecommendRow({
             {t}
           </span>
         ))}
-        <SoundTagList tags={tagger({ values: candidate.values, measurer: autoEqMeasurer(candidate.source) }, candidate.category, candidate.rig)} />
+        <SoundTagList tags={tagger({ values: candidate.values, source: candidate.source }, candidate.category, candidate.rig)} />
         <div className="small">
           <span className="rec-score">
             {similarityLabel(r.distance)} ({r.distance.toFixed(1)}dB)

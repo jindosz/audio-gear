@@ -1,12 +1,13 @@
 // 화면용 성향 태그: 곡선을 넣으면 태그를 돌려주는 함수를 준다(계산은 soundTags.ts).
 // 비교 기준(우선순위):
-//  1) 같은 측정자·같은 종류 기기들의 중앙값 — "측정치 미리 받기"로 저장한 요약값에서, 그 측정자 기기가 30개 이상일 때
+//  1) 같은 출처("AutoEQ · 측정자" 또는 "squig.link · 사이트")·같은 종류 기기들의 중앙값 — "측정치 미리 받기"로 저장한 요약값에서, 그 출처 기기가 30개 이상일 때
 //     (측정자마다 리그·보정이 달라 측정 차이가 태그에 섞이지 않게)
 //  2) 없으면 Harman 타깃(처음 한 번 받아 DB에 저장, targets.ts의 ensureTarget)
 // 기준을 받는 동안·인터넷이 없어 못 받으면 null(태그를 안 보여줌)
 import { useSyncExternalStore } from 'react'
 import { categoryLabels } from './labels'
 import { readPref, writePref } from './localPrefs'
+import { summarySource } from './recommend'
 import { listSummaries } from './repo'
 import { prepare, SUMMARY_GRID, type Values } from './similarity'
 import { medianValues, PEER_MIN, soundTags, tagReferenceId, type SoundTag } from './soundTags'
@@ -61,8 +62,8 @@ function loadTarget(id: string) {
 interface PeerRefs {
   /** 계산에 쓴 요약값 개수(받는 중이면 늘어남) */
   count: number
-  /** 측정자 → 그 측정자 기기들의 중앙값 */
-  byMeasurer: Map<string, Values>
+  /** 출처(측정치 source 형식) → 그 출처 기기들의 중앙값 */
+  bySource: Map<string, Values>
   /** 마지막으로 다시 계산한 시각 */
   at: number
 }
@@ -83,13 +84,14 @@ function loadPeers(category: DeviceCategory) {
       }
       const groups = new Map<string, Values[]>()
       for (const s of summaries) {
-        const list = groups.get(s.measurer) ?? []
+        const key = summarySource(s)
+        const list = groups.get(key) ?? []
         list.push(s.values)
-        groups.set(s.measurer, list)
+        groups.set(key, list)
       }
-      const byMeasurer = new Map<string, Values>()
-      for (const [measurer, list] of groups) if (list.length >= PEER_MIN) byMeasurer.set(measurer, medianValues(list))
-      peerRefs.set(category, { count: summaries.length, byMeasurer, at: Date.now() })
+      const bySource = new Map<string, Values>()
+      for (const [source, list] of groups) if (list.length >= PEER_MIN) bySource.set(source, medianValues(list))
+      peerRefs.set(category, { count: summaries.length, bySource, at: Date.now() })
       changed()
     })
     .catch(() => {})
@@ -98,12 +100,12 @@ function loadPeers(category: DeviceCategory) {
 
 // ---- 화면에서 쓰는 함수 ----
 
-/** 곡에 대한 정보: 곡선(또는 이미 SUMMARY_GRID로 다듬은 값)과, AutoEQ 측정자 이름(알면) */
+/** 기기 측정치 정보: 곡선(또는 이미 SUMMARY_GRID로 다듬은 값)과 출처(알면) */
 export interface TagInput {
   curve?: FrCurve
   values?: Values
-  /** AutoEQ 측정자(예: oratory1990). 같은 측정자 중앙값을 찾는 데 쓴다 */
-  measurer?: string | null
+  /** 출처(측정치 source 형식, 예: "AutoEQ · oratory1990", "squig.link · 사이트"). 같은 출처 중앙값을 찾는 데 쓴다 */
+  source?: string | null
 }
 
 /** 성향 태그. 기준을 아직 못 받았으면 null */
@@ -130,14 +132,14 @@ export function useSoundTagsEnabled(): boolean {
 export function useSoundTagger(): SoundTagger {
   // 기준을 다 받거나 다시 계산하면 version이 바뀌어 화면이 다시 그려진다
   useSyncExternalStore(subscribe, () => version)
-  return ({ curve, values, measurer }, category, rig) => {
+  return ({ curve, values, source }, category, rig) => {
     if (!enabled) return null
     const mine = values ?? (curve ? prepareCached(curve) : null)
     if (!mine) return null
 
     loadPeers(category)
-    const peer = measurer ? peerRefs.get(category)?.byMeasurer.get(measurer) : undefined
-    if (peer) return soundTags(mine, peer, SUMMARY_GRID, `${measurer} ${categoryLabels[category]} 중앙값`, '평균적')
+    const peer = source ? peerRefs.get(category)?.bySource.get(source) : undefined
+    if (peer) return soundTags(mine, peer, SUMMARY_GRID, `${source} ${categoryLabels[category]} 중앙값`, '평균적')
 
     const id = tagReferenceId(category, rig)
     const target = targetRefs.get(id)

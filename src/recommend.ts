@@ -50,18 +50,24 @@ export function fromMeasurement(device: Device, measurement: Measurement): Candi
   }
 }
 
-/** AutoEQ 요약값 → 후보. 측정치 source 형식("AutoEQ · 측정자")에 맞춰 출처를 비교할 수 있게 한다 */
+/** 요약값의 출처를 측정치 source 형식으로: "AutoEQ · 측정자" 또는 "squig.link · 사이트" */
+export function summarySource(s: Pick<CatalogSummary, 'provider' | 'measurer'>): string {
+  return `${s.provider === 'squig' ? 'squig.link' : 'AutoEQ'} · ${s.measurer}`
+}
+
+/** 요약값 → 후보. 측정치 source 형식에 맞춰 출처를 비교할 수 있게 한다 */
 export function fromSummary(s: CatalogSummary): Candidate {
   return {
     name: s.name,
     category: s.category,
-    source: `AutoEQ · ${s.measurer}`,
+    source: summarySource(s),
     rig: s.rig,
     values: s.values,
     catalog: {
-      provider: 'autoeq',
+      provider: s.provider ?? 'autoeq',
       name: s.name,
       source: s.measurer,
+      ...(s.files ? { files: s.files } : {}),
       rigName: '',
       rig: s.rig,
       category: s.category,

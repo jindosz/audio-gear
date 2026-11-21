@@ -2809,3 +2809,17 @@ button.select-option:active {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+/* 폰 EQ 적용할 앱(PhoneEqControl.tsx의 PhoneEqTargets) */
+.phone-eq-targets {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.phone-eq-apps {
+  flex-wrap: wrap;
+  gap: 6px;
+}

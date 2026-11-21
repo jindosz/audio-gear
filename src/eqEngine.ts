@@ -14,9 +14,27 @@ export interface EqStatus {
   on: boolean
   /** 지금 걸려 있는 EQ 이름 */
   name?: string
-  /** global = 폰 전체 출력, sessions = 재생 앱이 보내는 신호로 앱마다 건 경우 */
-  mode?: 'global' | 'sessions'
+  /** global = 폰 전체 출력, sessions = 재생 앱이 보내는 신호로 앱마다 건 경우, apps = 고른 앱에만 */
+  mode?: 'global' | 'sessions' | 'apps'
   error?: string
+}
+
+/** 폰 EQ를 어느 앱에 걸지. all = 모든 앱(폰 전체), apps = 고른 앱만(그 앱이 재생 신호를 보낼 때만 걸림) */
+export type EqTargetMode = 'all' | 'apps'
+
+export interface SeenApp {
+  /** 패키지 이름. 예: com.spotify.music */
+  package: string
+  /** 앱 이름. 예: Spotify */
+  label: string
+}
+
+export interface EqTargets {
+  mode: EqTargetMode
+  /** 고른 앱(패키지 이름) */
+  apps: string[]
+  /** EQ가 켜져 있는 동안 재생 신호를 보낸 적 있는 앱 = 고를 수 있는 앱 */
+  seen: SeenApp[]
 }
 
 export interface EqEngine {
@@ -27,6 +45,9 @@ export interface EqEngine {
   status(): Promise<EqStatus>
   /** 알림에서 끈 경우처럼 앱 밖에서 상태가 바뀌면 알려 준다. 돌려준 함수를 부르면 그만 받는다 */
   onStatus(cb: (s: EqStatus) => void): () => void
+  targets(): Promise<EqTargets>
+  /** 적용 대상을 바꾼다. EQ가 켜져 있으면 바로 다시 적용된다 */
+  setTargets(mode: EqTargetMode, apps: string[]): Promise<void>
 }
 
 /** 네이티브 플러그인이 받는 형식(SystemEqPlugin.java와 맞춰야 한다) */
@@ -35,6 +56,8 @@ interface SystemEqPlugin {
   off(): Promise<void>
   status(): Promise<EqStatus>
   addListener(event: 'statusChange', cb: (s: EqStatus) => void): Promise<PluginListenerHandle>
+  targets(): Promise<EqTargets>
+  setTargets(options: { mode: EqTargetMode; apps: string[] }): Promise<void>
 }
 
 const noneEngine: EqEngine = {
@@ -43,6 +66,8 @@ const noneEngine: EqEngine = {
   off: async () => ({ on: false }),
   status: async () => ({ on: false }),
   onStatus: () => () => {},
+  targets: async () => ({ mode: 'all', apps: [], seen: [] }),
+  setTargets: async () => {},
 }
 
 /** 네이티브 쪽은 EQ를 건 결과를 이벤트로 알려 준다. 응답을 이만큼 기다린 뒤에는 상태를 직접 묻는다 */
@@ -100,6 +125,8 @@ function androidEngine(): EqEngine {
       listeners.add(cb)
       return () => listeners.delete(cb)
     },
+    targets: () => plugin.targets(),
+    setTargets: (mode, apps) => plugin.setTargets({ mode, apps }),
   }
 }
 

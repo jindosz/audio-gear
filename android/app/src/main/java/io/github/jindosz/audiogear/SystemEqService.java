@@ -16,8 +16,11 @@ import android.media.audiofx.AudioEffect;
 import android.media.audiofx.DynamicsProcessing;
 import android.os.Build;
 import android.os.IBinder;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 폰 전체 소리에 EQ를 거는 포그라운드 서비스.
@@ -27,6 +30,8 @@ import java.util.Map;
  * 방식(시험 앱 android-spike로 갤럭시 폴드7에서 확인):
  *  ① 전체 출력(세션 0)에 건다 — 기본
  *  ② ①이 안 되면(만들기 실패, 제어권 없음) 재생 앱이 보내는 "오디오 세션 열림" 신호를 받아 그 앱 소리에 건다
+ *  ③ "고른 앱만"(2026-11-21): ①을 쓰지 않고, 고른 앱이 보낸 세션에만 건다(어디에 걸지는 EqTargeting)
+ * 켜져 있는 동안은 방식과 상관없이 신호를 받아 "신호를 보낸 앱"을 기억한다(앱 화면의 고를 수 있는 앱 목록)
  * EQ를 바꿀 때는 효과를 새로 만들지 않고 값만 바꾼다(소리가 끊기지 않게, 0.3초 간격 변경도 시험 완료).
  * 계산은 웹 코드(src/eqDevice.ts)가 하고, 여기서는 받은 밴드 값만 건다.
  */
@@ -36,6 +41,12 @@ public class SystemEqService extends Service {
     public static final String ACTION_OFF = "io.github.jindosz.audiogear.EQ_OFF";
     /** 저장해 둔 마지막 EQ를 다시 건다(폰을 다시 켰을 때 BootReceiver가 보냄). 꺼짐으로 저장돼 있으면 아무것도 안 함 */
     public static final String ACTION_RESTORE = "io.github.jindosz.audiogear.EQ_RESTORE";
+    /** 적용 대상(모든 앱/고른 앱)이 바뀜. 값은 SharedPreferences에 이미 저장돼 있고 서비스는 다시 읽어 적용만 한다 */
+    public static final String ACTION_TARGETS = "io.github.jindosz.audiogear.EQ_TARGETS";
+    /** SharedPreferences 열쇠: 적용 대상 방식("all"/"apps"), 고른 앱, 신호를 보낸 적 있는 앱(쉼표로 잇기) */
+    static final String KEY_TARGET_MODE = "target_mode";
+    static final String KEY_TARGET_APPS = "target_apps";
+    static final String KEY_SEEN_APPS = "seen_apps";
     public static final String EXTRA_NAME = "name";
     public static final String EXTRA_CUTOFFS = "cutoffs";
     public static final String EXTRA_GAINS = "gains";
@@ -45,6 +56,8 @@ public class SystemEqService extends Service {
     private static final int NOTIFICATION_ID = 1;
     /** 재생 앱 신호 방식에서 동시에 들고 있을 효과의 최대 개수(신호를 마구 보내는 앱이 있어도 메모리가 새지 않게) */
     private static final int MAX_SESSIONS = 16;
+    /** 신호로 알게 된 세션을 기억해 두는 최대 개수(효과를 안 붙인 세션 포함) */
+    private static final int MAX_KNOWN_SESSIONS = 64;
     /** 효과끼리 경쟁할 때 우선순위. 높을수록 이긴다 */
     private static final int PRIORITY = Integer.MAX_VALUE;
     /** 마지막으로 건 EQ를 저장해 두는 곳(3단계: 폰을 다시 켰을 때 복원용) */
@@ -54,7 +67,7 @@ public class SystemEqService extends Service {
     public static final class Status {
         public boolean on;
         public String name;
-        /** "global" = ① 전체 출력, "sessions" = ② 재생 앱 신호 */
+        /** "global" = ① 전체 출력, "sessions" = ② 재생 앱 신호, "apps" = ③ 고른 앱만 */
         public String mode;
         public String error;
 
@@ -106,32 +119,37 @@ public class SystemEqService extends Service {
     private DynamicsProcessing globalEffect;
     private final Map<Integer, DynamicsProcessing> sessionEffects = new LinkedHashMap<>();
     private boolean receiverRegistered = false;
+    /** 신호를 보낸 세션 → 앱 이름. 효과를 안 붙인 세션도 기억해서, 고른 앱이 바뀌면 이미 재생 중인 앱에도 바로 붙이고 뗀다 */
+    private final Map<Integer, String> knownSessions = new LinkedHashMap<>();
+    private String targetMode = EqTargeting.ALL;
+    private Set<String> targetApps = new LinkedHashSet<>();
 
     private String name = "";
     private float[] cutoffs = new float[0];
     private float[] gains = new float[0];
     private float inputGain = 0f;
 
-    /** 재생 앱이 보내는 "오디오 세션 열림/닫힘" 신호를 받는 곳(② 방식) */
+    /** 재생 앱이 보내는 "오디오 세션 열림/닫힘" 신호를 받는 곳(②·③ 방식, 그리고 앱 목록 기억) */
     private final BroadcastReceiver sessionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             int session = intent.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, AudioEffect.ERROR_BAD_VALUE);
             if (session == AudioEffect.ERROR_BAD_VALUE) return;
             if (AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION.equals(intent.getAction())) {
-                if (sessionEffects.containsKey(session)) return;
-                // 너무 많으면 가장 먼저 연 것부터 해제(LinkedHashMap이라 넣은 순서가 유지됨)
-                while (sessionEffects.size() >= MAX_SESSIONS) {
-                    Integer oldest = sessionEffects.keySet().iterator().next();
+                String pkg = intent.getStringExtra(AudioEffect.EXTRA_PACKAGE_NAME);
+                rememberSeen(pkg);
+                knownSessions.remove(session);
+                knownSessions.put(session, pkg);
+                // 오래된 것부터 잊는다(LinkedHashMap이라 넣은 순서가 유지됨)
+                while (knownSessions.size() > MAX_KNOWN_SESSIONS) {
+                    Integer oldest = knownSessions.keySet().iterator().next();
+                    knownSessions.remove(oldest);
                     DynamicsProcessing old = sessionEffects.remove(oldest);
                     if (old != null) old.release();
                 }
-                try {
-                    sessionEffects.put(session, createEffect(session));
-                } catch (Throwable t) {
-                    // 한 앱에 실패해도 다른 앱은 계속 시도한다
-                }
+                syncSession(session, pkg);
             } else if (AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION.equals(intent.getAction())) {
+                knownSessions.remove(session);
                 DynamicsProcessing effect = sessionEffects.remove(session);
                 if (effect != null) effect.release();
             }
@@ -149,7 +167,12 @@ public class SystemEqService extends Service {
         startInForeground();
         // intent가 null = 시스템이 서비스를 정리했다가 다시 살린 경우(START_STICKY). 마지막 EQ를 다시 건다
         String action = intent != null ? intent.getAction() : ACTION_RESTORE;
-        if (ACTION_RESTORE.equals(action)) {
+        loadTargets();
+        if (ACTION_TARGETS.equals(action)) {
+            // 켜져 있을 때만 다시 적용(꺼져 있으면 저장만 돼 있고 다음에 켤 때 쓰인다)
+            if (getStatus().on || loadLast()) applyEq();
+            else publish(false, null, null, null);
+        } else if (ACTION_RESTORE.equals(action)) {
             if (loadLast()) applyEq();
             else publish(false, null, null, null);
         } else if (ACTION_APPLY.equals(action)) {
@@ -191,17 +214,18 @@ public class SystemEqService extends Service {
             return;
         }
         try {
-            if (globalEffect != null) {
-                globalEffect = updateOrRecreate(globalEffect, 0);
-                publish(true, name, "global", null);
-            } else if (receiverRegistered) {
-                for (Map.Entry<Integer, DynamicsProcessing> e : sessionEffects.entrySet()) {
-                    e.setValue(updateOrRecreate(e.getValue(), e.getKey()));
-                }
-                publish(true, name, "sessions", null);
-            } else {
-                startGlobalOrSessions();
+            // 켜져 있는 동안은 늘 신호를 받는다(고른 앱 방식에 쓰고, 고를 수 있는 앱 목록도 모은다)
+            ensureReceiver();
+            if (EqTargeting.useGlobal(targetMode)) {
+                // ① 전체 출력: 이미 있으면 값만 바꾸고, 없으면 만들어 본다(안 되면 ② 앱 세션으로)
+                globalEffect = globalEffect != null ? updateOrRecreate(globalEffect, 0) : tryCreateGlobal();
+            } else if (globalEffect != null) {
+                // ③ 고른 앱만: 전체 출력에 걸려 있으면 뗀다(안 그러면 고른 앱에 두 번 겹친다)
+                globalEffect.release();
+                globalEffect = null;
             }
+            syncAllSessions();
+            publish(true, name, modeLabel(), null);
             saveLast(true);
         } catch (Throwable t) {
             // 실패한 EQ가 "켜짐"으로 저장되어 나중에(재부팅 복원 등) 다시 걸리지 않게
@@ -211,19 +235,25 @@ public class SystemEqService extends Service {
         }
     }
 
-    /** ① 전체 출력을 먼저 시도하고, 안 되면 ② 재생 앱 신호 방식으로 */
-    private void startGlobalOrSessions() {
+    /** 전체 출력(세션 0)에 걸어 본다. 막혀 있거나 다른 EQ 앱이 제어권을 쥐고 있으면 null */
+    private DynamicsProcessing tryCreateGlobal() {
         try {
             DynamicsProcessing effect = createEffect(0);
-            if (effect.hasControl()) {
-                globalEffect = effect;
-                publish(true, name, "global", null);
-                return;
-            }
-            effect.release(); // 다른 EQ 앱이 제어권을 쥐고 있음
+            if (effect.hasControl()) return effect;
+            effect.release();
         } catch (Throwable t) {
             // 이 폰에서 세션 0이 막혀 있음 → ② 방식으로
         }
+        return null;
+    }
+
+    private String modeLabel() {
+        if (globalEffect != null) return "global";
+        return EqTargeting.APPS.equals(targetMode) ? "apps" : "sessions";
+    }
+
+    private void ensureReceiver() {
+        if (receiverRegistered) return;
         IntentFilter filter = new IntentFilter();
         filter.addAction(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION);
         filter.addAction(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION);
@@ -231,7 +261,53 @@ public class SystemEqService extends Service {
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(sessionReceiver, filter, Context.RECEIVER_EXPORTED);
         else registerReceiver(sessionReceiver, filter);
         receiverRegistered = true;
-        publish(true, name, "sessions", null);
+    }
+
+    /** 이 세션에 효과가 있어야 하면 붙이거나 값만 바꾸고, 없어야 하면 뗀다 */
+    private void syncSession(int session, String pkg) {
+        boolean want = EqTargeting.wantsSession(targetMode, globalEffect != null, targetApps, pkg);
+        DynamicsProcessing effect = sessionEffects.get(session);
+        try {
+            if (want && effect == null) {
+                while (sessionEffects.size() >= MAX_SESSIONS) {
+                    Integer oldest = sessionEffects.keySet().iterator().next();
+                    DynamicsProcessing old = sessionEffects.remove(oldest);
+                    if (old != null) old.release();
+                }
+                sessionEffects.put(session, createEffect(session));
+            } else if (want) {
+                sessionEffects.put(session, updateOrRecreate(effect, session));
+            } else if (effect != null) {
+                sessionEffects.remove(session);
+                effect.release();
+            }
+        } catch (Throwable t) {
+            // 한 앱에 실패해도 다른 앱은 계속 시도한다(이미 닫힌 세션 등)
+            DynamicsProcessing broken = sessionEffects.remove(session);
+            if (broken != null) broken.release();
+        }
+    }
+
+    private void syncAllSessions() {
+        for (Map.Entry<Integer, String> e : new ArrayList<>(knownSessions.entrySet())) syncSession(e.getKey(), e.getValue());
+    }
+
+    /** 저장된 적용 대상(모든 앱/고른 앱)을 읽는다 */
+    private void loadTargets() {
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        targetMode = EqTargeting.normalizeMode(p.getString(KEY_TARGET_MODE, EqTargeting.ALL));
+        targetApps = EqTargeting.parseList(p.getString(KEY_TARGET_APPS, ""));
+    }
+
+    /** 신호를 보낸 앱을 기억한다(처음 본 앱이면 저장하고 앱 화면에 알린다) */
+    private void rememberSeen(String pkg) {
+        if (pkg == null || pkg.isEmpty() || pkg.equals(getPackageName())) return;
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        Set<String> seen = EqTargeting.parseList(p.getString(KEY_SEEN_APPS, ""));
+        if (!seen.add(pkg)) return;
+        p.edit().putString(KEY_SEEN_APPS, EqTargeting.joinList(seen)).apply();
+        Status s = getStatus();
+        publish(s.on, s.name, s.mode, s.error); // 상태는 그대로, 앱 화면이 목록을 다시 읽게
     }
 
     private void turnOff() {
@@ -251,6 +327,8 @@ public class SystemEqService extends Service {
         }
         for (DynamicsProcessing effect : sessionEffects.values()) effect.release();
         sessionEffects.clear();
+        // 꺼져 있는 동안은 신호를 못 받아 닫힌 세션을 알 수 없으니 잊는다
+        knownSessions.clear();
     }
 
     // ---- DynamicsProcessing ----
@@ -365,9 +443,11 @@ public class SystemEqService extends Service {
         PendingIntent off = PendingIntent.getService(
                 this, 1, new Intent(this, SystemEqService.class).setAction(ACTION_OFF), PendingIntent.FLAG_IMMUTABLE);
         Status s = getStatus();
-        String text = s.on
-                ? ("sessions".equals(s.mode) ? "재생 앱 신호 방식으로 적용 중" : "폰 전체 소리에 적용 중")
-                : "준비 중";
+        String text;
+        if (!s.on) text = "준비 중";
+        else if ("apps".equals(s.mode)) text = "고른 앱에 적용 중";
+        else if ("sessions".equals(s.mode)) text = "재생 앱 신호 방식으로 적용 중";
+        else text = "폰 전체 소리에 적용 중";
         return new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentTitle(s.on && s.name != null ? "EQ: " + s.name : "EQ")

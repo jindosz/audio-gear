@@ -25,7 +25,7 @@ import { DeviceDetailDialog } from './DeviceDetailDialog'
 import { ListFilterBar } from './ListFilterBar'
 import { ListGrip } from './ListGrip'
 import { VirtualList } from './VirtualList'
-import { ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
+import { ArrowUpIcon, ChevronDownIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
 
 interface Props {
   category: DeviceCategory
@@ -476,7 +476,8 @@ function SectionTitle({
     <h2>
       <button type="button" className="section-toggle" aria-expanded={open} onClick={() => onToggle(id)}>
         <span className="chevron" aria-hidden>
-          {open ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+          {/* 접히면 CSS로 -90도 돌려 오른쪽을 가리킨다(돌아가는 애니메이션) */}
+          <ChevronDownIcon size={14} />
         </span>
         {children}
       </button>

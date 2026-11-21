@@ -14,8 +14,13 @@ export function setupBackButton(): void {
   if (!isAndroidApp()) return
   void App.addListener('backButton', () => {
     const dialog = topDialog()
-    // close()를 부르면 Modal의 onClose가 불려 화면 상태도 "닫힘"이 된다
-    if (dialog) dialog.close()
-    else void App.minimizeApp()
+    if (!dialog) {
+      void App.minimizeApp()
+      return
+    }
+    // Esc 키와 같은 "cancel" 신호를 보낸다. Modal이 받아서 사라지는 애니메이션 뒤에 닫는다.
+    // 받아 주는 곳이 없으면(preventDefault 안 됨) 바로 닫는다
+    const cancel = new Event('cancel', { cancelable: true })
+    if (dialog.dispatchEvent(cancel)) dialog.close()
   })
 }

@@ -2782,3 +2782,30 @@ button.select-option:active {
   flex: 1;
   text-align: left;
 }
+
+/* 잠깐 떴다 사라지는 안내(ToastHost.tsx): 화면 아래 가운데 알약. 폰 목록 시트(z-index 5)·팝업보다 위
+   보일 때 아래에서 떠오르고, 숨을 때 흐려진다. 누를 수 없게(pointer-events: none) */
+.quick-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 60;
+  max-width: calc(100vw - 32px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 88%, transparent);
+  color: var(--bg);
+  font-size: 14px;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.quick-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}

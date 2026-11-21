@@ -2398,3 +2398,25 @@ button.settings-row {
   min-width: 0;
   text-overflow: ellipsis;
 }
+
+/* 안드로이드 기본 "탭 강조"(누른 곳에 파란 네모를 덮는 것) 끄기: 버튼 모양(둥근 알약)과 안 맞고 오래 남아 보였다.
+   누름 표시는 위의 :active(살짝 어두워짐)가 맡는다 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* PC에서 켜진 버튼(켜짐 토글·고른 세그먼트·고른 EQ)에 마우스를 올리면, 일반 버튼의 hover 바탕(회색)이
+   켜짐 바탕을 덮어 "회색 바탕 + 어두운 글자"가 됐다 → 켜진 버튼은 hover 때도 자기 바탕을 지킨다 */
+@media (hover: hover) {
+  button.toggle.on:not(:disabled):hover {
+    background: color-mix(in srgb, var(--accent) 85%, #000);
+  }
+
+  .segmented button.active:not(:disabled):hover {
+    background: var(--card);
+  }
+
+  .eq-item.active:not(:disabled):hover {
+    background: color-mix(in srgb, var(--accent) 10%, var(--card));
+  }
+}

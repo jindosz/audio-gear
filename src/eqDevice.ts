@@ -24,11 +24,22 @@ export interface DeviceEq {
 /** 밴드 i의 위쪽 끝 = i번째와 i+1번째 주파수의 기하 평균(로그 축에서 한가운데), 마지막 밴드는 20000Hz */
 const CUTOFFS = DEVICE_EQ_FREQS.map((f, i) => (i === DEVICE_EQ_FREQS.length - 1 ? 20000 : Math.sqrt(f * DEVICE_EQ_FREQS[i + 1])))
 
-export function toDeviceEq(eq: EqSettings): DeviceEq {
-  const response = totalResponse(eq.filters, [...DEVICE_EQ_FREQS])
-  return {
-    cutoffs: [...CUTOFFS],
-    gains: response.map((v) => Math.min(MAX_GAIN, Math.max(MIN_GAIN, v))),
-    inputGain: Math.min(0, eq.preamp),
-  }
+/**
+ * layer: 내 귀 보정(earEq.ts, 귀마다 127개 dB). 있으면 왼쪽(gains)·오른쪽(gainsRight)을 따로 만든다.
+ * EQ 몫(+6 상한)과 보정 몫(+6 상한)을 더해 +12까지 허용하고, 입력 게인은 가장 큰 부스트만큼 낮춰 소리가 깨지지 않게 한다
+ */
+export function toDeviceEq(eq: EqSettings, layer?: EarLayerLike | null): DeviceEq & { gainsRight?: number[] } {
+  const response = totalResponse(eq.filters, [...DEVICE_EQ_FREQS]).map((v) => Math.min(MAX_GAIN, Math.max(MIN_GAIN, v)))
+  if (!layer) return { cutoffs: [...CUTOFFS], gains: response, inputGain: Math.min(0, eq.preamp) }
+  const add = (extra: number[]) => response.map((v, i) => Math.min(MAX_GAIN * 2, v + (extra[i] ?? 0)))
+  const gains = add(layer.left)
+  const gainsRight = add(layer.right)
+  const peak = Math.max(0, ...gains, ...gainsRight)
+  return { cutoffs: [...CUTOFFS], gains, gainsRight, inputGain: Math.min(0, eq.preamp, -peak) }
+}
+
+/** earEq.ts의 EarLayer와 같은 모양(서로 import하지 않게 여기 따로 적음) */
+interface EarLayerLike {
+  left: number[]
+  right: number[]
 }

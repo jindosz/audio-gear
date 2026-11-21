@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
 import {
   applyPreset,
-  EAR_BALANCE_NAME,
+  isEarOnly,
   eqSignature,
   getEqEngine,
   turnOffPhoneEq,
@@ -42,7 +42,7 @@ export function PhoneEqStatusBar() {
   const { busy, error, run } = useAction()
   if (getEqEngine().kind === 'none' || !status?.on) return null
   // 균형만 걸린 상태면 "끄기" = 균형 끄기(EQ 끄기는 균형만 남기므로 그대로면 아무 일도 안 일어남)
-  const balanceOnly = status.name === EAR_BALANCE_NAME
+  const balanceOnly = isEarOnly(status)
   const off = balanceOnly ? () => setEarBalanceOn(false).then(() => ({})) : turnOffPhoneEq
   return (
     <div className="phone-eq-status small">

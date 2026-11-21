@@ -3,7 +3,7 @@
 // 폰에 거는 일은 eqEngine.ts가 한다: EQ를 걸 때 균형 값을 함께 넘기고, EQ를 끄면 균형만 남긴다.
 // 계산은 earBalance.ts(순수 함수)
 import { useSyncExternalStore } from 'react'
-import { applyBalanceOnly, EAR_BALANCE_NAME, getEqEngine, setBalanceProvider, turnOffPhoneEq } from './eqEngine'
+import { setBalanceProvider, syncEar } from './eqEngine'
 import { readPref, writePref } from './localPrefs'
 
 export interface EarBalance {
@@ -57,20 +57,5 @@ export async function setEarBalanceOn(on: boolean): Promise<void> {
   await syncEarBalance()
 }
 
-/**
- * 지금 폰 상태에 균형 설정을 맞춘다.
- * - EQ가 걸려 있으면 균형 값만 바꿈(EQ 그대로). 균형만 걸린 상태에서 균형을 끄면 다 끔
- * - 아무것도 안 걸려 있고 균형이 켜져 있으면 균형만 건다
- */
-export async function syncEarBalance(): Promise<void> {
-  const engine = getEqEngine()
-  if (engine.kind === 'none') return
-  const status = await engine.status()
-  const on = !!current?.on
-  if (status.on) {
-    if (status.name === EAR_BALANCE_NAME && !on) await turnOffPhoneEq()
-    else await engine.setBalance(on && current ? current.db : 0)
-  } else if (on) {
-    await applyBalanceOnly()
-  }
-}
+/** 지금 폰 상태에 균형 설정을 맞춘다(eqEngine.syncEar) */
+export const syncEarBalance = syncEar

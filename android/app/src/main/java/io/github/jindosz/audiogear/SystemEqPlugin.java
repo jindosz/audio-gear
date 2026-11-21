@@ -57,8 +57,31 @@ public class SystemEqPlugin extends Plugin {
                 .putExtra(SystemEqService.EXTRA_NAME, call.getString("name", "EQ"))
                 .putExtra(SystemEqService.EXTRA_CUTOFFS, cutoffs)
                 .putExtra(SystemEqService.EXTRA_GAINS, gains)
-                .putExtra(SystemEqService.EXTRA_INPUT_GAIN, call.getFloat("inputGain", 0f));
+                .putExtra(SystemEqService.EXTRA_INPUT_GAIN, call.getFloat("inputGain", 0f))
+                .putExtra(SystemEqService.EXTRA_BALANCE, call.getFloat("balanceDb", 0f));
         getContext().startForegroundService(intent);
+        call.resolve();
+    }
+
+    /** 내 귀 균형만 바꾸기(EQ 값 그대로). 꺼져 있으면 아무것도 안 함 */
+    @PluginMethod
+    public void setBalance(PluginCall call) {
+        if (SystemEqService.getStatus().on) {
+            getContext().startForegroundService(new Intent(getContext(), SystemEqService.class)
+                    .setAction(SystemEqService.ACTION_BALANCE)
+                    .putExtra(SystemEqService.EXTRA_BALANCE, call.getFloat("balanceDb", 0f)));
+        }
+        call.resolve();
+    }
+
+    /** 걸린 효과를 잠깐 끄기/다시 켜기(내 귀 균형 시험 중). 꺼져 있으면 아무것도 안 함 */
+    @PluginMethod
+    public void setBypass(PluginCall call) {
+        if (SystemEqService.getStatus().on) {
+            getContext().startForegroundService(new Intent(getContext(), SystemEqService.class)
+                    .setAction(SystemEqService.ACTION_BYPASS)
+                    .putExtra(SystemEqService.EXTRA_BYPASS, call.getBoolean("on", false)));
+        }
         call.resolve();
     }
 

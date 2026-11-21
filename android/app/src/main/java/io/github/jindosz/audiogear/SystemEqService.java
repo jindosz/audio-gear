@@ -40,6 +40,13 @@ public class SystemEqService extends Service {
     public static final String EXTRA_CUTOFFS = "cutoffs";
     public static final String EXTRA_GAINS = "gains";
     public static final String EXTRA_INPUT_GAIN = "inputGain";
+    /** 내 귀 균형만 바꾼다(EQ 값은 그대로). 꺼져 있으면 아무것도 안 함 */
+    public static final String ACTION_BALANCE = "io.github.jindosz.audiogear.EQ_BALANCE";
+    /** 걸린 효과를 잠깐 끄거나 다시 켠다(내 귀 균형 시험 중). 저장하지 않음 */
+    public static final String ACTION_BYPASS = "io.github.jindosz.audiogear.EQ_BYPASS";
+    /** 내 귀 균형(dB): "오른쪽을 왼쪽보다 몇 dB 크게". 양수면 왼쪽, 음수면 오른쪽을 그만큼 낮춘다(src/earBalance.ts와 같은 규칙) */
+    public static final String EXTRA_BALANCE = "balanceDb";
+    public static final String EXTRA_BYPASS = "bypass";
 
     private static final String CHANNEL_ID = "system_eq";
     private static final int NOTIFICATION_ID = 1;
@@ -111,6 +118,9 @@ public class SystemEqService extends Service {
     private float[] cutoffs = new float[0];
     private float[] gains = new float[0];
     private float inputGain = 0f;
+    private float balanceDb = 0f;
+    /** 시험 중이라 효과를 잠깐 끈 상태 */
+    private boolean bypass = false;
 
     /** 재생 앱이 보내는 "오디오 세션 열림/닫힘" 신호를 받는 곳(② 방식) */
     private final BroadcastReceiver sessionReceiver = new BroadcastReceiver() {
@@ -160,7 +170,19 @@ public class SystemEqService extends Service {
             cutoffs = c != null ? c : new float[0];
             gains = g != null ? g : new float[0];
             inputGain = Math.min(0f, intent.getFloatExtra(EXTRA_INPUT_GAIN, 0f));
+            balanceDb = intent.getFloatExtra(EXTRA_BALANCE, 0f);
+            // 시험 중에 앱이 닫혀 잠깐 끈 상태가 남았더라도 새로 걸면 다시 켠다
+            bypass = false;
+            setAllEnabled(true);
             applyEq();
+        } else if (ACTION_BALANCE.equals(action)) {
+            if (getStatus().on) {
+                balanceDb = intent.getFloatExtra(EXTRA_BALANCE, 0f);
+                applyEq();
+            }
+        } else if (ACTION_BYPASS.equals(action)) {
+            bypass = intent.getBooleanExtra(EXTRA_BYPASS, false);
+            setAllEnabled(!bypass);
         } else {
             turnOff();
         }
@@ -273,17 +295,37 @@ public class SystemEqService extends Service {
                 false // 리미터 안 씀
         ).build();
         config.setPreEqAllChannelsTo(makeEq());
-        config.setInputGainAllChannelsTo(inputGain);
+        config.setInputGainByChannelIndex(0, leftGain());
+        config.setInputGainByChannelIndex(1, rightGain());
         DynamicsProcessing effect = new DynamicsProcessing(PRIORITY, session, config);
-        effect.setEnabled(true);
+        effect.setEnabled(!bypass);
         return effect;
+    }
+
+    /** 왼쪽 입력 음량 = 프리앰프 + 균형(양수면 왼쪽을 낮춤). 소리를 키우지는 않는다 */
+    private float leftGain() {
+        return inputGain - Math.max(0f, balanceDb);
+    }
+
+    private float rightGain() {
+        return inputGain - Math.max(0f, -balanceDb);
+    }
+
+    private void setAllEnabled(boolean enabled) {
+        try {
+            if (globalEffect != null) globalEffect.setEnabled(enabled);
+            for (DynamicsProcessing e : sessionEffects.values()) e.setEnabled(enabled);
+        } catch (Throwable t) {
+            // 효과가 이미 풀렸으면 무시
+        }
     }
 
     /** 밴드 수가 같으면 값만 바꾸고(끊김 없음), 다르면 새로 만든다 */
     private DynamicsProcessing updateOrRecreate(DynamicsProcessing effect, int session) {
         if (effect.getConfig().getPreEqBandCount() == cutoffs.length) {
             effect.setPreEqAllChannelsTo(makeEq());
-            effect.setInputGainAllChannelsTo(inputGain);
+            effect.setInputGainbyChannelIndex(0, leftGain());
+            effect.setInputGainbyChannelIndex(1, rightGain());
             return effect;
         }
         effect.release();
@@ -300,6 +342,7 @@ public class SystemEqService extends Service {
             e.putString("cutoffs", join(cutoffs));
             e.putString("gains", join(gains));
             e.putFloat("inputGain", inputGain);
+            e.putFloat("balanceDb", balanceDb);
         }
         e.apply();
     }
@@ -315,6 +358,7 @@ public class SystemEqService extends Service {
         cutoffs = c;
         gains = g;
         inputGain = Math.min(0f, p.getFloat("inputGain", 0f));
+        balanceDb = p.getFloat("balanceDb", 0f);
         return true;
     }
 

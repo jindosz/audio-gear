@@ -1,7 +1,8 @@
 // IndexedDB(브라우저 안의 데이터베이스)를 Dexie로 정의하는 파일.
 // 화면 코드는 이 파일의 db만 사용하고, 저장 방식은 여기서만 신경 쓴다.
-import Dexie, { type EntityTable } from 'dexie'
-import type { CatalogSummary, CompareTab, Device, EqPreset, Measurement, MetaRecord, Target } from './types'
+import Dexie, { type EntityTable, type Table } from 'dexie'
+import { installSyncStamp } from './syncStamp'
+import type { CatalogSummary, CompareTab, Deletion, Device, EqPreset, Measurement, MetaRecord, Target } from './types'
 
 export const db = new Dexie('audio-gear') as Dexie & {
   devices: EntityTable<Device, 'id'>
@@ -11,6 +12,7 @@ export const db = new Dexie('audio-gear') as Dexie & {
   meta: EntityTable<MetaRecord, 'key'>
   summaries: EntityTable<CatalogSummary, 'path'>
   eqPresets: EntityTable<EqPreset, 'id'>
+  deletions: Table<Deletion, [string, string]>
 }
 
 // 문자열은 "기본 키, 인덱스1, 인덱스2..." 순서.
@@ -38,3 +40,11 @@ db.version(3).stores({
 db.version(4).stores({
   eqPresets: 'id, createdAt',
 })
+
+// 버전 5: 동기화용 지우기 표시(지운 항목을 다른 기기에도 알리려고). 키 = [테이블 + id], 오래된 표시를 정리하려고 deletedAt 인덱스
+db.version(5).stores({
+  deletions: '[table+id], deletedAt',
+})
+
+// 동기화 대상 테이블에 쓸 때 고친 시각·지우기 표시를 자동으로 붙인다(syncStamp.ts)
+installSyncStamp(db)

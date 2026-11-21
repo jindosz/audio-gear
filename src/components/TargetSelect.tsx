@@ -8,6 +8,7 @@ import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { DeviceCategory } from '../types'
 import { CustomTargetDialog } from './CustomTargetDialog'
 import { Select } from './Select'
+import { askConfirm } from '../confirm'
 
 interface Props {
   tabId: string
@@ -47,7 +48,14 @@ export function TargetSelect({ tabId, targetId, category }: Props) {
   const current = customTargets?.find((t) => t.id === targetId)
 
   async function handleDelete() {
-    if (!current || !confirm(`내 타깃 "${current.name}"을 삭제할까요? 이 타깃을 쓰는 모든 탭에서 빠집니다.`)) return
+    if (!current) return
+    const ok = await askConfirm({
+      title: '타깃 삭제',
+      message: `내 타깃 "${current.name}"을 삭제할까요? 이 타깃을 쓰는 모든 탭에서 빠져요.`,
+      ok: '삭제',
+      danger: true,
+    })
+    if (!ok) return
     await deleteTarget(current.id)
   }
 

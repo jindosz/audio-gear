@@ -9,6 +9,7 @@ import { isAndroidApp, saveTextFile } from '../platform'
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
+import { askConfirm } from '../confirm'
 
 interface Props {
   open: boolean
@@ -107,7 +108,16 @@ function BackupGroup() {
 
   async function handleImport() {
     if (!pending) return
-    if (mode === 'replace' && !confirm('지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿉니다. 계속할까요?')) return
+    if (
+      mode === 'replace' &&
+      !(await askConfirm({
+        title: '모두 바꾸기',
+        message: '지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿀까요?',
+        ok: '모두 바꾸기',
+        danger: true,
+      }))
+    )
+      return
     try {
       await importAll(pending.data, mode)
       setMessage('가져왔어요.')
@@ -169,7 +179,12 @@ function CleanupRow() {
   const [busy, setBusy] = useState(false)
 
   async function handleCleanup() {
-    if (!confirm('저장된 기기 이름을 정리하고, 이름이 같아진 기기는 하나로 합칩니다(보유·찜·메모·측정치 유지). 기기가 아닌 항목(구분선 등)은 지웁니다. 계속할까요?')) return
+    const ok = await askConfirm({
+      title: '저장된 기기 정리',
+      message: '이름을 정리하고 같아진 기기는 하나로 합쳐요(보유·찜·메모·측정치 유지). 기기가 아닌 항목(구분선 등)은 지워요. 계속할까요?',
+      ok: '정리',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       setMessage(describeCleanup(await cleanupStoredDevices()))

@@ -31,6 +31,7 @@ import { PhoneEqControl, PhoneEqStatusBar } from './PhoneEqControl'
 import { AlertIcon, ChevronDownIcon, SearchIcon } from './Icons'
 import { CatalogPickDialog } from './CatalogPickDialog'
 import { findSamePreset } from '../eqPresetList'
+import { askConfirm } from '../confirm'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
 
@@ -119,7 +120,7 @@ export function EqPage() {
   }
 
   async function handleDelete(preset: EqPreset) {
-    if (!confirm(`"${preset.name}"을(를) 삭제할까요?`)) return
+    if (!(await askConfirm({ title: 'EQ 삭제', message: `"${preset.name}"을(를) 삭제할까요?`, ok: '삭제', danger: true }))) return
     const rest = presets!.filter((p) => p.id !== preset.id)
     await deleteEqPreset(preset.id)
     setActiveId(rest[0]?.id ?? '')
@@ -290,9 +291,13 @@ function EqEditor({
     update({ goal: value })
   }
 
-  function handleAuto() {
+  async function handleAuto() {
     if (!wantedEq || !goal) return
-    if (filters.length > 0 && !confirm('지금 밴드를 자동 계산 결과로 바꿉니다. 계속할까요?')) return
+    if (
+      filters.length > 0 &&
+      !(await askConfirm({ title: '자동 계산', message: '지금 밴드를 자동 계산 결과로 바꿀까요?', ok: '바꾸기' }))
+    )
+      return
     // 이름을 아직 안 바꿨으면("새 EQ 3") 무엇을 위한 EQ인지 알 수 있게 이름도 붙여 준다
     const name = /^새 EQ \d+$/.test(draft.name) ? `${current.name} → ${goal.shortName}` : draft.name
     update({ filters: fitPeq(wantedEq).filters, name })

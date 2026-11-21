@@ -32,6 +32,7 @@ import { Modal } from './Modal'
 import { ToggleButton } from './ToggleButton'
 import { Help } from './Help'
 import { PlusIcon } from './Icons'
+import { askConfirm } from '../confirm'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -71,7 +72,7 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
   async function handleDelete() {
     const count = measurements?.length ?? 0
     const message = count > 0 ? `${name}과 측정치 ${count}개를 삭제할까요?` : `${name}을 삭제할까요?`
-    if (!confirm(message)) return
+    if (!(await askConfirm({ title: '기기 삭제', message, ok: '삭제', danger: true }))) return
     await deleteDevice(deviceId)
     onDeleted()
   }

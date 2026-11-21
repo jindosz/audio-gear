@@ -2686,3 +2686,29 @@ button.select-option:active {
 .segmented.seg-slide > button:active {
   transform: none;
 }
+
+/* 확인 팝업(ConfirmHost.tsx): 글 + 오른쪽 아래 [취소] [확인] */
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 22px;
+}
+
+.confirm p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 폰: 버튼 두 개가 반씩 꽉 차게(엄지로 누르기 쉽게) */
+@media (max-width: 768px) {
+  .confirm-actions > button {
+    flex: 1;
+  }
+}

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { PeakFilter } from '../eq'
 import { CloseIcon, PlusIcon } from './Icons'
+import { askConfirm } from '../confirm'
 
 interface Props {
   filters: PeakFilter[]
@@ -75,7 +76,9 @@ export function EqBandTable({ filters, onChange }: Props) {
           <PlusIcon size={16} /> 밴드 추가
         </button>
         {filters.length > 0 && (
-          <button type="button" onClick={() => confirm('밴드를 모두 지울까요?') && onChange([])}>
+          <button type="button" onClick={async () => {
+              if (await askConfirm({ message: '밴드를 모두 지울까요?', ok: '모두 지우기', danger: true })) onChange([])
+            }}>
             모두 지우기
           </button>
         )}

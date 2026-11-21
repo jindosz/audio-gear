@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { ComparePanel } from './components/ComparePanel'
 import { ConfirmHost } from './components/ConfirmHost'
+import { ToastHost } from './components/ToastHost'
 import { CloseIcon } from './components/Icons'
 import { DeviceList } from './components/DeviceList'
 import { EqPage } from './components/EqPage'
@@ -76,6 +77,8 @@ function App() {
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       {/* 앱 모양의 확인 팝업(askConfirm으로 엶). 브라우저 기본 confirm 창 대신 */}
       <ConfirmHost />
+      {/* 잠깐 떴다 사라지는 안내(showToast로 엶) */}
+      <ToastHost />
     </div>
   )
 }

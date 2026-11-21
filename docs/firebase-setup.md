@@ -33,6 +33,16 @@ audio-gear의 로그인과 PC↔폰 동기화는 Firebase(구글의 무료 서�
    ```
    이 값들은 앱 안에 그대로 들어가는 **공개돼도 괜찮은 값**입니다(비밀번호가 아님). 남의 데이터를 막는 건 3-4의 보안 규칙입니다.
 
+## 5. (권장) 웹 API 키 제한하기
+웹 앱의 `apiKey`는 앱 안에 그대로 들어가 누구나 볼 수 있습니다. AI Studio가 만든 프로젝트(`gen-lang-client-…`)처럼 Gemini 등 다른 API가 켜져 있는 프로젝트라면, 이 키로 Firebase 말고 다른 API를 못 부르게 막아 두는 게 안전합니다.
+1. https://console.cloud.google.com/apis/credentials (위쪽에서 그 프로젝트가 골라져 있는지 확인)
+2. "API 키" 목록에서 값이 `apiKey`와 같은 키(보통 이름이 "Browser key (auto created by Firebase)")를 누름
+3. **API 제한사항 → 키 제한** → 아래 3개만 체크 → [저장]
+   - Identity Toolkit API (로그인)
+   - Token Service API (로그인 유지)
+   - Cloud Firestore API (데이터)
+4. Gemini용으로 따로 만든 키는 건드리지 않습니다.
+
 ## 그 다음
 - 설정값을 `src/firebaseConfig.ts`에 넣으면 설정 → "계정"에서 가입·로그인할 수 있습니다.
 - 사용량은 콘솔의 **Firestore Database → 사용량(Usage)** 에서 볼 수 있습니다. 무료 한도(대략 하루 읽기 5만·쓰기 2만 번, 저장 1GB)는 개인·지인 규모면 충분합니다.

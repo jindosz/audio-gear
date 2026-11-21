@@ -31,6 +31,7 @@ export function AccountGroup() {
       danger: true,
     })
     if (!ok) return
+    showToast('계정을 지우는 중…', 10000)
     try {
       await deleteAccountAndData()
       showToast('계정을 지웠어요')

@@ -27,7 +27,8 @@ import { EqPresetPicker } from './EqPresetPicker'
 import { Modal } from './Modal'
 import { Help } from './Help'
 import { PhoneEqControl, PhoneEqStatusBar } from './PhoneEqControl'
-import { AlertIcon, ChevronDownIcon } from './Icons'
+import { AlertIcon, ChevronDownIcon, SearchIcon } from './Icons'
+import { CatalogPickDialog } from './CatalogPickDialog'
 import { findSamePreset } from '../eqPresetList'
 
 const FrChart = lazy(() => import('./FrChart').then((m) => ({ default: m.FrChart })))
@@ -223,6 +224,8 @@ function EqEditor({
   }))
   const [loadingTarget, setLoadingTarget] = useState(false)
   const [error, setError] = useState('')
+  // "다른 기기 찾기" 팝업: 어느 칸(지금 쓰는 기기/목표)을 채우는지. null이면 닫힘
+  const [findFor, setFindFor] = useState<'current' | 'goal' | null>(null)
 
   // 자동 저장: 아직 저장하지 않은 고친 내용. 마지막으로 고친 뒤 0.3초가 지나면 저장하고,
   // 그 전에 다른 EQ로 바꾸면(편집 칸이 사라지면) 바로 저장한다
@@ -325,66 +328,99 @@ function EqEditor({
       <PhoneEqControl presetId={preset.id} name={draft.name} eq={{ filters, preamp }} />
 
       <div className="row eq-pickers">
-        <label>
-          지금 쓰는 기기{' '}
-          <select value={current.measurement.id} onChange={(e) => update({ measurementId: e.target.value })}>
-            {ownedOptions.length > 0 && (
-              <optgroup label="보유 기기">
-                {ownedOptions.map((o) => (
-                  <option key={o.measurement.id} value={o.measurement.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {otherOptions.length > 0 && (
-              <optgroup label="그 밖의 내 기기">
-                {otherOptions.map((o) => (
-                  <option key={o.measurement.id} value={o.measurement.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-        </label>
+        <div className="eq-pick-group">
+          <label>
+            지금 쓰는 기기{' '}
+            <select value={current.measurement.id} onChange={(e) => update({ measurementId: e.target.value })}>
+              {ownedOptions.length > 0 && (
+                <optgroup label="보유 기기">
+                  {ownedOptions.map((o) => (
+                    <option key={o.measurement.id} value={o.measurement.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {otherOptions.length > 0 && (
+                <optgroup label="그 밖의 내 기기">
+                  {otherOptions.map((o) => (
+                    <option key={o.measurement.id} value={o.measurement.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="find-device"
+            onClick={() => setFindFor('current')}
+            title="전체 기기 목록에서 찾기"
+          >
+            <SearchIcon size={16} /> 다른 기기
+          </button>
+        </div>
         <span aria-hidden="true">→</span>
-        <label>
-          목표{' '}
-          <select value={draft.goal} onChange={(e) => handleGoal(e.target.value)} disabled={loadingTarget}>
-            <option value="">없음 (직접 조정)</option>
-            <optgroup label="기기 측정치">
-              {options
-                .filter((o) => o !== current)
-                .map((o) => (
-                  <option key={o.measurement.id} value={`m:${o.measurement.id}`}>
-                    {o.label}
-                  </option>
-                ))}
-            </optgroup>
-            {customTargets && customTargets.length > 0 && (
-              <optgroup label="내 타깃">
-                {customTargets.map((t) => (
-                  <option key={t.id} value={`t:${t.id}`}>
-                    {t.name}
-                  </option>
-                ))}
+        <div className="eq-pick-group">
+          <label>
+            목표{' '}
+            <select value={draft.goal} onChange={(e) => handleGoal(e.target.value)} disabled={loadingTarget}>
+              <option value="">없음 (직접 조정)</option>
+              <optgroup label="기기 측정치">
+                {options
+                  .filter((o) => o !== current)
+                  .map((o) => (
+                    <option key={o.measurement.id} value={`m:${o.measurement.id}`}>
+                      {o.label}
+                    </option>
+                  ))}
               </optgroup>
-            )}
-            {targetGroups.map((c) => (
-              <optgroup key={c} label={`${categoryLabels[c]} 타깃`}>
-                {BUILTIN_TARGETS.filter((t) => t.category === c).map((t) => (
-                  <option key={t.id} value={`t:${t.id}`}>
-                    {t.name} ({rigLabels[t.rig]})
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
+              {customTargets && customTargets.length > 0 && (
+                <optgroup label="내 타깃">
+                  {customTargets.map((t) => (
+                    <option key={t.id} value={`t:${t.id}`}>
+                      {t.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {targetGroups.map((c) => (
+                <optgroup key={c} label={`${categoryLabels[c]} 타깃`}>
+                  {BUILTIN_TARGETS.filter((t) => t.category === c).map((t) => (
+                    <option key={t.id} value={`t:${t.id}`}>
+                      {t.name} ({rigLabels[t.rig]})
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="find-device"
+            onClick={() => setFindFor('goal')}
+            title="전체 기기 목록에서 찾기"
+          >
+            <SearchIcon size={16} /> 다른 기기
+          </button>
+        </div>
         {loadingTarget && <span className="muted small">타깃 받는 중…</span>}
       </div>
       {error && <p className="error small">{error}</p>}
+      {/* 전체 기기 목록에서 고르기. 맞은편 칸의 측정자에 맞춘다(직접 올린 측정치는 맞출 측정자가 없음) */}
+      <CatalogPickDialog
+        open={findFor !== null}
+        onClose={() => setFindFor(null)}
+        title={findFor === 'goal' ? '목표 기기 찾기' : '지금 쓰는 기기 찾기'}
+        preferCategory={category}
+        preferredSource={knownSource(findFor === 'goal' ? current.measurement.source : goal?.source)}
+        onPicked={(id) => {
+          if (findFor === 'goal') update({ goal: `m:${id}` })
+          else update({ measurementId: id })
+          setFindFor(null)
+        }}
+      />
       {/* 같은 "기기 → 목표" 조합이 다른 EQ에 있으면 알려 준다(같은 EQ를 또 만들지 않게) */}
       {sameAs && (
         <p className="notice small">
@@ -490,6 +526,11 @@ function goalInfo(measurement: MeasurementOption | undefined, target: Target | u
     return { label: `타깃: ${target.name}`, shortName: target.name, curve: target.curve, category: target.category, source: undefined }
   }
   return undefined
+}
+
+/** 측정자로 맞출 수 있는 출처만(직접 올린 측정치·타깃은 null) */
+function knownSource(source: string | undefined): string | null {
+  return source && source !== 'local' ? source : null
 }
 
 function rms(values: (number | null)[]): number {

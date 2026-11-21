@@ -2227,3 +2227,56 @@ button.settings-row {
     flex: 1 1 0;
   }
 }
+
+/* EQ 화면 "다른 기기 찾기" 팝업: 검색창 + 결과 목록(전체 기기 목록에서 검색) */
+.catalog-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catalog-pick input[type='search'] {
+  width: 100%;
+}
+
+.catalog-pick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(60vh, 480px);
+  overflow-y: auto;
+}
+
+.catalog-pick-list .eq-item {
+  width: 100%;
+  max-width: none;
+}
+
+.find-device {
+  white-space: nowrap;
+}
+
+/* 폰: 선택 상자 아래에 꽉 찬 줄로 */
+@media (max-width: 768px) {
+  .eq-pickers .find-device {
+    align-self: flex-start;
+  }
+}
+
+/* "지금 쓰는 기기"·"목표" 선택 상자와 그 칸의 "다른 기기" 버튼을 한 묶음으로(줄이 바뀌어도 같이 움직임) */
+.eq-pick-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .eq-pick-group {
+    width: 100%;
+  }
+}

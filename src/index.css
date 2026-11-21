@@ -119,8 +119,10 @@ body {
   font-size: 12px;
 }
 
+@media (hover: hover) {
 .nav-item:not(:disabled):hover {
   background: var(--hover);
+}
 }
 
 .nav-item.active {
@@ -213,8 +215,10 @@ body {
   box-shadow: inset 4px 0 0 var(--c);
 }
 
+@media (hover: hover) {
 .device-row.selected:hover {
   background: color-mix(in srgb, var(--c) 24%, transparent);
+}
 }
 
 .device-name .tag {
@@ -236,8 +240,10 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+@media (hover: hover) {
 .device-row:hover {
   background: var(--hover);
+}
 }
 
 .device-name {
@@ -255,9 +261,11 @@ body {
   visibility: hidden; /* 마우스를 올렸을 때만 보인다 */
 }
 
+@media (hover: hover) {
 .device-row:hover .more-btn,
 .more-btn:focus-visible {
   visibility: visible;
+}
 }
 
 /* 마우스가 없는 터치 기기에서는 항상 보이게 */
@@ -338,9 +346,11 @@ body {
   color: var(--muted);
 }
 
+@media (hover: hover) {
 .tab-close:hover,
 .tab-add:hover {
   color: var(--text);
+}
 }
 
 .tab-add {
@@ -562,8 +572,10 @@ button.chip {
   border-radius: 999px;
 }
 
+@media (hover: hover) {
 button.chip:not(:disabled):hover {
   border-color: var(--accent);
+}
 }
 
 .tag.added {
@@ -722,9 +734,11 @@ button.small {
   color: var(--star);
 }
 
+@media (hover: hover) {
 .device-row:hover .star-btn,
 .star-btn:focus-visible {
   visibility: visible;
+}
 }
 
 @media (hover: none) {
@@ -802,8 +816,10 @@ button.small {
   cursor: pointer;
 }
 
+@media (hover: hover) {
 .settings-link:hover {
   color: var(--accent);
+}
 }
 
 
@@ -845,8 +861,10 @@ button.small {
   cursor: pointer;
 }
 
+@media (hover: hover) {
 .file-button:hover {
   border-color: var(--accent);
+}
 }
 
 .import-box {
@@ -942,8 +960,10 @@ button.toggle.small {
   padding: 2px 10px;
 }
 
+@media (hover: hover) {
 button.toggle:hover {
   border-color: var(--accent);
+}
 }
 
 button.toggle.on {
@@ -1118,11 +1138,13 @@ button.toggle.on {
   touch-action: none;
 }
 
+@media (hover: hover) {
 .resize-handle:hover,
 .resize-handle:focus-visible {
   background: var(--accent);
   opacity: 0.4;
   outline: none;
+}
 }
 
 body.resizing {
@@ -1161,8 +1183,10 @@ body.resizing {
   text-align: left;
 }
 
+@media (hover: hover) {
 .section-toggle:hover {
   color: var(--text);
+}
 }
 
 .section-toggle .chevron {
@@ -1302,8 +1326,10 @@ body.resizing {
   text-align: left;
 }
 
+@media (hover: hover) {
 .eq-item:hover {
   background: var(--hover);
+}
 }
 
 .eq-item.active {
@@ -1598,8 +1624,10 @@ body.resizing {
   display: none;
 }
 
+@media (hover: hover) {
 .help > summary:hover {
   color: var(--text);
+}
 }
 
 .help-body {
@@ -1695,8 +1723,10 @@ button {
   transition: background 0.15s, color 0.15s;
 }
 
+@media (hover: hover) {
 button:not(:disabled):hover {
   background: color-mix(in srgb, var(--text) 10%, transparent);
+}
 }
 
 button.primary,
@@ -1705,9 +1735,11 @@ button[type='submit'] {
   color: var(--on-accent);
 }
 
+@media (hover: hover) {
 button.primary:not(:disabled):hover,
 button[type='submit']:not(:disabled):hover {
   background: color-mix(in srgb, var(--accent) 85%, #000);
+}
 }
 
 button.small {
@@ -2080,9 +2112,11 @@ button.settings-row {
   color: var(--accent);
 }
 
+@media (hover: hover) {
 .device-row:hover .own-btn,
 .own-btn:focus-visible {
   visibility: visible;
+}
 }
 
 @media (hover: none) {
@@ -2346,4 +2380,21 @@ button.settings-row {
   .main-col {
     padding-bottom: calc(var(--list-h) + 16px);
   }
+}
+
+/* 비슷한 기기 찾기의 "기준" 선택 상자: 선택 상자는 가장 긴 항목 길이만큼 넓어지는 성질이 있어,
+   이름이 긴 기기(squig.link 출처 등)가 있으면 팝업 밖으로 튀어나갔다 → 줄 폭 안에 가두고 넘치는 글자는 …로 */
+.recommend > .row > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.recommend > .row > label > select {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
 }

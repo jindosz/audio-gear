@@ -6,6 +6,7 @@ import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { CatalogDataBox } from './CatalogDataBox'
+import { setSoundTagsEnabled, useSoundTagsEnabled } from '../useSoundTagger'
 import { Help } from './Help'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { checkForUpdate, PREVIEW_UPDATES_KEY, previewUpdatesOn } from '../appUpdate'
@@ -26,6 +27,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     <Modal open={open} onClose={onClose} title="설정">
       <div className="settings">
         <ThemeRow />
+        <SoundTagsRow />
         <BackupGroup />
         {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
         <section className="settings-group">
@@ -287,6 +289,19 @@ function PreviewUpdateRow() {
           writePref(PREVIEW_UPDATES_KEY, next)
         }}
       >
+        {on ? '켜짐' : '꺼짐'}
+      </ToggleButton>
+    </div>
+  )
+}
+
+/** 성향 태그 보기 켜고 끄기(그래프 범례·기기 목록·기기 상세·비슷한 기기 찾기 결과) */
+function SoundTagsRow() {
+  const on = useSoundTagsEnabled()
+  return (
+    <div className="settings-row">
+      <span>성향 태그 보기</span>
+      <ToggleButton small on={on} onChange={setSoundTagsEnabled}>
         {on ? '켜짐' : '꺼짐'}
       </ToggleButton>
     </div>

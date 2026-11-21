@@ -6,6 +6,7 @@
 // 기준을 받는 동안·인터넷이 없어 못 받으면 null(태그를 안 보여줌)
 import { useSyncExternalStore } from 'react'
 import { categoryLabels } from './labels'
+import { readPref, writePref } from './localPrefs'
 import { listSummaries } from './repo'
 import { prepare, SUMMARY_GRID, type Values } from './similarity'
 import { medianValues, PEER_MIN, soundTags, tagReferenceId, type SoundTag } from './soundTags'
@@ -17,6 +18,22 @@ const subscribers = new Set<() => void>()
 const changed = () => {
   version++
   subscribers.forEach((notify) => notify())
+}
+
+// ---- 켜고 끄기(설정 → "성향 태그 보기", 이 기기에 기억) ----
+
+const ENABLED_KEY = 'soundTags.on'
+let enabled = readPref<boolean>(ENABLED_KEY, true)
+
+export function soundTagsEnabled(): boolean {
+  return enabled
+}
+
+/** 끄면 그래프·목록·기기 상세·추천 결과의 성향 태그가 모두 사라진다 */
+export function setSoundTagsEnabled(on: boolean): void {
+  enabled = on
+  writePref(ENABLED_KEY, on)
+  changed()
 }
 
 // ---- 2) Harman 타깃 ----
@@ -104,10 +121,17 @@ function prepareCached(curve: FrCurve): Values {
   return v
 }
 
+/** 설정 화면용: 지금 켜져 있는지(바뀌면 다시 그림) */
+export function useSoundTagsEnabled(): boolean {
+  useSyncExternalStore(subscribe, () => version)
+  return enabled
+}
+
 export function useSoundTagger(): SoundTagger {
   // 기준을 다 받거나 다시 계산하면 version이 바뀌어 화면이 다시 그려진다
   useSyncExternalStore(subscribe, () => version)
   return ({ curve, values, measurer }, category, rig) => {
+    if (!enabled) return null
     const mine = values ?? (curve ? prepareCached(curve) : null)
     if (!mine) return null
 

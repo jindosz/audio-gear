@@ -216,3 +216,13 @@ export function OwnedIcon({ size, filled }: SmallIconProps & { filled?: boolean 
     </svg>
   )
 }
+
+/** 파일(파일 고르기 버튼) */
+export function FileIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  )
+}

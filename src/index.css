@@ -3188,3 +3188,63 @@ button.select-option:active {
     touch-action: pan-y;
   }
 }
+
+/* ---- 파일 고르기(FilePicker.tsx) ---- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.file-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+.file-picker-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--field);
+  font-weight: 500;
+  transition: transform 0.12s, background-color 0.18s;
+}
+.file-picker:active .file-picker-button {
+  transform: scale(0.97);
+}
+@media (hover: hover) {
+  .file-picker:hover .file-picker-button {
+    filter: brightness(0.96);
+  }
+}
+.file-picker:has(:focus-visible) .file-picker-button {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .file-picker-button {
+    min-height: 44px;
+  }
+}
+.file-picker-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+/* 기기 추가 결과: 이름·종류·추가됨이 길면 다음 줄로(오른쪽 끝에서 잘리지 않게) */
+.result-list > li > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}

@@ -25,7 +25,9 @@ import {
 } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import { specHint } from '../specHints'
-import type { Acoustic, Codec, Connection, Device } from '../types'
+import type { Acoustic, Codec, Connection, Device, Measurement } from '../types'
+import { addCatalogMeasurement, catalogCurvesFor, catalogSourceLabel, type CatalogEntry } from '../catalog'
+import { showToast } from '../toast'
 import { MeasurementUpload } from './MeasurementUpload'
 import { Select } from './Select'
 import { Modal } from './Modal'
@@ -149,6 +151,8 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
         </button>
       )}
 
+      <OtherCatalogMeasurements device={device} have={measurements} />
+
       <div className="detail-foot">
         <button className="danger" onClick={handleDelete}>
           기기 삭제
@@ -240,5 +244,72 @@ function SpecHintLine({ device }: { device: Device }) {
       </button>
 
     </p>
+  )
+}
+
+/**
+ * 다른 측정치 받기: 이 기기를 잰 다른 측정자·구성의 측정치(AutoEQ·squig.link)를 골라 이 기기에 붙인다.
+ * 같은 기기를 측정자별로 비교하거나, 비교하는 기기와 같은 측정자 것으로 맞출 때 쓴다
+ */
+function OtherCatalogMeasurements({ device, have }: { device: Device; have: Measurement[] }) {
+  const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState('')
+
+  async function open() {
+    setLoading(true)
+    setError('')
+    try {
+      setEntries(await catalogCurvesFor(`${device.brand} ${device.model}`))
+    } catch {
+      setError('목록을 불러오지 못했어요')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function add(entry: CatalogEntry) {
+    setBusy(entry.path)
+    setError('')
+    try {
+      await addCatalogMeasurement(device.id, entry)
+      showToast(`${catalogSourceLabel(entry)} 측정치를 받았어요`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '받지 못했어요')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (!entries) {
+    return (
+      <button className="link" onClick={() => void open()} disabled={loading}>
+        <PlusIcon size={16} /> {loading ? '찾는 중…' : '다른 측정자 측정치 받기'}
+      </button>
+    )
+  }
+  // 이미 받은 것(같은 출처·구성)은 빼고 보여준다
+  const haveKeys = new Set(have.map((m) => `${m.source}|${m.variant}`))
+  const left = entries.filter((e) => !haveKeys.has(`${catalogSourceLabel(e)}|${e.variant ?? ''}`))
+  return (
+    <div className="other-measurements">
+      <h3>다른 측정치 받기</h3>
+      {left.length === 0 ? (
+        <p className="muted small">더 받을 수 있는 측정치가 없어요.</p>
+      ) : (
+        <div className="sources">
+          {left.map((entry) => (
+            <button key={entry.path} className="chip" disabled={busy !== null} onClick={() => void add(entry)}>
+              {busy === entry.path ? '받는 중…' : entry.source}
+              {entry.provider === 'squig' && <span className="muted"> · squig</span>}
+              {entry.variant && <span className="muted"> · {entry.variant}</span>}
+              {entry.rigName && <span className="muted"> · {entry.rigName}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {error && <p className="error small">{error}</p>}
+    </div>
   )
 }

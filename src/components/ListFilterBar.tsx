@@ -44,7 +44,6 @@ function Segmented<T extends string>({
 
 export function ListFilterBar({ category, filter, onChange, brands, measurers }: Props) {
   const set = (patch: Partial<ListFilter>) => onChange({ ...filter, ...patch })
-  const specOn = filter.connection || filter.acoustic || filter.anc
 
   return (
     <div className="list-filter">
@@ -74,6 +73,33 @@ export function ListFilterBar({ category, filter, onChange, brands, measurers }:
         ))}
       </select>
       {filter.measurer && <p className="muted small">기기를 누르면 이 측정자의 측정치를 그래프에 올립니다.</p>}
+      <SpecFilterFields category={category} filter={filter} onChange={onChange} />
+      {activeCount(filter) > 0 && (
+        <button type="button" className="filter-reset" onClick={() => onChange(EMPTY_FILTER)}>
+          필터 초기화
+        </button>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 특징 필터 칸(유선/무선, ANC, 오픈/밀폐는 헤드폰만). 기기 목록 필터와 추천 결과 필터가 함께 쓴다.
+ * 바꾸면 filter의 특징 값만 고친 새 필터를 onChange로 넘긴다
+ */
+export function SpecFilterFields({
+  category,
+  filter,
+  onChange,
+}: {
+  category: DeviceCategory
+  filter: ListFilter
+  onChange: (f: ListFilter) => void
+}) {
+  const set = (patch: Partial<ListFilter>) => onChange({ ...filter, ...patch })
+  const specOn = filter.connection || filter.acoustic || filter.anc
+  return (
+    <>
       <div className="row">
         <Segmented
           label="연결 방식"
@@ -101,11 +127,6 @@ export function ListFilterBar({ category, filter, onChange, brands, measurers }:
         />
       )}
       {specOn && <p className="muted small">특징은 입력값 또는 이름으로 추정한 값 기준이라, 정보가 없는 기기는 빠집니다.</p>}
-      {activeCount(filter) > 0 && (
-        <button type="button" className="filter-reset" onClick={() => onChange(EMPTY_FILTER)}>
-          필터 초기화
-        </button>
-      )}
-    </div>
+    </>
   )
 }

@@ -4,6 +4,7 @@
 // 왜 출처를 먼저 보나: 같은 기기라도 측정자·리그가 다르면 곡선이 꽤 달라서(HD 600 기준 2dB 이상),
 // 출처가 다른 후보끼리 거리를 그대로 비교하면 "소리 차이"보다 "측정 환경 차이"를 재게 된다.
 import type { CatalogEntry } from './catalog'
+import { filterInfo, matchesFilter, type ListFilter } from './listFilter'
 import { distance, explain, prepare, SUMMARY_GRID, type Values } from './similarity'
 import type { CatalogSummary, Device, DeviceCategory, Measurement, Rig } from './types'
 
@@ -117,13 +118,20 @@ function better(a: Recommendation, b: Recommendation): boolean {
  * - 정렬: 출처 맞음 정도 → 거리. 묶음(출처 맞음 정도)마다 가까운 순으로 최대 perLevel개
  *   (후보가 수천 개면 "같은 측정자" 묶음만으로 목록이 차 버려서 묶음마다 따로 자른다)
  */
-export function recommend(ref: Reference, candidates: Candidate[], perLevel = 15): Recommendation[] {
+export function recommend(
+  ref: Reference,
+  candidates: Candidate[],
+  perLevel = 15,
+  /** 특징 필터(무선·ANC 등). 묶음마다 자르기 전에 걸러야 걸러도 묶음이 15개씩 찬다 */
+  keep?: (c: Candidate) => boolean,
+): Recommendation[] {
   const refValues = ref.values
   const exclude = new Set(ref.excludeNames ?? [])
   const best = new Map<string, Recommendation>()
 
   for (const candidate of candidates) {
     if (candidate.category !== ref.category || exclude.has(candidate.name)) continue
+    if (keep && !keep(candidate)) continue
     const d = distance(candidate.values, refValues, SUMMARY_GRID)
     if (d === null) continue
     const rec: Recommendation = {
@@ -138,4 +146,16 @@ export function recommend(ref: Reference, candidates: Candidate[], perLevel = 15
 
   const sorted = [...best.values()].sort((a, b) => a.level - b.level || a.distance - b.distance)
   return ([0, 1, 2] as const).flatMap((level) => sorted.filter((r) => r.level === level).slice(0, perLevel))
+}
+
+const NO_MEASURERS: ReadonlySet<string> = new Set()
+
+/**
+ * 후보가 특징 필터(유선/무선·오픈/밀폐·ANC)에 맞는지. 기기 목록 필터와 같은 규칙(listFilter.ts):
+ * 내 기기면 입력해 둔 특징, 없으면 이름으로 추정한 값. 특징을 모르는 후보는 필터를 켜면 빠진다.
+ * 브랜드·측정자는 추천에서 쓰지 않는다(출처는 이미 묶음으로 나눠 보여줌)
+ */
+export function candidateMatches(c: Candidate, filter: ListFilter): boolean {
+  const spec: ListFilter = { ...filter, brand: null, measurer: null }
+  return matchesFilter(filterInfo(c.name, c.category, NO_MEASURERS, c.device), spec)
 }

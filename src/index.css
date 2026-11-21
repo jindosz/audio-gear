@@ -2280,3 +2280,10 @@ button.settings-row {
     width: 100%;
   }
 }
+
+/* 추천 팝업의 특징 필터(유선/무선·ANC·오픈/밀폐) */
+.rec-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

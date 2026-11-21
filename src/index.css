@@ -3169,3 +3169,16 @@ button.select-option:active {
     min-height: 48px;
   }
 }
+/* 설정 맨 위 계정 줄: 이메일이 길면 … */
+.account-entry .account-entry-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+/* 접힌 제목(측정치 미리 받기·고급) 위 여백을 줄여 한 줄 항목처럼 */
+.settings-advanced > summary.settings-group-title {
+  margin-top: 0;
+}

@@ -1,4 +1,6 @@
-// 설정 맨 위 "계정" 묶음: 로그인 전 [로그인 / 가입], 로그인 후 이메일·마지막 동기화·[지금 동기화]·[로그아웃]
+// 계정: 설정 맨 위 한 줄(AccountRow) → 누르면 로그인 전엔 로그인 팝업, 로그인 후엔 "계정" 화면(AccountDialog).
+// 계정 화면: 이메일·마지막 동기화·[지금 동기화], 내 귀 설정 동기화, 로그아웃, 계정 삭제
+// (설정이 길어져서 2026-11-21 따로 뺌)
 import { useEffect, useState } from 'react'
 import { deleteAccountAndData, loadAccount, signOutAccount, syncNow, useAccount } from '../account'
 import { askConfirm } from '../confirm'
@@ -6,7 +8,9 @@ import { readPref, writePref } from '../localPrefs'
 import { resetEarSyncState, SYNC_EAR_KEY } from '../syncRunner'
 import { showToast } from '../toast'
 import { ChevronRightIcon } from './Icons'
+import { Modal } from './Modal'
 import { ToggleButton } from './ToggleButton'
+import { Help } from './Help'
 import { SignInDialog } from './SignInDialog'
 
 /** "방금" / "3분 전" / "2시간 전" / "11월 20일" */
@@ -18,9 +22,48 @@ function ago(t: number): string {
   return new Date(t).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
 }
 
-export function AccountGroup() {
+/** 설정 맨 위 한 줄: "계정 · 이메일(또는 로그인 / 가입)" › */
+export function AccountRow() {
   const account = useAccount()
   const [signingIn, setSigningIn] = useState(false)
+  const [open, setOpen] = useState(false)
+  // 설정을 열 때 서버를 불러온다(로그인한 적 없으면 앱을 열 때는 안 불러옴)
+  useEffect(() => {
+    void loadAccount()
+  }, [])
+
+  const disabled = !account.loaded || !account.configured
+  const right = !account.loaded
+    ? '불러오는 중…'
+    : !account.configured
+      ? '서버가 설정되지 않았어요'
+      : account.user
+        ? account.user.email
+        : '로그인 / 가입'
+  return (
+    <>
+      <button
+        type="button"
+        className="settings-row settings-link account-entry"
+        disabled={disabled}
+        onClick={() => (account.user ? setOpen(true) : setSigningIn(true))}
+      >
+        <span>계정</span>
+        <span className="account-entry-value muted small">
+          {right}
+          {account.user && account.syncing && ' · 동기화 중…'}
+        </span>
+        <ChevronRightIcon />
+      </button>
+      <SignInDialog open={signingIn} onClose={() => setSigningIn(false)} />
+      <AccountDialog open={open} onClose={() => setOpen(false)} />
+    </>
+  )
+}
+
+/** "계정" 화면 */
+function AccountDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const account = useAccount()
   const [syncEar, setSyncEar] = useState(() => readPref<boolean>(SYNC_EAR_KEY, false))
 
   async function removeAccount() {
@@ -35,33 +78,27 @@ export function AccountGroup() {
     try {
       await deleteAccountAndData()
       showToast('계정을 지웠어요')
+      onClose()
     } catch (err) {
       showToast(err instanceof Error ? err.message : '계정을 지우지 못했어요')
     }
   }
-  // 계정 칸을 열 때 서버를 불러온다(로그인한 적 없으면 앱을 열 때는 안 불러옴)
-  useEffect(() => {
-    void loadAccount()
-  }, [])
 
+  async function signOut() {
+    await signOutAccount()
+    showToast('로그아웃했어요(이 기기 데이터는 그대로예요)')
+    onClose()
+  }
+
+  const user = account.user
   return (
-    <section className="settings-group">
-      <h3 className="settings-group-title">계정</h3>
-      {!account.loaded ? (
-        <p className="muted small">불러오는 중…</p>
-      ) : !account.configured ? (
-        <p className="muted small">아직 서버가 설정되지 않았어요</p>
-      ) : !account.user ? (
-        <button type="button" className="settings-row settings-link" onClick={() => setSigningIn(true)}>
-          <span>로그인 / 가입</span>
-          <span className="muted small">PC·폰 동기화</span>
-        </button>
-      ) : (
-        <>
+    <Modal open={open} onClose={onClose} title="계정">
+      {user && (
+        <div className="settings">
           {/* 이메일이 길어도 버튼이 밀려나지 않게: 이메일·상태는 두 줄로, 길면 … */}
           <div className="settings-row account-row">
             <span className="account-info">
-              <span className="account-email">{account.user.email}</span>
+              <span className="account-email">{user.email}</span>
               <span className="muted small">
                 {account.syncing
                   ? '동기화 중…'
@@ -86,8 +123,8 @@ export function AccountGroup() {
               onChange={(next) => {
                 setSyncEar(next)
                 writePref(SYNC_EAR_KEY, next)
-                if (next && account.user) {
-                  resetEarSyncState(account.user.uid)
+                if (next) {
+                  resetEarSyncState(user.uid)
                   void syncNow()
                 }
               }}
@@ -95,24 +132,18 @@ export function AccountGroup() {
               {syncEar ? '켜짐' : '꺼짐'}
             </ToggleButton>
           </div>
-          <details className="settings-advanced account-manage">
-            <summary className="settings-group-title">
-              <ChevronRightIcon size={14} /> 계정 관리
-            </summary>
-            <button
-              type="button"
-              className="settings-row settings-link"
-              onClick={() => void signOutAccount().then(() => showToast('로그아웃했어요(이 기기 데이터는 그대로예요)'))}
-            >
-              <span>로그아웃</span>
-            </button>
-            <button type="button" className="settings-row settings-link danger-text" onClick={() => void removeAccount()}>
-              <span>계정 삭제</span>
-            </button>
-          </details>
-        </>
+          <button type="button" className="settings-row settings-link" onClick={() => void signOut()}>
+            <span>로그아웃</span>
+          </button>
+          <button type="button" className="settings-row settings-link danger-text" onClick={() => void removeAccount()}>
+            <span>계정 삭제</span>
+          </button>
+          <Help>
+            로그인한 기기끼리 기기·측정치·내 타깃·비교 탭·EQ를 자동으로 맞춰요(고친 뒤 30초, 앱을 열거나 다시 볼 때). 내 귀 설정은 켰을
+            때만 올라가요. 로그아웃하거나 계정을 지워도 이 기기의 데이터는 그대로예요.
+          </Help>
+        </div>
       )}
-      <SignInDialog open={signingIn} onClose={() => setSigningIn(false)} />
-    </section>
+    </Modal>
   )
 }

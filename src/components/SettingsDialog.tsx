@@ -5,7 +5,7 @@ import { cleanupStoredDevices, exportAll, importAll } from '../repo'
 import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
-import { AccountGroup } from './AccountGroup'
+import { AccountRow } from './AccountGroup'
 import { CatalogDataBox } from './CatalogDataBox'
 import { startAllSummaryJobs, useSummaryJob } from '../summaryJob'
 import { setSoundTagsEnabled, useSoundTagsEnabled } from '../useSoundTagger'
@@ -37,15 +37,19 @@ export function SettingsDialog({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="설정">
       <div className="settings">
-        <AccountGroup />
+        <AccountRow />
         <ThemeRow />
         <SoundTagsRow />
         <EarBalanceRow />
         <EarEqRow />
         <BackupGroup />
         {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
-        <section className="settings-group">
-          <h3 className="settings-group-title">측정치 미리 받기</h3>
+        {/* 자주 안 여는 칸이라 접어 둔다(받는 중이면 제목 옆에 진행 표시) */}
+        <details className="settings-advanced">
+          <summary className="settings-group-title">
+            <ChevronRightIcon size={14} /> 측정치 미리 받기
+            <SummaryJobBadge />
+          </summary>
           <AllDownloadRow />
           <CatalogDataBox category="headphone" title="헤드폰" />
           <CatalogDataBox category="iem" title="이어폰" />
@@ -54,7 +58,7 @@ export function SettingsDialog({ open, onClose }: Props) {
             있는 기기는 squig.link 측정치를 받아요. 받아 두면 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 돼요. 이어폰은 1만 개가
             넘어 시간이 꽤 걸리지만, 화면을 닫아도 계속 받고 멈췄다가 이어 받을 수 있어요. 한 번에 한 종류씩 받아요.
           </Help>
-        </section>
+        </details>
         {/* 자주 안 쓰는 항목은 접어 둔다 */}
         <details className="settings-advanced">
           <summary className="settings-group-title">
@@ -451,6 +455,13 @@ function EarEqRow() {
       </Modal>
     </div>
   )
+}
+
+/** 접힌 "측정치 미리 받기" 제목 옆: 받는 중이면 "받는 중"(접혀 있어도 돌고 있는 걸 알 수 있게) */
+function SummaryJobBadge() {
+  const job = useSummaryJob()
+  if (job.status !== 'running' && job.status !== 'stopping') return null
+  return <span className="muted small"> · 받는 중</span>
 }
 
 /** [전체 받기]: 헤드폰 → 이어폰을 차례로(이미 받은 것은 건너뜀). 받는 중에는 누를 수 없고, 멈추기는 각 상자에서 */

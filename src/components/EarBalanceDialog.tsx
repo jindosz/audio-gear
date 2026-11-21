@@ -9,6 +9,7 @@ import {
   BALANCE_STEP,
   balanceLabel,
   randomStart,
+  roundStep,
   summarize,
   type BalanceResult,
 } from '../earBalance'
@@ -18,6 +19,7 @@ import { isAndroidApp } from '../platform'
 import { showToast } from '../toast'
 import { createTonePlayer, type TonePlayer } from '../tonePlayer'
 import { Help } from './Help'
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons'
 import { Modal } from './Modal'
 
 interface Props {
@@ -121,16 +123,37 @@ export function EarBalanceDialog({ open, onClose }: Props) {
               {step.index + 1} / {BALANCE_FREQS.length} · {freqLabel(BALANCE_FREQS[step.index])}
             </p>
             <p className="muted small">소리가 가운데서 들리게 맞춰요</p>
-            <input
-              type="range"
-              className="ear-balance-slider"
-              min={BALANCE_MIN}
-              max={BALANCE_MAX}
-              step={BALANCE_STEP}
-              value={value}
-              onChange={(e) => move(Number(e.target.value))}
-              aria-label="좌우 균형"
-            />
+            {/* 손가락으로 끌면 0.5dB씩 맞추기 어려워서 양옆 버튼으로 한 칸(0.5dB)씩 */}
+            <div className="ear-balance-control">
+              <button
+                type="button"
+                className="ear-balance-step"
+                onClick={() => move(roundStep(value - BALANCE_STEP))}
+                disabled={value <= BALANCE_MIN}
+                aria-label="왼쪽으로 조금"
+              >
+                <ChevronLeftIcon size={22} />
+              </button>
+              <input
+                type="range"
+                className="ear-balance-slider"
+                min={BALANCE_MIN}
+                max={BALANCE_MAX}
+                step={BALANCE_STEP}
+                value={value}
+                onChange={(e) => move(Number(e.target.value))}
+                aria-label="좌우 균형"
+              />
+              <button
+                type="button"
+                className="ear-balance-step"
+                onClick={() => move(roundStep(value + BALANCE_STEP))}
+                disabled={value >= BALANCE_MAX}
+                aria-label="오른쪽으로 조금"
+              >
+                <ChevronRightIcon size={22} />
+              </button>
+            </div>
             <div className="ear-balance-ends muted small">
               <span>왼쪽</span>
               <span>가운데</span>

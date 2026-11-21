@@ -2918,11 +2918,33 @@ button.select-option:active {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.ear-balance-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ear-balance-step {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+}
+@media (pointer: coarse) {
+  .ear-balance-step {
+    width: 48px;
+    height: 48px;
+  }
+}
 .ear-balance-slider {
   /* 입력칸 공통 모양(바탕·안쪽 여백)이 붙으면 팝업 밖으로 삐져나가서 지운다 */
   box-sizing: border-box;
-  width: 100%;
-  margin: 8px 0 0;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   padding: 0;
   border: none;
   background: none;
@@ -2931,6 +2953,8 @@ button.select-option:active {
 }
 .ear-balance-ends {
   display: flex;
+  /* 양옆 버튼만큼 들여서 슬라이더 끝과 글자를 맞춘다 */
+  padding: 0 44px;
   justify-content: space-between;
 }
 .ear-balance-result {
@@ -2956,4 +2980,9 @@ button.select-option:active {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+@media (pointer: coarse) {
+  .ear-balance-ends {
+    padding: 0 56px;
+  }
 }

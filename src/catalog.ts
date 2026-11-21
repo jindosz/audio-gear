@@ -271,15 +271,27 @@ function averageChannels(curves: FrCurve[]): FrCurve {
 export async function fetchCatalogCurve(entry: CatalogEntry): Promise<FrCurve> {
   if (entry.provider === 'squig') {
     // 왼쪽·오른쪽 파일을 받아 받아진 것만 평균 낸다(한쪽만 올린 사이트도 있다)
+    // 실패한 파일의 상태 코드도 모은다(네트워크 오류는 0). 모두 404면 "파일 없음"으로 알려 다시 시도하지 않게 한다
+    const statuses: number[] = []
     const results = await Promise.all(
       (entry.files ?? []).map((url) =>
         fetch(url)
-          .then(async (r) => (r.ok ? parseFrCsv(await r.text()).curve : null))
-          .catch(() => null),
+          .then(async (r) => {
+            if (r.ok) return parseFrCsv(await r.text()).curve
+            statuses.push(r.status)
+            return null
+          })
+          .catch(() => {
+            statuses.push(0)
+            return null
+          }),
       ),
     )
     const curves = results.filter((c): c is FrCurve => c !== null)
-    if (curves.length === 0) throw new Error('측정치를 받지 못했습니다')
+    if (curves.length === 0) {
+      const missing = statuses.length > 0 && statuses.every((code) => code === 404)
+      throw new Error(missing ? '측정치 파일이 없어요 (404)' : '측정치를 받지 못했습니다')
+    }
     return averageChannels(curves)
   }
   const fileName = entry.path.split('/').pop()

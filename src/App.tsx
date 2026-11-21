@@ -10,6 +10,7 @@ import { ResizeHandle } from './components/ResizeHandle'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar, type Page } from './components/Sidebar'
 import { setupAutoUpdate } from './appUpdate'
+import { retryFailedSummaries } from './summaryJob'
 import { EQ_ACTIVE_KEY, readPref, writePref } from './localPrefs'
 import type { DeviceCategory } from './types'
 import { describeCleanup, useStartupCleanup } from './useStartupCleanup'
@@ -31,6 +32,16 @@ function App() {
   useEffect(() => writePref('listWidth', listWidth), [listWidth])
   // 안드로이드 앱: 인터넷이 되면 새 정식 버전이 있는지 확인해 업데이트를 묻는다(appUpdate.ts)
   useEffect(() => setupAutoUpdate(), [])
+  // 측정치 미리 받기에서 실패했던 것: 앱을 열고 10초 뒤(처음 화면 그리기와 겹치지 않게)·인터넷이 다시 연결될 때 다시 시도
+  useEffect(() => {
+    const retry = () => void retryFailedSummaries()
+    const timer = setTimeout(retry, 10_000)
+    window.addEventListener('online', retry)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('online', retry)
+    }
+  }, [])
 
   return (
     <div className="app" style={{ '--list-width': `${listWidth}px` } as CSSProperties}>

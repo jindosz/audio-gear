@@ -3,8 +3,8 @@
 // 받아 두면 비슷한 기기 찾기의 후보가 되고, 기기 목록 줄에 성향 태그가 보인다
 import { useLiveQuery } from 'dexie-react-hooks'
 import { categoryLabels } from '../labels'
-import { listSummaries } from '../repo'
-import { startSummaryJob, stopSummaryJob, useSummaryJob } from '../summaryJob'
+import { getMeta, listSummaries } from '../repo'
+import { goneKey, retryKey, startSummaryJob, stopSummaryJob, useSummaryJob } from '../summaryJob'
 import type { DeviceCategory } from '../types'
 import { useCatalogDevices } from '../useCatalogDevices'
 
@@ -17,7 +17,14 @@ export function CatalogDataBox({ category, saved: savedProp, title }: { category
   const { catalogDevices } = useCatalogDevices()
   // 이 카테고리에서 측정치를 받을 수 있는 기기 수(AutoEQ + squig.link에만 있는 기기) = 받을 수 있는 최대 개수.
   // squig.link 목록을 아직 받는 중이면 AutoEQ 기기만 세고, 다 받으면 늘어난다
-  const available = catalogDevices?.filter((d) => d.category === category && d.primary).length
+  // 파일이 없다고 확인된 것(받을 수 없음)은 전체에서 뺀다(진행 막대가 100%까지 차게)
+  const goneRecord = useLiveQuery(() => getMeta(goneKey(category)), [category])
+  const gone = goneRecord ? (JSON.parse(goneRecord.value) as string[]).length : 0
+  // 나중에 다시 시도할 것(앱을 다시 열어도 남아 있게 저장된 목록에서 센다)
+  const retryRecord = useLiveQuery(() => getMeta(retryKey(category)), [category])
+  const retryCount = retryRecord ? (JSON.parse(retryRecord.value) as string[]).length : 0
+  const listed = catalogDevices?.filter((d) => d.category === category && d.primary).length
+  const available = listed === undefined ? undefined : Math.max(0, listed - gone)
   const running = job.status === 'running' || job.status === 'stopping'
   const thisJob = job.category === category
   const total = available ?? (thisJob ? job.total : 0)
@@ -25,10 +32,13 @@ export function CatalogDataBox({ category, saved: savedProp, title }: { category
 
   let message = ''
   if (running && !thisJob) message = '다른 종류를 받는 중이에요'
-  else if (running) message = `받는 중 ${percent}%${job.failed ? ` · 실패 ${job.failed}개` : ''} (닫아도 계속 받아요)`
+  else if (running && job.retrying) message = `실패했던 것 다시 받는 중 ${percent}%`
+  else if (running) message = `받는 중 ${percent}% (닫아도 계속 받아요)`
   else if (thisJob && job.status === 'error') message = `오류: ${job.error}`
   else if (saved === 0) message = `받으면 ${categoryLabels[category]} 전체의 성향 태그가 보이고 비슷한 기기 찾기 후보가 돼요(처음 한 번, 수 분~수십 분)`
-  else if (thisJob && job.failed) message = `실패 ${job.failed}개 — "이어 받기"로 다시 시도`
+  else if (retryCount > 0) message = `실패 ${retryCount}개 — 나중에 자동으로 다시 시도해요`
+  // 파일이 없어 받을 수 없는 것은 따로 알려 준다(다시 시도하지 않음)
+  if (gone > 0 && !running) message = [message, `받을 수 없음 ${gone}개(파일 없음)`].filter(Boolean).join(' · ')
 
   return (
     <div className="data-box">

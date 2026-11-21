@@ -31,7 +31,8 @@ export function CatalogDataBox({ category, saved: savedProp, title }: { category
   const percent = total ? Math.min(100, Math.round((saved / total) * 100)) : 0
 
   let message = ''
-  if (running && !thisJob) message = '다른 종류를 받는 중이에요'
+  if (running && !thisJob && job.queued?.includes(category)) message = '[전체 받기] 차례를 기다리는 중이에요'
+  else if (running && !thisJob) message = '다른 종류를 받는 중이에요'
   else if (running && job.retrying) message = `실패했던 것 다시 받는 중 ${percent}%`
   else if (running) message = `받는 중 ${percent}% (닫아도 계속 받아요)`
   else if (thisJob && job.status === 'error') message = `오류: ${job.error}`

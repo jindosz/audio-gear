@@ -24,6 +24,8 @@ export interface JobState {
   failed: number
   /** 다시 시도한 것만 받는 중인지(앱을 열 때 자동으로) */
   retrying?: boolean
+  /** [전체 받기]에서 이 다음에 받을 종류들 */
+  queued?: DeviceCategory[]
   error?: string
 }
 
@@ -169,7 +171,23 @@ export async function retryFailedSummaries(): Promise<void> {
   }
 }
 
-/** 받기를 멈춘다. 지금 받는 중인 몇 개는 마저 받고 멈춘다 */
+/**
+ * [전체 받기]: 헤드폰 → 이어폰을 차례로 받는다(이미 받은 것은 건너뜀).
+ * 하나를 끝까지 받으면 다음으로 넘어가고, 멈추거나 오류가 나면 남은 차례도 멈춘다
+ */
+export async function startAllSummaryJobs(): Promise<void> {
+  if (state.status === 'running' || state.status === 'stopping') return
+  const order: DeviceCategory[] = ['headphone', 'iem']
+  for (let i = 0; i < order.length; i++) {
+    setState({ queued: order.slice(i + 1) })
+    await startSummaryJob(order[i])
+    setState({ queued: order.slice(i + 1) })
+    if (currentStatus() !== 'done') break
+  }
+  setState({ queued: [] })
+}
+
+/** 받기를 멈춘다. 지금 받는 중인 몇 개는 마저 받고 멈춘다([전체 받기]의 남은 차례도) */
 export function stopSummaryJob() {
-  if (state.status === 'running') setState({ status: 'stopping' })
+  if (state.status === 'running') setState({ status: 'stopping', queued: [] })
 }

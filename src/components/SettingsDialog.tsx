@@ -6,6 +6,7 @@ import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { CatalogDataBox } from './CatalogDataBox'
+import { startAllSummaryJobs, useSummaryJob } from '../summaryJob'
 import { setSoundTagsEnabled, useSoundTagsEnabled } from '../useSoundTagger'
 import { Help } from './Help'
 import { isAndroidApp, saveTextFile } from '../platform'
@@ -32,6 +33,7 @@ export function SettingsDialog({ open, onClose }: Props) {
         {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
         <section className="settings-group">
           <h3 className="settings-group-title">측정치 미리 받기</h3>
+          <AllDownloadRow />
           <CatalogDataBox category="headphone" title="헤드폰" />
           <CatalogDataBox category="iem" title="이어폰" />
           <Help>
@@ -305,6 +307,20 @@ function SoundTagsRow() {
       <ToggleButton small on={on} onChange={setSoundTagsEnabled}>
         {on ? '켜짐' : '꺼짐'}
       </ToggleButton>
+    </div>
+  )
+}
+
+/** [전체 받기]: 헤드폰 → 이어폰을 차례로(이미 받은 것은 건너뜀). 받는 중에는 누를 수 없고, 멈추기는 각 상자에서 */
+function AllDownloadRow() {
+  const job = useSummaryJob()
+  const running = job.status === 'running' || job.status === 'stopping'
+  return (
+    <div className="settings-row">
+      <span>헤드폰·이어폰 전체</span>
+      <button type="button" className="primary small" onClick={() => void startAllSummaryJobs()} disabled={running}>
+        {running ? '받는 중…' : '전체 받기'}
+      </button>
     </div>
   )
 }

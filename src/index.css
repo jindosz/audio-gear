@@ -3042,3 +3042,54 @@ button.select-option:active {
   height: 10px;
   border-radius: 50%;
 }
+.ear-eq-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ear-eq-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.ear-eq-progress p {
+  margin: 0;
+}
+.ear-eq-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--field);
+  overflow: hidden;
+}
+.ear-eq-bar > div {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.ear-eq-listening {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ear-eq-listening i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ear-eq-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ear-eq-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ear-eq-listening i {
+    animation: none;
+  }
+}

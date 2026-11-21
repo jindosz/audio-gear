@@ -46,10 +46,43 @@ type Step =
 
 class Cancelled extends Error {}
 
+const freqLabel = (hz: number) => (hz >= 1000 ? `${hz / 1000}kHz` : `${hz}Hz`)
+/** 한 주파수에 보통 이만큼 들려줘서, 진행 막대가 그 안에서도 조금씩 차게 한다 */
+const TYPICAL_TRIALS = 8
+
+/**
+ * 진행 표시: 전체 막대(양쪽 귀 16단계)와 지금 주파수·몇 번째 소리, 늘 깜빡이는 "듣는 중".
+ * 소리가 나는 순간은 일부러 보여 주지 않는다(화면을 보고 누르면 검사가 안 됨)
+ */
+function TestProgress({ ear, index, trial }: { ear: Ear; index: number; trial: number }) {
+  const total = ORDER.length * 2
+  const done = (ear === 'right' ? ORDER.length : 0) + index + Math.min(trial / TYPICAL_TRIALS, 0.9)
+  const percent = Math.round((done / total) * 100)
+  return (
+    <div className="ear-eq-progress">
+      <div className="ear-eq-progress-head">
+        <span className="ear-balance-progress">
+          {ear === 'left' ? '왼쪽' : '오른쪽'} 귀 · {freqLabel(ORDER[index])}
+        </span>
+        <span className="muted small">{percent}%</span>
+      </div>
+      <div className="ear-eq-bar" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+        <div style={{ width: `${percent}%` }} />
+      </div>
+      <p className="muted small ear-eq-listening">
+        <i /> 듣는 중 · {index + 1}/{ORDER.length}단계 · {Math.max(trial, 1)}번째 소리
+      </p>
+    </div>
+  )
+}
+
 export function EarEqDialog({ open, onClose }: Props) {
   const [step, setStep] = useState<Step>({ kind: 'ready' })
   const [deviceChoice, setDeviceChoice] = useState('')
   const [flash, setFlash] = useState(false)
+  // 지금 주파수에서 몇 번째 소리인지(가짜 문항 포함, 진행 표시용)
+  const [trial, setTrial] = useState(0)
+  const [checking, setChecking] = useState(false)
   const devices = useLiveQuery(listDevices)
   const measurements = useLiveQuery(listMeasurements)
   // 시험을 멈출 표시, 지금 응답을 기다리는 함수, 소리 장치
@@ -166,9 +199,11 @@ export function EarEqDialog({ open, onClose }: Props) {
     for (let index = 0; index < ORDER.length; index++) {
       const freq = ORDER[index]
       setStep({ kind: 'test', ear, index })
+      setTrial(0)
       let s = newStaircase()
       while (s.threshold === null) {
         await wait(gapMs(Math.random), token)
+        setTrial((n) => n + 1)
         const fake = isCatchTrial(Math.random)
         const end = fake ? ctx.currentTime + BEEPS_DURATION_S : playBeeps(ctx, ear, freq, s.level)
         const heard = await waitForPress((end - ctx.currentTime) * 1000 + RESPONSE_MS, token)
@@ -218,6 +253,24 @@ export function EarEqDialog({ open, onClose }: Props) {
     })
   }
 
+  /** [소리 확인]: 잘 들리는 크기(−20dBFS)로 왼쪽 → 오른쪽 한 번씩. 볼륨·연결을 시험 전에 확인 */
+  async function soundCheck() {
+    if (checking) return
+    setChecking(true)
+    try {
+      const ctx = await openTestAudio()
+      const end = playBeeps(ctx, 'left', 1000, -20)
+      await new Promise((r) => setTimeout(r, (end - ctx.currentTime) * 1000 + 400))
+      const end2 = playBeeps(ctx, 'right', 1000, -20)
+      await new Promise((r) => setTimeout(r, (end2 - ctx.currentTime) * 1000 + 200))
+      void ctx.close()
+    } catch {
+      showToast('소리를 내지 못했어요')
+    } finally {
+      setChecking(false)
+    }
+  }
+
   async function save(p: EarProfile) {
     await saveEarProfile(p)
     showToast(isAndroidApp() ? '저장하고 폰에 적용했어요' : '저장했어요')
@@ -258,6 +311,9 @@ export function EarEqDialog({ open, onClose }: Props) {
               모르겠으면 "모름"을 골라요(그럼 결과가 그 기기 전용이 돼요). 의료용 검사가 아니에요.
             </Help>
             <div className="ear-balance-actions">
+              <button type="button" onClick={() => void soundCheck()} disabled={checking}>
+                {checking ? '왼쪽 → 오른쪽…' : '소리 확인'}
+              </button>
               <button type="button" className="primary" onClick={() => void begin()}>
                 시작
               </button>
@@ -267,10 +323,8 @@ export function EarEqDialog({ open, onClose }: Props) {
 
         {step.kind === 'test' && (
           <>
-            <p className="ear-balance-progress">
-              {step.ear === 'left' ? '왼쪽' : '오른쪽'} 귀 · {step.index + 1} / {ORDER.length}
-            </p>
-            <p className="muted small">아주 작은 소리도 들리면 바로 눌러요</p>
+            <TestProgress ear={step.ear} index={step.index} trial={trial} />
+            <p className="muted small">아주 작은 소리도 들리면 바로 눌러요. 안 들리면 그대로 기다려요(소리가 점점 커져요)</p>
             <button
               type="button"
               className={`ear-eq-hear primary${flash ? ' flash' : ''}`}

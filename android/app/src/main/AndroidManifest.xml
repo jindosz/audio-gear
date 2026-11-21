@@ -48,15 +48,6 @@
         </provider>
     </application>
 
-    <!-- 폰 EQ "고른 앱만": 신호를 보낸 앱의 이름(예: Spotify)을 읽으려면 그 앱이 보여야 한다(안드로이드 11부터).
-         모든 설치 앱이 아니라 홈 화면에 뜨는(실행할 수 있는) 앱만 보이게 한다 -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
-    </queries>
-
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

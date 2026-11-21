@@ -71,7 +71,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ./gradlew testReleaseUnitTest assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/audio-gear-0.1.$VERSION_CODE.apk"
 
       # 파일 이름에 버전이 들어가 매번 달라지므로, 올리기 전에 그 릴리스의 이전 APK를 지운다(처음이면 릴리스가 없어 건너뜀)

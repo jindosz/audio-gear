@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import com.getcapacitor.JSArray;
@@ -13,8 +12,6 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import org.json.JSONException;
 
 /**
@@ -79,66 +76,6 @@ public class SystemEqPlugin extends Plugin {
     @PluginMethod
     public void status(PluginCall call) {
         call.resolve(toJs(SystemEqService.getStatus()));
-    }
-
-    /**
-     * 적용 대상과 고를 수 있는 앱 목록.
-     * { mode: "all"|"apps", apps: [고른 앱], seen: [{ package, label }] } — seen은 EQ가 켜져 있는 동안 신호를 보낸 적 있는 앱
-     */
-    @PluginMethod
-    public void targets(PluginCall call) {
-        SharedPreferences p = prefs();
-        JSObject result = new JSObject();
-        result.put("mode", EqTargeting.normalizeMode(p.getString(SystemEqService.KEY_TARGET_MODE, EqTargeting.ALL)));
-        JSArray apps = new JSArray();
-        for (String pkg : EqTargeting.parseList(p.getString(SystemEqService.KEY_TARGET_APPS, ""))) apps.put(pkg);
-        result.put("apps", apps);
-        JSArray seen = new JSArray();
-        for (String pkg : EqTargeting.parseList(p.getString(SystemEqService.KEY_SEEN_APPS, ""))) {
-            JSObject app = new JSObject();
-            app.put("package", pkg);
-            app.put("label", appLabel(pkg));
-            seen.put(app);
-        }
-        result.put("seen", seen);
-        call.resolve(result);
-    }
-
-    /** 적용 대상 바꾸기. 저장하고, EQ가 켜져 있으면 서비스가 바로 다시 적용한다 */
-    @PluginMethod
-    public void setTargets(PluginCall call) {
-        Set<String> apps = new LinkedHashSet<>();
-        JSArray array = call.getArray("apps");
-        if (array != null) {
-            for (int i = 0; i < array.length(); i++) {
-                String pkg = array.optString(i, "");
-                if (!pkg.isEmpty()) apps.add(pkg);
-            }
-        }
-        prefs().edit()
-                .putString(SystemEqService.KEY_TARGET_MODE, EqTargeting.normalizeMode(call.getString("mode")))
-                .putString(SystemEqService.KEY_TARGET_APPS, EqTargeting.joinList(apps))
-                .apply();
-        if (SystemEqService.getStatus().on) {
-            getContext().startForegroundService(
-                    new Intent(getContext(), SystemEqService.class).setAction(SystemEqService.ACTION_TARGETS));
-        }
-        call.resolve();
-    }
-
-    private SharedPreferences prefs() {
-        return getContext().getSharedPreferences(SystemEqService.PREFS, Context.MODE_PRIVATE);
-    }
-
-    /** 앱 이름(예: "Spotify"). 못 읽으면 패키지 이름 그대로(AndroidManifest의 <queries>로 실행 가능한 앱만 보임) */
-    private String appLabel(String pkg) {
-        try {
-            PackageManager pm = getContext().getPackageManager();
-            ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
-            return pm.getApplicationLabel(info).toString();
-        } catch (PackageManager.NameNotFoundException e) {
-            return pkg;
-        }
     }
 
     private static JSObject toJs(SystemEqService.Status s) {

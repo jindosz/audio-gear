@@ -21,17 +21,26 @@ export interface EqStatus {
 
 export interface EqEngine {
   kind: 'android' | 'none'
-  /** EQ를 건다. 이미 켜져 있으면 바꾼다(끊김 없이). 결과 상태를 돌려준다 */
-  apply(name: string, eq: EqSettings): Promise<EqStatus>
+  /**
+   * EQ를 건다. 이미 켜져 있으면 바꾼다(끊김 없이). 결과 상태를 돌려준다.
+   * balanceDb: 내 귀 균형(earBalance.ts의 값, 0이면 없음). 큰 쪽 채널만 줄인다
+   */
+  apply(name: string, eq: EqSettings, balanceDb?: number): Promise<EqStatus>
   off(): Promise<EqStatus>
   status(): Promise<EqStatus>
+  /** 켜져 있으면 균형 값만 바꾼다(EQ는 그대로). 꺼져 있으면 아무것도 안 함 */
+  setBalance(db: number): Promise<void>
+  /** true면 걸린 효과를 잠깐 끈다(내 귀 균형 시험 중). 저장하지 않음 */
+  setBypass(on: boolean): Promise<void>
   /** 알림에서 끈 경우처럼 앱 밖에서 상태가 바뀌면 알려 준다. 돌려준 함수를 부르면 그만 받는다 */
   onStatus(cb: (s: EqStatus) => void): () => void
 }
 
 /** 네이티브 플러그인이 받는 형식(SystemEqPlugin.java와 맞춰야 한다) */
 interface SystemEqPlugin {
-  apply(options: { name: string; cutoffs: number[]; gains: number[]; inputGain: number }): Promise<void>
+  apply(options: { name: string; cutoffs: number[]; gains: number[]; inputGain: number; balanceDb: number }): Promise<void>
+  setBalance(options: { balanceDb: number }): Promise<void>
+  setBypass(options: { on: boolean }): Promise<void>
   off(): Promise<void>
   status(): Promise<EqStatus>
   addListener(event: 'statusChange', cb: (s: EqStatus) => void): Promise<PluginListenerHandle>
@@ -42,6 +51,8 @@ const noneEngine: EqEngine = {
   apply: async () => ({ on: false, error: '이 기기에서는 폰 전체 EQ를 쓸 수 없습니다' }),
   off: async () => ({ on: false }),
   status: async () => ({ on: false }),
+  setBalance: async () => {},
+  setBypass: async () => {},
   onStatus: () => () => {},
 }
 
@@ -82,9 +93,9 @@ function androidEngine(): EqEngine {
 
   return {
     kind: 'android',
-    async apply(name, eq) {
+    async apply(name, eq, balanceDb = 0) {
       const result = nextStatus()
-      await plugin.apply({ name, ...toDeviceEq(eq) })
+      await plugin.apply({ name, ...toDeviceEq(eq), balanceDb })
       return result
     },
     async off() {
@@ -95,6 +106,8 @@ function androidEngine(): EqEngine {
       return result
     },
     status: () => plugin.status(),
+    setBalance: (db) => plugin.setBalance({ balanceDb: db }),
+    setBypass: (on) => plugin.setBypass({ on }),
     onStatus(cb) {
       subscribe()
       listeners.add(cb)
@@ -150,14 +163,40 @@ function setApplied(next: AppliedEq | null) {
   appliedListeners.forEach((l) => l())
 }
 
+// ---- 내 귀 균형(earBalanceStore.ts가 값을 알려 준다. 이 파일이 스토어를 import하면 서로 물려서 거꾸로 등록받음) ----
+
+/** 균형만 걸려 있을 때(EQ 없이) 폰 상태·알림에 보이는 이름 */
+export const EAR_BALANCE_NAME = '내 귀 균형'
+
+interface BalanceProvider {
+  /** 지금 걸 균형 값(꺼져 있으면 0) */
+  db(): number
+  /** 균형이 켜져 있는지 */
+  on(): boolean
+}
+let balanceProvider: BalanceProvider = { db: () => 0, on: () => false }
+
+export function setBalanceProvider(p: BalanceProvider): void {
+  balanceProvider = p
+}
+
+/** 평평한 EQ로 균형만 건다 */
+export async function applyBalanceOnly(): Promise<EqStatus> {
+  const result = await getEqEngine().apply(EAR_BALANCE_NAME, { filters: [], preamp: 0 }, balanceProvider.db())
+  setApplied(null)
+  return result
+}
+
 /** 이 EQ를 폰에 건다(이미 켜져 있으면 끊김 없이 바꿈). 성공하면 무엇을 걸었는지 기억한다 */
 export async function applyPreset(id: string, name: string, eq: EqSettings): Promise<EqStatus> {
-  const result = await getEqEngine().apply(name, eq)
+  const result = await getEqEngine().apply(name, eq, balanceProvider.db())
   setApplied(result.on ? { id, signature: eqSignature(name, eq) } : null)
   return result
 }
 
+/** EQ 끄기. 내 귀 균형이 켜져 있으면 다 끄지 않고 균형만 남긴다 */
 export async function turnOffPhoneEq(): Promise<EqStatus> {
+  if (balanceProvider.on()) return applyBalanceOnly()
   const result = await getEqEngine().off()
   if (!result.on) setApplied(null)
   return result

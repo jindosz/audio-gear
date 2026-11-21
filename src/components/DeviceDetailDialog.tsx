@@ -27,10 +27,12 @@ import { PALETTE_SIZE, seriesColor } from '../selection'
 import { specHint } from '../specHints'
 import type { Acoustic, Codec, Connection, Device } from '../types'
 import { MeasurementUpload } from './MeasurementUpload'
+import { Select } from './Select'
 import { Modal } from './Modal'
 import { ToggleButton } from './ToggleButton'
 import { Help } from './Help'
 import { PlusIcon } from './Icons'
+import { askConfirm } from '../confirm'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -70,7 +72,7 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
   async function handleDelete() {
     const count = measurements?.length ?? 0
     const message = count > 0 ? `${name}과 측정치 ${count}개를 삭제할까요?` : `${name}을 삭제할까요?`
-    if (!confirm(message)) return
+    if (!(await askConfirm({ title: '기기 삭제', message, ok: '삭제', danger: true }))) return
     await deleteDevice(deviceId)
     onDeleted()
   }
@@ -168,7 +170,7 @@ function SpecsEditor({ device }: { device: Device }) {
       <div className="row">
         <label>
           연결{' '}
-          <select
+          <Select
             value={device.connection ?? ''}
             onChange={(e) => updateDeviceSpecs(device.id, { connection: (e.target.value || undefined) as Connection | undefined })}
           >
@@ -178,11 +180,11 @@ function SpecsEditor({ device }: { device: Device }) {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
           구조{' '}
-          <select
+          <Select
             value={device.acoustic ?? ''}
             onChange={(e) => updateDeviceSpecs(device.id, { acoustic: (e.target.value || undefined) as Acoustic | undefined })}
           >
@@ -192,7 +194,7 @@ function SpecsEditor({ device }: { device: Device }) {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {wireless && (
           <ToggleButton on={device.anc ?? false} onChange={(on) => updateDeviceSpecs(device.id, { anc: on })}>

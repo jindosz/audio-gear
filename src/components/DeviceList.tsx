@@ -25,7 +25,8 @@ import { DeviceDetailDialog } from './DeviceDetailDialog'
 import { ListFilterBar } from './ListFilterBar'
 import { ListGrip } from './ListGrip'
 import { VirtualList } from './VirtualList'
-import { ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
+import { ArrowUpIcon, ChevronDownIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
+import { SegmentedGroup } from './SegmentedGroup'
 
 interface Props {
   category: DeviceCategory
@@ -291,13 +292,13 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
       {/* 폰에서만 보임: 잡고 끌어서 목록 높이 조절, 누르면 펼치기/되돌리기(높이는 기억하지 않음) */}
       <ListGrip />
       {/* 폰에서만 보임: 왼쪽 메뉴 대신 목록 위에서 헤드폰/이어폰 전환 */}
-      <div className="list-category segmented mobile-only">
+      <SegmentedGroup className="list-category mobile-only" label="기기 종류">
         {(Object.keys(categoryLabels) as DeviceCategory[]).map((c) => (
           <button key={c} className={c === category ? 'active' : undefined} onClick={() => onCategoryChange(c)} aria-pressed={c === category}>
             {categoryLabels[c]}
           </button>
         ))}
-      </div>
+      </SegmentedGroup>
       <div className="list-search">
         <input type="search" placeholder="기기 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button
@@ -313,9 +314,13 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
         </button>
       </div>
 
-      {filterOpen && (
-        <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} measurers={measurers} />
-      )}
+      {/* 필터 칸은 늘 그려 두고 열고 닫기만 해서, 스르륵 펼쳐지고 접히게 한다(.collapse, index.css).
+          inert: 닫혀 있는 동안 안의 버튼을 누르거나 키보드로 옮겨 갈 수 없게 */}
+      <div className={filterOpen ? 'collapse open' : 'collapse'} inert={!filterOpen}>
+        <div className="collapse-inner">
+          <ListFilterBar category={category} filter={filter} onChange={setFilter} brands={brands} measurers={measurers} />
+        </div>
+      </div>
 
       <div className="list-scroll" ref={scrollRef} onScroll={(e) => setShowTop(e.currentTarget.scrollTop > 600)}>
         {notice && <p className="list-notice small">{notice}</p>}
@@ -476,7 +481,8 @@ function SectionTitle({
     <h2>
       <button type="button" className="section-toggle" aria-expanded={open} onClick={() => onToggle(id)}>
         <span className="chevron" aria-hidden>
-          {open ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+          {/* 접히면 CSS로 -90도 돌려 오른쪽을 가리킨다(돌아가는 애니메이션) */}
+          <ChevronDownIcon size={14} />
         </span>
         {children}
       </button>

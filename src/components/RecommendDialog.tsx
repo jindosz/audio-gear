@@ -5,7 +5,9 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { addFromCatalog } from '../catalog'
 import { categoryLabels, rigLabels, sourceLabel, specTags } from '../labels'
+import { EMPTY_FILTER, type ListFilter } from '../listFilter'
 import {
+  candidateMatches,
   fromMeasurement,
   fromSummary,
   matchLabels,
@@ -25,7 +27,9 @@ import { displaySpecs, specHint } from '../specHints'
 import { useCatalogDevices } from '../useCatalogDevices'
 import type { SelectedItem } from '../useCompareData'
 import { Modal } from './Modal'
+import { Select } from './Select'
 import { Help } from './Help'
+import { SpecFilterFields } from './ListFilterBar'
 
 interface Props {
   open: boolean
@@ -78,6 +82,8 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
   const [savedTarget, setSavedTarget] = useState(false)
   // AutoEQ 후보를 비교에 넣으려고 측정치를 받는 중인 기기 이름
   const [pendingName, setPendingName] = useState<string | null>(null)
+  // 추천 결과 특징 필터(유선/무선·ANC·오픈/밀폐). 팝업을 닫으면 초기화
+  const [filter, setFilter] = useState<ListFilter>(EMPTY_FILTER)
 
   const devices = useLiveQuery(listDevices)
   const measurements = useLiveQuery(listMeasurements)
@@ -143,7 +149,10 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
     ...summaries.map(fromSummary),
   ]
   // excludeNames 덕분에 기준 기기 자신은 후보에서 빠진다
-  const results = recommend(reference, candidates)
+  // 이어폰 기준이면 오픈/밀폐 칸이 안 보이므로, 헤드폰 기준일 때 골라 둔 값이 몰래 걸리지 않게 뺀다
+  const activeFilter: ListFilter = category === 'iem' ? { ...filter, acoustic: null } : filter
+  const filterOn = !!(activeFilter.connection || activeFilter.acoustic || activeFilter.anc)
+  const results = recommend(reference, candidates, 15, filterOn ? (c) => candidateMatches(c, activeFilter) : undefined)
   const selectedIds = new Set(selected.map((s) => s.measurement.id))
 
   async function handleAdd(r: Recommendation) {
@@ -197,13 +206,13 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
       <div className="row">
         <label>
           기준{' '}
-          <select value={base.key} onChange={(e) => setRefKey(e.target.value)}>
+          <Select value={base.key} onChange={(e) => setRefKey(e.target.value)}>
             {bases.map((b) => (
               <option key={b.key} value={b.key}>
                 {b.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 
@@ -227,8 +236,21 @@ function RecommendBody({ tabId, selected, target, category: menuCategory }: Omit
         기준과 소리 모양(주파수 응답)이 가까운 순서예요. 측정자·리그가 다르면 같은 기기도 곡선이 달라서 같은 측정자 → 같은
         리그 순으로 묶어 보여줘요(묶음마다 15개). 슬라이더로 저음·중고음·고음을 더하거나 뺀 소리도 찾을 수 있어요.
       </Help>
+      {/* 특징 필터: 묶음마다 자르기 전에 걸러서, 켜도 묶음마다 15개까지 채운다 */}
+      <div className="rec-filter">
+        <SpecFilterFields
+          category={category}
+          filter={filter}
+          onChange={setFilter}
+        />
+      </div>
       {notice && <p className="error small">{notice}</p>}
-      {results.length === 0 && <p className="muted">후보가 없어요. 위에서 데이터를 받아 주세요.</p>}
+      {results.length === 0 &&
+        (filterOn ? (
+          <p className="muted">조건에 맞는 후보가 없어요.</p>
+        ) : (
+          <p className="muted">후보가 없어요. 위에서 데이터를 받아 주세요.</p>
+        ))}
 
       {levels.map((level) => {
         const group = results.filter((r) => r.level === level)

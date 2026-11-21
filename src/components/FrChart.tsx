@@ -61,7 +61,13 @@ export function FrChart({ grid, series, yTitle, signed = false, className }: Pro
       type: 'line',
       data: { datasets: [] },
       options: {
-        animation: false,
+        // 곡선이 바뀔 때 스르륵: 새로 넣은 곡선은 아래에서 올라오고, 정규화 등으로 값이 바뀐 곡선은 새 자리로 움직인다.
+        // 움직임 줄이기 설정이면 끈다
+        animation: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? false
+          : { duration: 450, easing: 'easeOutCubic' },
+        // 마우스를 올렸을 때(툴팁·점 표시)는 바로 반응하게
+        transitions: { active: { animation: { duration: 0 } } },
         maintainAspectRatio: false, // 부모 요소 크기에 맞춰 늘어난다
         parsing: false,
         spanGaps: false,
@@ -104,17 +110,23 @@ export function FrChart({ grid, series, yTitle, signed = false, className }: Pro
     const text = cssVar('--muted')
     const gridLine = cssVar('--border')
 
-    chart.data.datasets = series.map(
-      (s): ChartDataset<'line', XY[]> => ({
+    // 같은 곡선(이름+색)은 같은 데이터 객체를 계속 쓴다. Chart.js는 객체가 같으면 "같은 곡선"으로 보고
+    // 바뀐 값만 움직이며, 새 객체는 새 곡선으로 보고 아래에서 올라오게 그린다.
+    // (매번 새 객체를 만들면 곡선 하나를 뺄 때 다른 곡선들이 순서대로 밀려 엉뚱하게 움직인다)
+    const previous = new Map(chart.data.datasets.map((d) => [datasetKey(d.label, d.order), d]))
+    chart.data.datasets = series.map((s): ChartDataset<'line', XY[]> => {
+      const order = s.colorIndex === null ? 1 : 0
+      const dataset = previous.get(datasetKey(s.label, order)) ?? { label: s.label, data: [] }
+      return Object.assign(dataset, {
         label: s.label,
         data: grid.map((x, i) => ({ x, y: s.values[i] })),
         borderColor: s.colorIndex === null ? text : cssVar(`--series-${s.colorIndex}`),
         backgroundColor: s.colorIndex === null ? text : cssVar(`--series-${s.colorIndex}`),
         // 타깃은 점선([선 길이, 빈칸 길이])으로 그리고, 기기 곡선보다 뒤(order가 클수록 뒤)에 둔다
         borderDash: s.colorIndex === null ? [6, 4] : [],
-        order: s.colorIndex === null ? 1 : 0,
-      }),
-    )
+        order,
+      })
+    })
 
     const { x, y } = chart.options.scales!
     for (const axis of [x!, y!]) {
@@ -135,4 +147,9 @@ export function FrChart({ grid, series, yTitle, signed = false, className }: Pro
       <canvas ref={canvasRef} role="img" aria-label="주파수 응답 그래프" />
     </div>
   )
+}
+
+/** 곡선을 알아보는 열쇠: 이름 + 앞뒤 순서(타깃 여부) */
+function datasetKey(label: string | undefined, order: number | undefined): string {
+  return `${order ?? 0}|${label ?? ''}`
 }

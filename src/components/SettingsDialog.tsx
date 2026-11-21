@@ -8,6 +8,8 @@ import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
+import { SegmentedGroup } from './SegmentedGroup'
+import { askConfirm } from '../confirm'
 
 interface Props {
   open: boolean
@@ -48,7 +50,7 @@ function ThemeRow() {
     <div className="settings-row">
       <span>화면 테마</span>
       {/* 세 버튼 중 하나만 눌린 상태가 되는 "세그먼트 버튼". aria-pressed로 눌림 상태를 알린다 */}
-      <div className="segmented small" role="group" aria-label="화면 테마">
+      <SegmentedGroup className="small" label="화면 테마">
         {THEME_OPTIONS.map((o) => (
           <button
             key={o.value}
@@ -60,7 +62,7 @@ function ThemeRow() {
             {o.label}
           </button>
         ))}
-      </div>
+      </SegmentedGroup>
     </div>
   )
 }
@@ -106,7 +108,16 @@ function BackupGroup() {
 
   async function handleImport() {
     if (!pending) return
-    if (mode === 'replace' && !confirm('지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿉니다. 계속할까요?')) return
+    if (
+      mode === 'replace' &&
+      !(await askConfirm({
+        title: '모두 바꾸기',
+        message: '지금 있는 기기·측정치·타깃·탭·EQ를 모두 지우고 백업으로 바꿀까요?',
+        ok: '모두 바꾸기',
+        danger: true,
+      }))
+    )
+      return
     try {
       await importAll(pending.data, mode)
       setMessage('가져왔어요.')
@@ -137,14 +148,14 @@ function BackupGroup() {
           <p className="small">
             <strong>{pending.fileName}</strong> · 기기 {summary.devices}개, 측정치 {summary.measurements}개, EQ {summary.eqPresets}개
           </p>
-          <div className="segmented small" role="group" aria-label="가져오는 방식">
+          <SegmentedGroup className="small" label="가져오는 방식">
             <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
               합치기
             </button>
             <button type="button" className={mode === 'replace' ? 'active' : undefined} aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
               모두 바꾸기
             </button>
-          </div>
+          </SegmentedGroup>
           <div className="row">
             <button type="button" className="primary" onClick={handleImport}>
               가져오기
@@ -168,7 +179,12 @@ function CleanupRow() {
   const [busy, setBusy] = useState(false)
 
   async function handleCleanup() {
-    if (!confirm('저장된 기기 이름을 정리하고, 이름이 같아진 기기는 하나로 합칩니다(보유·찜·메모·측정치 유지). 기기가 아닌 항목(구분선 등)은 지웁니다. 계속할까요?')) return
+    const ok = await askConfirm({
+      title: '저장된 기기 정리',
+      message: '이름을 정리하고 같아진 기기는 하나로 합쳐요(보유·찜·메모·측정치 유지). 기기가 아닌 항목(구분선 등)은 지워요. 계속할까요?',
+      ok: '정리',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       setMessage(describeCleanup(await cleanupStoredDevices()))

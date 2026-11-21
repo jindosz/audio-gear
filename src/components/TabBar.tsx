@@ -2,6 +2,7 @@
 import { createTab, deleteTab } from '../repo'
 import type { CompareTab } from '../types'
 import { CloseIcon, PlusIcon } from './Icons'
+import { askConfirm } from '../confirm'
 
 interface Props {
   tabs: CompareTab[]
@@ -15,7 +16,11 @@ export function TabBar({ tabs, activeId, onSelect }: Props) {
   }
 
   async function handleClose(tab: CompareTab) {
-    if (tab.selections.length > 0 && !confirm(`"${tab.name}" 탭을 닫을까요? 이 탭의 선택이 사라집니다.`)) return
+    if (
+      tab.selections.length > 0 &&
+      !(await askConfirm({ title: '탭 닫기', message: `"${tab.name}" 탭을 닫을까요? 이 탭의 선택이 사라져요.`, ok: '닫기' }))
+    )
+      return
     // 보고 있던 탭을 닫으면 옆 탭(오른쪽, 없으면 왼쪽)으로 옮긴다
     if (tab.id === activeId) {
       const index = tabs.findIndex((t) => t.id === tab.id)

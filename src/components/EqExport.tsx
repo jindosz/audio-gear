@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { defaultApp, detectPlatform, EQ_APPS, eqText, type EqApp, type EqSettings } from '../eqExport'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { Help } from './Help'
+import { SegmentedGroup } from './SegmentedGroup'
 
 interface Props {
   eq: EqSettings
@@ -70,7 +71,7 @@ export function EqExport({ eq, name }: Props) {
   const body = (
     <>
       <div className="row">
-        <div className="segmented" role="group" aria-label="EQ 앱">
+        <SegmentedGroup label="EQ 앱">
           {(Object.keys(EQ_APPS) as EqApp[]).map((key) => (
             <button
               key={key}
@@ -82,7 +83,7 @@ export function EqExport({ eq, name }: Props) {
               {EQ_APPS[key].label}
             </button>
           ))}
-        </div>
+        </SegmentedGroup>
       </div>
       {platform === 'ios' && <p className="warning small">iPhone은 다른 앱 소리에 EQ를 걸 수 없어요</p>}
       {/* 넣는 방법은 처음 한 번만 보면 되니 접어 둔다 */}

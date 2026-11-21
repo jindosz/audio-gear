@@ -6,6 +6,7 @@ import { categoryLabels, rigLabels } from '../labels'
 import { putTarget } from '../repo'
 import type { DeviceCategory, Rig } from '../types'
 import { Modal } from './Modal'
+import { Select } from './Select'
 
 interface Props {
   open: boolean
@@ -80,20 +81,20 @@ function CustomTargetForm({
 
       <div className="row">
         <input placeholder="타깃 이름" value={name} onChange={(e) => setName(e.target.value)} required />
-        <select value={category} onChange={(e) => setCategory(e.target.value as DeviceCategory)} title="카테고리">
+        <Select value={category} onChange={(e) => setCategory(e.target.value as DeviceCategory)} title="카테고리">
           {Object.entries(categoryLabels).map(([value, label]) => (
             <option key={value} value={value}>
               {label}용
             </option>
           ))}
-        </select>
-        <select value={rig} onChange={(e) => setRig(e.target.value as Rig)} title="이 타깃이 기준으로 삼는 측정 리그">
+        </Select>
+        <Select value={rig} onChange={(e) => setRig(e.target.value as Rig)} title="이 타깃이 기준으로 삼는 측정 리그">
           {Object.entries(rigLabels).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <p className="muted small">리그는 리그 불일치 경고에 쓰입니다. 모르면 "기타"를 고르세요.</p>
       <button type="submit" disabled={!parsed || !name.trim()}>

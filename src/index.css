@@ -119,8 +119,10 @@ body {
   font-size: 12px;
 }
 
+@media (hover: hover) {
 .nav-item:not(:disabled):hover {
   background: var(--hover);
+}
 }
 
 .nav-item.active {
@@ -213,8 +215,10 @@ body {
   box-shadow: inset 4px 0 0 var(--c);
 }
 
+@media (hover: hover) {
 .device-row.selected:hover {
   background: color-mix(in srgb, var(--c) 24%, transparent);
+}
 }
 
 .device-name .tag {
@@ -236,8 +240,10 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+@media (hover: hover) {
 .device-row:hover {
   background: var(--hover);
+}
 }
 
 .device-name {
@@ -255,9 +261,11 @@ body {
   visibility: hidden; /* 마우스를 올렸을 때만 보인다 */
 }
 
+@media (hover: hover) {
 .device-row:hover .more-btn,
 .more-btn:focus-visible {
   visibility: visible;
+}
 }
 
 /* 마우스가 없는 터치 기기에서는 항상 보이게 */
@@ -338,9 +346,11 @@ body {
   color: var(--muted);
 }
 
+@media (hover: hover) {
 .tab-close:hover,
 .tab-add:hover {
   color: var(--text);
+}
 }
 
 .tab-add {
@@ -562,8 +572,10 @@ button.chip {
   border-radius: 999px;
 }
 
+@media (hover: hover) {
 button.chip:not(:disabled):hover {
   border-color: var(--accent);
+}
 }
 
 .tag.added {
@@ -722,9 +734,11 @@ button.small {
   color: var(--star);
 }
 
+@media (hover: hover) {
 .device-row:hover .star-btn,
 .star-btn:focus-visible {
   visibility: visible;
+}
 }
 
 @media (hover: none) {
@@ -802,8 +816,10 @@ button.small {
   cursor: pointer;
 }
 
+@media (hover: hover) {
 .settings-link:hover {
   color: var(--accent);
+}
 }
 
 
@@ -845,8 +861,10 @@ button.small {
   cursor: pointer;
 }
 
+@media (hover: hover) {
 .file-button:hover {
   border-color: var(--accent);
+}
 }
 
 .import-box {
@@ -942,8 +960,10 @@ button.toggle.small {
   padding: 2px 10px;
 }
 
+@media (hover: hover) {
 button.toggle:hover {
   border-color: var(--accent);
+}
 }
 
 button.toggle.on {
@@ -1118,11 +1138,13 @@ button.toggle.on {
   touch-action: none;
 }
 
+@media (hover: hover) {
 .resize-handle:hover,
 .resize-handle:focus-visible {
   background: var(--accent);
   opacity: 0.4;
   outline: none;
+}
 }
 
 body.resizing {
@@ -1161,8 +1183,10 @@ body.resizing {
   text-align: left;
 }
 
+@media (hover: hover) {
 .section-toggle:hover {
   color: var(--text);
+}
 }
 
 .section-toggle .chevron {
@@ -1302,8 +1326,10 @@ body.resizing {
   text-align: left;
 }
 
+@media (hover: hover) {
 .eq-item:hover {
   background: var(--hover);
+}
 }
 
 .eq-item.active {
@@ -1598,8 +1624,10 @@ body.resizing {
   display: none;
 }
 
+@media (hover: hover) {
 .help > summary:hover {
   color: var(--text);
+}
 }
 
 .help-body {
@@ -1695,8 +1723,10 @@ button {
   transition: background 0.15s, color 0.15s;
 }
 
+@media (hover: hover) {
 button:not(:disabled):hover {
   background: color-mix(in srgb, var(--text) 10%, transparent);
+}
 }
 
 button.primary,
@@ -1705,9 +1735,11 @@ button[type='submit'] {
   color: var(--on-accent);
 }
 
+@media (hover: hover) {
 button.primary:not(:disabled):hover,
 button[type='submit']:not(:disabled):hover {
   background: color-mix(in srgb, var(--accent) 85%, #000);
+}
 }
 
 button.small {
@@ -2080,9 +2112,11 @@ button.settings-row {
   color: var(--accent);
 }
 
+@media (hover: hover) {
 .device-row:hover .own-btn,
 .own-btn:focus-visible {
   visibility: visible;
+}
 }
 
 @media (hover: none) {
@@ -2279,4 +2313,472 @@ button.settings-row {
   .eq-pick-group {
     width: 100%;
   }
+}
+
+/* 추천 팝업의 특징 필터(유선/무선·ANC·오픈/밀폐) */
+.rec-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 비슷한 기기 찾기: 이름이 아주 길어도(띄어쓰기 없는 squig.link 이름 등) 팝업이 옆으로 스크롤되지 않게
+   이름은 아무 데서나 줄바꿈, [비교에 추가] 버튼은 줄어들지 않게 */
+.rec-list li {
+  min-width: 0;
+}
+
+.rec-main {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.rec-list li > button,
+.rec-list li > span {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.recommend select {
+  max-width: 100%;
+}
+
+.dialog {
+  overflow-x: hidden;
+}
+
+/* 태그("유선" 등)는 쪼개지 않고 통째로 다음 줄로 */
+.rec-main .tag {
+  display: inline-block;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* 폰: 아래 목록 시트를 화면 위에 띄운다(position: fixed). 예전처럼 따로 한 칸을 차지하면
+   위쪽 둥근 모서리 옆이 바탕색으로 채워져 그래프가 잘려 보였다 → 이제 모서리 옆으로 그래프가 비쳐 보인다.
+   그래프 칸은 화면 아래 끝까지 늘리고, 시트에 가려지는 만큼(--list-h) 아래 여백을 줘서 끝까지 밀어 볼 수 있게 한다.
+   높이는 접힘·중간·펼침 자리로 스르륵(transition) 움직이고, 손가락으로 끄는 동안(.sheet-dragging)은 바로 따라온다 */
+@media (max-width: 768px) {
+  .app {
+    grid-template-rows: auto minmax(0, 1fr) 0;
+  }
+
+  .list-col {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    overflow: hidden; /* 접힘 자리에서는 손잡이만 보이고 나머지는 시트 안에 숨는다 */
+    transition: height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .app.sheet-dragging .list-col {
+    transition: none;
+  }
+
+  .main-col {
+    padding-bottom: calc(var(--list-h) + 16px);
+  }
+}
+
+/* 비슷한 기기 찾기의 "기준" 선택 상자: 선택 상자는 가장 긴 항목 길이만큼 넓어지는 성질이 있어,
+   이름이 긴 기기(squig.link 출처 등)가 있으면 팝업 밖으로 튀어나갔다 → 줄 폭 안에 가두고 넘치는 글자는 …로 */
+.recommend > .row > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.recommend > .row > label > select {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* 안드로이드 기본 "탭 강조"(누른 곳에 파란 네모를 덮는 것) 끄기: 버튼 모양(둥근 알약)과 안 맞고 오래 남아 보였다.
+   누름 표시는 위의 :active(살짝 어두워짐)가 맡는다 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* PC에서 켜진 버튼(켜짐 토글·고른 세그먼트·고른 EQ)에 마우스를 올리면, 일반 버튼의 hover 바탕(회색)이
+   켜짐 바탕을 덮어 "회색 바탕 + 어두운 글자"가 됐다 → 켜진 버튼은 hover 때도 자기 바탕을 지킨다 */
+@media (hover: hover) {
+  button.toggle.on:not(:disabled):hover {
+    background: color-mix(in srgb, var(--accent) 85%, #000);
+  }
+
+  .segmented button.active:not(:disabled):hover {
+    background: var(--card);
+  }
+
+  .eq-item.active:not(:disabled):hover {
+    background: color-mix(in srgb, var(--accent) 10%, var(--card));
+  }
+}
+
+/* ---- 애니메이션(2026-11-21): 팝업·버튼·접기·화면 전환을 부드럽게 ----
+   길이는 짧게(0.15~0.3초). 움직임 줄이기 설정(prefers-reduced-motion)이면 위쪽 규칙이 모두 끈다 */
+
+/* 팝업: 열 때 스르륵 떠오르고, 닫을 때(.closing, Modal.tsx) 가라앉으며 사라진다. 뒤 어두운 배경도 같이 */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.dialog[open] {
+  animation: dialog-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dialog[open]::backdrop {
+  animation: fade-in 0.24s ease-out;
+}
+
+.dialog.closing {
+  animation: dialog-out 0.18s ease-in forwards;
+}
+
+.dialog.closing::backdrop {
+  animation: fade-out 0.18s ease-in forwards;
+}
+
+/* 폰: 팝업이 아래에 붙어 있으니 아래에서 더 길게 올라온다 */
+@media (max-width: 768px) {
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+  }
+
+  @keyframes dialog-out {
+    to {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+  }
+}
+
+/* 버튼: 누르는 순간 살짝 작아졌다가(눌리는 느낌) 놓으면 돌아온다. 색 바뀜(켜짐·꺼짐·고름)도 부드럽게 */
+button,
+.settings-link,
+summary {
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* 목록 줄 전체 버튼·폰 손잡이는 크기가 변하면 줄이 흔들려 보여서 작아지지 않게 */
+.row-main:active,
+.list-grip:active,
+.section-toggle:active,
+.eq-item:active {
+  transform: none;
+}
+
+/* 목록 줄: 선택될 때 배경색이 스르륵 바뀐다 */
+.device-row {
+  transition: background-color 0.2s ease;
+}
+
+/* 구역 접기 꺾쇠: 접히면 오른쪽으로 돌아간다 */
+.section-toggle .chevron {
+  transition: transform 0.2s ease;
+}
+
+.section-toggle[aria-expanded='false'] .chevron {
+  transform: rotate(-90deg);
+}
+
+/* 도움말(ⓘ) 펼친 내용이 스르륵 나타남 */
+.help[open] > :not(summary) {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* 화면 전환(그래프 ↔ EQ): 새 화면이 살짝 떠오르며 나타남 */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.main-col,
+.eq-page {
+  animation: page-in 0.22s ease-out;
+}
+
+/* ---- 손가락 화면의 선택 상자(Select.tsx): 겉모양은 선택 상자와 같게, 누르면 아래 시트 ---- */
+.select-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--field);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+}
+
+.select-button .select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-button .icon {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+/* 원래 <select>에 걸려 있던 자리별 폭 규칙을 버튼에도 */
+.eq-pickers .select-button {
+  max-width: 420px;
+}
+
+.recommend > .row > label > .select-button {
+  flex: 1;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .eq-pickers .select-button {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* 시트 안 목록: 줄 전체가 버튼, 고른 항목은 강조색 글자 + 체크 */
+.select-sheet,
+.select-sheet ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.select-sheet {
+  min-height: 0; /* 팝업(세로 flex) 안에서 줄어들어 목록만 스크롤되게 */
+  padding-bottom: 16px;
+  overflow-y: auto;
+}
+
+.select-group + .select-group {
+  margin-top: 8px;
+}
+
+.select-group-label {
+  padding: 8px 4px 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+button.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: none;
+  font-weight: 400;
+  text-align: left;
+}
+
+button.select-option.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+button.select-option:active {
+  transform: none;
+}
+
+/* 시트 목록 좌우 여백: 고른 항목 강조가 팝업 끝에 붙지 않게, 묶음 이름은 제목과 줄 맞춤 */
+.dialog > .select-sheet {
+  padding: 0 12px 16px;
+}
+
+.select-group-label {
+  padding-left: 10px;
+}
+
+/* ---- 세그먼트 버튼 미끄러지는 알약(SegmentedGroup.tsx) ----
+   고른 칸마다 바탕을 칠하는 대신, 묶음 안에 알약 하나(::before)를 두고 고른 칸 자리(--seg-x, --seg-w)로 옮긴다.
+   .seg-ready: 자리를 잰 뒤에만 보임, .seg-animate: 처음 자리 잡은 뒤부터 움직임 효과 */
+.segmented.seg-slide {
+  position: relative;
+  isolation: isolate; /* 알약(z-index -1)이 묶음 바탕 뒤로 숨지 않게 이 안에서만 쌓는다 */
+}
+
+.segmented.seg-slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: var(--seg-w, 0);
+  height: var(--seg-h, 0);
+  transform: translate(var(--seg-x, 0), var(--seg-y, 0));
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  opacity: 0;
+}
+
+.segmented.seg-slide.seg-ready::before {
+  opacity: 1;
+}
+
+.segmented.seg-slide.seg-animate::before {
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 알약이 바탕을 맡으니 고른 버튼 자체는 투명하게(글자색만 강조색) */
+.segmented.seg-slide.seg-ready > button.active,
+.segmented.seg-slide.seg-ready > button.active:not(:disabled):hover {
+  background: none;
+  box-shadow: none;
+}
+
+/* 세그먼트 칸은 눌러도 작아지지 않게(알약과 어긋나 보임) */
+.segmented.seg-slide > button:active {
+  transform: none;
+}
+
+/* 확인 팝업(ConfirmHost.tsx): 글 + 오른쪽 아래 [취소] [확인] */
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 22px;
+}
+
+.confirm p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 폰: 버튼 두 개가 반씩 꽉 차게(엄지로 누르기 쉽게) */
+@media (max-width: 768px) {
+  .confirm-actions > button {
+    flex: 1;
+  }
+}
+
+/* 펼치고 접는 칸(필터 등): 높이 0 ↔ 내용 높이를 grid 줄 크기(0fr ↔ 1fr)로 스르륵 바꾼다.
+   height: auto는 애니메이션이 안 돼서 쓰는 방법. 안쪽(.collapse-inner)이 overflow: hidden으로 잘린다 */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease;
+}
+
+.collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.list-col > .collapse {
+  flex-shrink: 0;
+}
+
+/* 비교 탭 알약: 고른 탭의 바탕·그림자가 스르륵 바뀌게(탭 내용은 ComparePanel이 옆으로 밀어 넣음) */
+.tab {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+/* 그래프 툴바 설정(타깃·차이 기준·정규화 기준): 처음부터 한 줄에 하나씩.
+   예전에는 옆으로 늘어놓아 고른 이름이 길어질 때에야 아래로 밀려 배치가 들썩였다.
+   이름 칸(왼쪽)은 폭을 고정해 세 줄의 선택 상자 시작이 맞고, 선택 상자는 남은 폭을 채운다(길면 …) */
+.toolbar-settings {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.toolbar-settings > label {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+}
+
+.toolbar-settings > label > select,
+.toolbar-settings > label > .select-button {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* 타깃 줄의 "받는 중…"·오류 글은 선택 상자 아래 줄에 */
+.toolbar-settings > label > .muted,
+.toolbar-settings > label > .error {
+  grid-column: 2 / -1;
+}
+
+/* 폰 선택 상자 버튼: 고른 이름은 늘 왼쪽부터(폭이 넓을 때 가운데로 가지 않게), 꺾쇠는 오른쪽 끝 */
+.select-button .select-value {
+  flex: 1;
+  text-align: left;
 }

@@ -7,6 +7,8 @@ import { deleteTarget, listCustomTargets, setTabTarget } from '../repo'
 import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { DeviceCategory } from '../types'
 import { CustomTargetDialog } from './CustomTargetDialog'
+import { Select } from './Select'
+import { askConfirm } from '../confirm'
 
 interface Props {
   tabId: string
@@ -46,7 +48,14 @@ export function TargetSelect({ tabId, targetId, category }: Props) {
   const current = customTargets?.find((t) => t.id === targetId)
 
   async function handleDelete() {
-    if (!current || !confirm(`내 타깃 "${current.name}"을 삭제할까요? 이 타깃을 쓰는 모든 탭에서 빠집니다.`)) return
+    if (!current) return
+    const ok = await askConfirm({
+      title: '타깃 삭제',
+      message: `내 타깃 "${current.name}"을 삭제할까요? 이 타깃을 쓰는 모든 탭에서 빠져요.`,
+      ok: '삭제',
+      danger: true,
+    })
+    if (!ok) return
     await deleteTarget(current.id)
   }
 
@@ -58,7 +67,7 @@ export function TargetSelect({ tabId, targetId, category }: Props) {
     <>
       <label>
         타깃{' '}
-        <select value={targetId ?? ''} onChange={(e) => handleChange(e.target.value)} disabled={loading}>
+        <Select value={targetId ?? ''} onChange={(e) => handleChange(e.target.value)} disabled={loading}>
           <option value="">없음</option>
           {customTargets && customTargets.length > 0 && (
             // optgroup: 선택지를 제목 아래로 묶어 보여준다
@@ -80,7 +89,7 @@ export function TargetSelect({ tabId, targetId, category }: Props) {
             </optgroup>
           ))}
           <option value={UPLOAD}>+ CSV 불러오기…</option>
-        </select>
+        </Select>
         {current && (
           <button type="button" className="link danger small" onClick={handleDelete} title="이 내 타깃 삭제">
             삭제

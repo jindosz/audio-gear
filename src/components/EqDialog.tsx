@@ -13,6 +13,7 @@ import { FINE_GRID } from '../similarity'
 import type { DeviceCategory, FrCurve, Target } from '../types'
 import type { SelectedItem } from '../useCompareData'
 import { EqExport } from './EqExport'
+import { Select } from './Select'
 import { Help } from './Help'
 import { Modal } from './Modal'
 import { AlertIcon } from './Icons'
@@ -145,24 +146,24 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
       <div className="row">
         <label>
           지금 쓰는 기기{' '}
-          <select value={current.key} onChange={(e) => setCurrentKey(e.target.value)}>
+          <Select value={current.key} onChange={(e) => setCurrentKey(e.target.value)}>
             {currentOptions.map((o) => (
               <option key={o.key} value={o.key}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <span aria-hidden="true">→</span>
         <label>
           들어볼 소리{' '}
-          <select value={wish.key} onChange={(e) => setWishKey(e.target.value)}>
+          <Select value={wish.key} onChange={(e) => setWishKey(e.target.value)}>
             {wishOptions.map((o) => (
               <option key={o.key} value={o.key}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 

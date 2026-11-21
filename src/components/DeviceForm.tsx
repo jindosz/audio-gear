@@ -4,6 +4,7 @@ import { categoryLabels } from '../labels'
 import { addDevice } from '../repo'
 import type { DeviceCategory } from '../types'
 import { ToggleButton } from './ToggleButton'
+import { Select } from './Select'
 
 interface Props {
   /** 등록이 끝나면 부를 함수(선택). 등록한 기기 이름을 넘겨준다 */
@@ -35,13 +36,13 @@ export function DeviceForm({ onAdded }: Props) {
       <div className="row">
         <input placeholder="브랜드" value={brand} onChange={(e) => setBrand(e.target.value)} required />
         <input placeholder="모델명" value={model} onChange={(e) => setModel(e.target.value)} required />
-        <select value={category} onChange={(e) => setCategory(e.target.value as DeviceCategory)}>
+        <Select value={category} onChange={(e) => setCategory(e.target.value as DeviceCategory)}>
           {Object.entries(categoryLabels).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
-        </select>
+        </Select>
         <ToggleButton on={owned} onChange={setOwned}>
           보유
         </ToggleButton>

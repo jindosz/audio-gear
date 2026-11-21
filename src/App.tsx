@@ -1,6 +1,8 @@
 // 3단 화면: 왼쪽 메뉴 | 기기 목록 | 메인(비교 탭·그래프)
 import { useEffect, useState, type CSSProperties } from 'react'
 import { ComparePanel } from './components/ComparePanel'
+import { ConfirmHost } from './components/ConfirmHost'
+import { CloseIcon } from './components/Icons'
 import { DeviceList } from './components/DeviceList'
 import { EqPage } from './components/EqPage'
 import { ResizeHandle } from './components/ResizeHandle'
@@ -32,7 +34,7 @@ function App() {
         <div className="toast" role="status">
           저장된 기기를 정리했습니다: {describeCleanup(cleanup.result)}
           <button type="button" onClick={cleanup.dismiss} aria-label="안내 닫기">
-            ✕
+            <CloseIcon size={16} />
           </button>
         </div>
       )}
@@ -72,6 +74,8 @@ function App() {
         </>
       )}
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {/* 앱 모양의 확인 팝업(askConfirm으로 엶). 브라우저 기본 confirm 창 대신 */}
+      <ConfirmHost />
     </div>
   )
 }

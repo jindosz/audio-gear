@@ -95,12 +95,13 @@ export function EarEqDialog({ open, onClose }: Props) {
   }
 
   const deviceById = new Map((devices ?? []).map((d) => [d.id, d]))
+  // 보유 기기 측정치만(목록에서 눌러 본 기기도 DB에 저장되지만, 시험에 쓰는 건 내가 가진 기기)
   const options = (measurements ?? [])
     .flatMap((m) => {
       const d = deviceById.get(m.deviceId)
-      return d ? [{ m, d, label: `${d.brand} ${d.model} · ${sourceLabel(m.source)}` }] : []
+      return d?.owned ? [{ m, d, label: `${d.brand} ${d.model} · ${sourceLabel(m.source)}` }] : []
     })
-    .sort((a, b) => Number(b.d.owned) - Number(a.d.owned) || a.label.localeCompare(b.label))
+    .sort((a, b) => a.label.localeCompare(b.label))
 
   async function begin() {
     stopTest()
@@ -246,6 +247,9 @@ export function EarEqDialog({ open, onClose }: Props) {
                 ))}
               </Select>
             </label>
+            {measurements && options.length === 0 && (
+              <p className="muted small">보유 기기가 없어요. 기기 목록에서 보유로 표시하면 고를 수 있어요</p>
+            )}
             <p className="warning small">측정치는 측정자마다 기준이 달라 원음을 해칠 수 있어요</p>
             <Help>
               조용한 곳에서 하고, 폰 볼륨은 평소 듣는 크기로 두고 시험 중엔 바꾸지 마세요. 무선 이어폰은 아주 작은 소리를 꺼 버릴 수 있어

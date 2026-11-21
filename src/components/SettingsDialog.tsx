@@ -8,6 +8,7 @@ import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
+import { SegmentedGroup } from './SegmentedGroup'
 
 interface Props {
   open: boolean
@@ -48,7 +49,7 @@ function ThemeRow() {
     <div className="settings-row">
       <span>화면 테마</span>
       {/* 세 버튼 중 하나만 눌린 상태가 되는 "세그먼트 버튼". aria-pressed로 눌림 상태를 알린다 */}
-      <div className="segmented small" role="group" aria-label="화면 테마">
+      <SegmentedGroup className="small" label="화면 테마">
         {THEME_OPTIONS.map((o) => (
           <button
             key={o.value}
@@ -60,7 +61,7 @@ function ThemeRow() {
             {o.label}
           </button>
         ))}
-      </div>
+      </SegmentedGroup>
     </div>
   )
 }
@@ -137,14 +138,14 @@ function BackupGroup() {
           <p className="small">
             <strong>{pending.fileName}</strong> · 기기 {summary.devices}개, 측정치 {summary.measurements}개, EQ {summary.eqPresets}개
           </p>
-          <div className="segmented small" role="group" aria-label="가져오는 방식">
+          <SegmentedGroup className="small" label="가져오는 방식">
             <button type="button" className={mode === 'merge' ? 'active' : undefined} aria-pressed={mode === 'merge'} onClick={() => setMode('merge')}>
               합치기
             </button>
             <button type="button" className={mode === 'replace' ? 'active' : undefined} aria-pressed={mode === 'replace'} onClick={() => setMode('replace')}>
               모두 바꾸기
             </button>
-          </div>
+          </SegmentedGroup>
           <div className="row">
             <button type="button" className="primary" onClick={handleImport}>
               가져오기

@@ -26,6 +26,7 @@ import { ListFilterBar } from './ListFilterBar'
 import { ListGrip } from './ListGrip'
 import { VirtualList } from './VirtualList'
 import { ArrowUpIcon, ChevronDownIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
+import { SegmentedGroup } from './SegmentedGroup'
 
 interface Props {
   category: DeviceCategory
@@ -291,13 +292,13 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
       {/* 폰에서만 보임: 잡고 끌어서 목록 높이 조절, 누르면 펼치기/되돌리기(높이는 기억하지 않음) */}
       <ListGrip />
       {/* 폰에서만 보임: 왼쪽 메뉴 대신 목록 위에서 헤드폰/이어폰 전환 */}
-      <div className="list-category segmented mobile-only">
+      <SegmentedGroup className="list-category mobile-only" label="기기 종류">
         {(Object.keys(categoryLabels) as DeviceCategory[]).map((c) => (
           <button key={c} className={c === category ? 'active' : undefined} onClick={() => onCategoryChange(c)} aria-pressed={c === category}>
             {categoryLabels[c]}
           </button>
         ))}
-      </div>
+      </SegmentedGroup>
       <div className="list-search">
         <input type="search" placeholder="기기 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button

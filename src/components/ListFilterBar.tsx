@@ -3,6 +3,7 @@ import { EMPTY_FILTER, activeCount, type ListFilter } from '../listFilter'
 import type { DeviceCategory } from '../types'
 import { ToggleButton } from './ToggleButton'
 import { Select } from './Select'
+import { SegmentedGroup } from './SegmentedGroup'
 
 interface Props {
   category: DeviceCategory
@@ -27,7 +28,7 @@ function Segmented<T extends string>({
 }) {
   const all = [{ value: null, label: '전체' }, ...options]
   return (
-    <div className="segmented small" role="group" aria-label={label}>
+    <SegmentedGroup className="small" label={label}>
       {all.map((o) => (
         <button
           key={o.label}
@@ -39,7 +40,7 @@ function Segmented<T extends string>({
           {o.label}
         </button>
       ))}
-    </div>
+    </SegmentedGroup>
   )
 }
 

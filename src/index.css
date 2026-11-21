@@ -2641,3 +2641,48 @@ button.select-option:active {
 .select-group-label {
   padding-left: 10px;
 }
+
+/* ---- 세그먼트 버튼 미끄러지는 알약(SegmentedGroup.tsx) ----
+   고른 칸마다 바탕을 칠하는 대신, 묶음 안에 알약 하나(::before)를 두고 고른 칸 자리(--seg-x, --seg-w)로 옮긴다.
+   .seg-ready: 자리를 잰 뒤에만 보임, .seg-animate: 처음 자리 잡은 뒤부터 움직임 효과 */
+.segmented.seg-slide {
+  position: relative;
+  isolation: isolate; /* 알약(z-index -1)이 묶음 바탕 뒤로 숨지 않게 이 안에서만 쌓는다 */
+}
+
+.segmented.seg-slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: var(--seg-w, 0);
+  height: var(--seg-h, 0);
+  transform: translate(var(--seg-x, 0), var(--seg-y, 0));
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  opacity: 0;
+}
+
+.segmented.seg-slide.seg-ready::before {
+  opacity: 1;
+}
+
+.segmented.seg-slide.seg-animate::before {
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 알약이 바탕을 맡으니 고른 버튼 자체는 투명하게(글자색만 강조색) */
+.segmented.seg-slide.seg-ready > button.active,
+.segmented.seg-slide.seg-ready > button.active:not(:disabled):hover {
+  background: none;
+  box-shadow: none;
+}
+
+/* 세그먼트 칸은 눌러도 작아지지 않게(알약과 어긋나 보임) */
+.segmented.seg-slide > button:active {
+  transform: none;
+}

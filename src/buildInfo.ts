@@ -11,3 +11,9 @@ export function buildLabel(): string {
   const kind = isAndroidApp() ? `안드로이드 앱 0.1.${buildNumber} (빌드 ${buildNumber})` : `웹 (빌드 ${buildNumber})`
   return commit ? `${kind} · 커밋 ${commit.slice(0, 7)}` : kind
 }
+
+/** 지금 앱의 빌드 번호(숫자). 개발 서버처럼 번호가 없으면 null */
+export function currentBuildNumber(): number | null {
+  const n = Number(buildNumber)
+  return buildNumber && Number.isFinite(n) ? n : null
+}

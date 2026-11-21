@@ -6,6 +6,7 @@ import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
 import { isAndroidApp, saveTextFile } from '../platform'
+import { checkForUpdate } from '../appUpdate'
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
@@ -31,6 +32,13 @@ export function SettingsDialog({ open, onClose }: Props) {
           {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
           {!isAndroidApp() && <StorageRow />}
         </details>
+        {/* 안드로이드 앱: 새 정식 버전이 있는지 바로 확인(평소에는 앱을 열 때 자동으로 확인) */}
+        {isAndroidApp() && (
+          <button type="button" className="settings-row settings-link" onClick={() => checkForUpdate({ force: true, manual: true })}>
+            <span>업데이트 확인</span>
+            <ChevronRightIcon />
+          </button>
+        )}
         {/* 지금 쓰는 앱이 몇 번째 빌드인지(업데이트가 됐는지 확인용) */}
         <p className="settings-version">audio-gear · {buildLabel()}</p>
       </div>

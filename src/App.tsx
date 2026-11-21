@@ -9,6 +9,7 @@ import { EqPage } from './components/EqPage'
 import { ResizeHandle } from './components/ResizeHandle'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar, type Page } from './components/Sidebar'
+import { setupAutoUpdate } from './appUpdate'
 import { EQ_ACTIVE_KEY, readPref, writePref } from './localPrefs'
 import type { DeviceCategory } from './types'
 import { describeCleanup, useStartupCleanup } from './useStartupCleanup'
@@ -28,6 +29,8 @@ function App() {
   // 기기 목록 칸 폭(px). 끌어서 바꾼 폭은 이 브라우저에 기억한다
   const [listWidth, setListWidth] = useState(() => readPref('listWidth', LIST_WIDTH.default))
   useEffect(() => writePref('listWidth', listWidth), [listWidth])
+  // 안드로이드 앱: 인터넷이 되면 새 정식 버전이 있는지 확인해 업데이트를 묻는다(appUpdate.ts)
+  useEffect(() => setupAutoUpdate(), [])
 
   return (
     <div className="app" style={{ '--list-width': `${listWidth}px` } as CSSProperties}>

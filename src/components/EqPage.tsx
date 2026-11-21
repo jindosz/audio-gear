@@ -149,7 +149,7 @@ export function EqPage() {
             activeId={active?.id}
             onSelect={setActiveId}
             onNew={handleNew}
-            newDisabled={options.length === 0}
+            newDisabled={false}
           />
         </aside>
 
@@ -171,14 +171,12 @@ export function EqPage() {
               await handleNew()
               setPickerOpen(false)
             }}
-            newDisabled={options.length === 0}
+            newDisabled={false}
           />
         </Modal>
 
         <section className="eq-editor">
-          {options.length === 0 ? (
-            <p className="muted">먼저 기기 목록에서 지금 쓰는 기기를 눌러 측정치를 받아 주세요.</p>
-          ) : active ? (
+          {active ? (
             // key: 다른 EQ를 고르면 편집 칸을 새로 만들어, 고르던 EQ의 입력 중인 값이 섞이지 않게 한다
             <EqEditor
               key={active.id}
@@ -258,21 +256,22 @@ function EqEditor({
   const goalTargetId = draft.goal.startsWith('t:') ? draft.goal.slice(2) : null
   const goalTarget = useLiveQuery(() => (goalTargetId ? getTarget(goalTargetId) : undefined), [goalTargetId])
 
-  // EqPage가 측정치가 하나라도 있을 때만 이 칸을 그리므로 항상 있다
-  const current = currentOption(options, draft.measurementId)!
-  const category: DeviceCategory = current.device.category
+  // 저장된 측정치가 하나도 없으면(처음 쓰는 경우) 없다 → [다른 기기]로 전체 기기 목록에서 받아 고른다
+  const current = currentOption(options, draft.measurementId)
   const goalMeasurement = draft.goal.startsWith('m:')
     ? options.find((o) => o.measurement.id === draft.goal.slice(2))
     : undefined
+  // 타깃 순서·검색에 쓰는 기기 종류: 지금 기기 → 목표 기기 → 헤드폰
+  const category: DeviceCategory = current?.device.category ?? goalMeasurement?.device.category ?? 'headphone'
   const goal = goalInfo(goalMeasurement, goalTarget)
 
   const filters = draft.filters
   const response = totalResponse(filters, FINE_GRID)
   const preamp = autoPreamp(response, FINE_GRID)
-  const before = display(current.measurement.curve)
-  const after = before.map((v, i) => (v === null ? null : v + response[i]))
+  const before = current ? display(current.measurement.curve) : null
+  const after = before?.map((v, i) => (v === null ? null : v + response[i])) ?? null
   const goalCurve = goal ? display(goal.curve) : null
-  const wantedEq = goal ? targetEq(current.measurement.curve, goal.curve) : null
+  const wantedEq = goal && current ? targetEq(current.measurement.curve, goal.curve) : null
 
   async function handleGoal(value: string) {
     setError('')
@@ -292,7 +291,7 @@ function EqEditor({
   }
 
   async function handleAuto() {
-    if (!wantedEq || !goal) return
+    if (!wantedEq || !goal || !current) return
     if (
       filters.length > 0 &&
       !(await askConfirm({ title: '자동 계산', message: '지금 밴드를 자동 계산 결과로 바꿀까요?', ok: '바꾸기' }))
@@ -337,7 +336,12 @@ function EqEditor({
         <div className="eq-pick-group">
           <label>
             지금 쓰는 기기{' '}
-            <Select value={current.measurement.id} onChange={(e) => update({ measurementId: e.target.value })}>
+            <Select value={current?.measurement.id ?? ''} onChange={(e) => update({ measurementId: e.target.value })}>
+              {!current && (
+                <option value="" disabled>
+                  [다른 기기]로 찾아 주세요
+                </option>
+              )}
               {ownedOptions.length > 0 && (
                 <optgroup label="보유 기기">
                   {ownedOptions.map((o) => (
@@ -420,7 +424,7 @@ function EqEditor({
         onClose={() => setFindFor(null)}
         title={findFor === 'goal' ? '목표 기기 찾기' : '지금 쓰는 기기 찾기'}
         preferCategory={category}
-        preferredSource={knownSource(findFor === 'goal' ? current.measurement.source : goal?.source)}
+        preferredSource={knownSource(findFor === 'goal' ? current?.measurement.source : goal?.source)}
         onPicked={(id) => {
           if (findFor === 'goal') update({ goal: `m:${id}` })
           else update({ measurementId: id })
@@ -442,7 +446,7 @@ function EqEditor({
           <AlertIcon size={15} /> {categoryLabels[category]}↔{categoryLabels[goal.category]}: 결과가 부정확할 수 있어요
         </p>
       )}
-      {goal?.source && goal.source !== current.measurement.source && (
+      {current && goal?.source && goal.source !== current.measurement.source && (
         <p
           className="warning small"
           title={`${sourceLabel(current.measurement.source)} / ${sourceLabel(goal.source)} — 측정 환경 차이까지 EQ에 섞이므로 같은 측정자를 고르는 것이 좋습니다`}
@@ -451,35 +455,48 @@ function EqEditor({
         </p>
       )}
 
-      <ul className="legend">
-        <li style={{ '--c': seriesColor(1) } as CSSProperties}>
-          <span className="swatch" aria-hidden="true" />
-          원래: {current.label}
-        </li>
-        <li style={{ '--c': seriesColor(0) } as CSSProperties}>
-          <span className="swatch" aria-hidden="true" />
-          EQ 적용 후
-        </li>
-        {goal && (
-          <li>
-            <span className="swatch target" aria-hidden="true" />
-            목표: {goal.label}
-          </li>
-        )}
-      </ul>
-      <div className="eq-chart">
-        <Suspense fallback={<p className="muted">그래프 불러오는 중…</p>}>
-          <FrChart
-            grid={FINE_GRID}
-            series={[
-              { label: '원래', colorIndex: 1, values: before },
-              { label: 'EQ 적용 후', colorIndex: 0, values: after },
-              ...(goal && goalCurve ? [{ label: goal.label, colorIndex: null, values: goalCurve }] : []),
-            ]}
-            yTitle="dB (300Hz~3kHz 평균 = 0)"
-          />
-        </Suspense>
-      </div>
+      {current && before && after ? (
+        <>
+          <ul className="legend">
+            <li style={{ '--c': seriesColor(1) } as CSSProperties}>
+              <span className="swatch" aria-hidden="true" />
+              원래: {current.label}
+            </li>
+            <li style={{ '--c': seriesColor(0) } as CSSProperties}>
+              <span className="swatch" aria-hidden="true" />
+              EQ 적용 후
+            </li>
+            {goal && (
+              <li>
+                <span className="swatch target" aria-hidden="true" />
+                목표: {goal.label}
+              </li>
+            )}
+          </ul>
+          <div className="eq-chart">
+            <Suspense fallback={<p className="muted">그래프 불러오는 중…</p>}>
+              <FrChart
+                grid={FINE_GRID}
+                series={[
+                  { label: '원래', colorIndex: 1, values: before },
+                  { label: 'EQ 적용 후', colorIndex: 0, values: after },
+                  ...(goal && goalCurve ? [{ label: goal.label, colorIndex: null, values: goalCurve }] : []),
+                ]}
+                yTitle="dB (300Hz~3kHz 평균 = 0)"
+              />
+            </Suspense>
+          </div>
+        </>
+      ) : (
+        // 처음 쓰는 경우: 저장된 기기가 없어도 [다른 기기]로 전체 목록에서 찾아 받으면 된다
+        <p className="notice">
+          지금 쓰는 기기를 골라 주세요. 옆의{' '}
+          <button type="button" className="link" onClick={() => setFindFor('current')}>
+            다른 기기
+          </button>
+          로 전체 목록에서 찾아 받을 수 있어요.
+        </p>
+      )}
       <div className="eq-chart small-chart">
         <Suspense fallback={null}>
           <FrChart
@@ -500,7 +517,7 @@ function EqEditor({
           className="primary"
           onClick={handleAuto}
           disabled={!wantedEq}
-          title={wantedEq ? undefined : '목표를 먼저 고르세요'}
+          title={!current ? '지금 쓰는 기기를 먼저 고르세요' : wantedEq ? undefined : '목표를 먼저 고르세요'}
         >
           목표에 맞춰 자동 계산
         </button>

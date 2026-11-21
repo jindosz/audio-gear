@@ -5,6 +5,7 @@ import { parseFrCsv, type ParseResult } from '../csv'
 import { categoryLabels, rigLabels } from '../labels'
 import { putTarget } from '../repo'
 import type { DeviceCategory, Rig } from '../types'
+import { FilePicker } from './FilePicker'
 import { Modal } from './Modal'
 import { Select } from './Select'
 
@@ -69,7 +70,7 @@ function CustomTargetForm({
         한 줄에 "주파수, dB" 형식의 CSV/텍스트 파일. 측정치 업로드와 같은 형식이고, AutoEQ·squig.link에서 받은 타깃
         파일도 쓸 수 있습니다.
       </p>
-      <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} data-autofocus />
+      <FilePicker accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} label="CSV 파일 고르기" />
 
       {error && <p className="error">{error}</p>}
       {parsed && first && last && (

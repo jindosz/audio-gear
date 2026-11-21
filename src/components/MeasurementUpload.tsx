@@ -4,6 +4,7 @@ import { parseFrCsv, type ParseResult } from '../csv'
 import { channelLabels, rigLabels } from '../labels'
 import { addMeasurement } from '../repo'
 import type { Channel, Rig } from '../types'
+import { FilePicker } from './FilePicker'
 import { Select } from './Select'
 
 interface Props {
@@ -53,7 +54,7 @@ export function MeasurementUpload({ deviceId, onDone }: Props) {
 
   return (
     <form className="upload form" onSubmit={handleSubmit}>
-      <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} />
+      <FilePicker accept=".csv,.txt,text/csv,text/plain" onChange={handleFile} label="CSV 파일 고르기" />
 
       {error && <p className="error">{error}</p>}
       {parsed && first && last && (

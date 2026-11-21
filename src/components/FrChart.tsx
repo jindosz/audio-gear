@@ -49,6 +49,9 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
+/** 손가락으로 본 값 표시가 사라지기까지(ms, 마지막으로 만진 뒤) */
+const TOOLTIP_HIDE_MS = 2500
+
 export function FrChart({ grid, series, yTitle, signed = false, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<Chart<'line', XY[]> | null>(null)
@@ -100,7 +103,30 @@ export function FrChart({ grid, series, yTitle, signed = false, className }: Pro
       },
     })
     chartRef.current = chart
-    return () => chart.destroy()
+
+    // 손가락으로 눌러 본 값(툴팁)은 뗀 뒤에도 남아 있어서, 마지막으로 만진 뒤 잠시 지나면 지운다.
+    // 마우스는 그래프 밖으로 나가면 원래 사라지니 그대로 둔다
+    const canvas = canvasRef.current!
+    let hideTimer: ReturnType<typeof setTimeout> | undefined
+    const scheduleHide = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(() => {
+        chart.setActiveElements([])
+        chart.tooltip?.setActiveElements([], { x: 0, y: 0 })
+        chart.update('none')
+      }, TOOLTIP_HIDE_MS)
+    }
+    canvas.addEventListener('pointerdown', scheduleHide)
+    canvas.addEventListener('pointermove', scheduleHide)
+    canvas.addEventListener('pointerup', scheduleHide)
+    return () => {
+      clearTimeout(hideTimer)
+      canvas.removeEventListener('pointerdown', scheduleHide)
+      canvas.removeEventListener('pointermove', scheduleHide)
+      canvas.removeEventListener('pointerup', scheduleHide)
+      chart.destroy()
+    }
   }, [])
 
   // 데이터·색·테마가 바뀔 때마다 차트 내용을 갱신한다

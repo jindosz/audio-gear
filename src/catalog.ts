@@ -353,3 +353,25 @@ export async function loadAllCatalogEntries(): Promise<CatalogEntry[]> {
   const [autoeq, squig] = await Promise.all([loadCatalog(), loadSquigCatalog().catch(() => [])])
   return [...autoeq, ...squig]
 }
+
+/**
+ * 이 기기(이름)를 잰 측정치 중 받을 수 있는 것 전부(AutoEQ + squig.link, 측정자·구성별).
+ * 기기 상세 팝업의 "다른 측정치 받기"에 쓴다. 이름은 normalize해서 맞춘다(표기 차이: "HD600" / "HD 600")
+ */
+export async function catalogCurvesFor(name: string): Promise<CatalogEntry[]> {
+  const key = normalize(name)
+  return (await loadAllCatalogEntries()).filter((e) => e.hasCurve && normalize(e.name) === key)
+}
+
+/** 목록 측정치 하나를 받아 이 기기(deviceId)에 측정치로 붙인다. 기기를 새로 만들지 않는다 */
+export async function addCatalogMeasurement(deviceId: string, entry: CatalogEntry): Promise<string> {
+  const curve = await fetchCatalogCurve(entry)
+  return addMeasurement({
+    deviceId,
+    variant: entry.variant ?? '',
+    rig: entry.rig,
+    source: catalogSourceLabel(entry),
+    channel: 'avg',
+    curve,
+  })
+}

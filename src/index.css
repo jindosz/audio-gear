@@ -2287,3 +2287,35 @@ button.settings-row {
   flex-direction: column;
   gap: 6px;
 }
+
+/* 비슷한 기기 찾기: 이름이 아주 길어도(띄어쓰기 없는 squig.link 이름 등) 팝업이 옆으로 스크롤되지 않게
+   이름은 아무 데서나 줄바꿈, [비교에 추가] 버튼은 줄어들지 않게 */
+.rec-list li {
+  min-width: 0;
+}
+
+.rec-main {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.rec-list li > button,
+.rec-list li > span {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.recommend select {
+  max-width: 100%;
+}
+
+.dialog {
+  overflow-x: hidden;
+}
+
+/* 태그("유선" 등)는 쪼개지 않고 통째로 다음 줄로 */
+.rec-main .tag {
+  display: inline-block;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}

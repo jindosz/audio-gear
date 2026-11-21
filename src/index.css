@@ -3126,3 +3126,46 @@ button.select-option:active {
 .settings-row.danger-text {
   color: var(--danger);
 }
+
+/* ---- 설정의 계정 칸(AccountGroup.tsx) ---- */
+.account-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.account-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-row > button {
+  flex-shrink: 0;
+}
+/* 접힌 "계정 관리" 아래 빈 틈 없애기(제목 여백을 줄임) */
+.account-manage > summary.settings-group-title {
+  margin: 0;
+}
+/* 접기 제목(고급·계정 관리): 손가락 화면에서 누르는 영역을 키우면 글자가 위에 붙고 아래가 비어 보여서 가운데로 */
+.settings-advanced > summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* 로그인 팝업의 [로그인 | 가입]: 폭 전체, 두 칸 반반 */
+.sign-in .segmented {
+  display: flex;
+  width: 100%;
+}
+.sign-in .segmented > button {
+  flex: 1;
+}
+.sign-in-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+@media (pointer: coarse) {
+  .sign-in-submit {
+    min-height: 48px;
+  }
+}

@@ -58,11 +58,11 @@ export function AccountGroup() {
         </button>
       ) : (
         <>
-          <div className="settings-row">
-            <span>
-              {account.user.email}
+          {/* 이메일이 길어도 버튼이 밀려나지 않게: 이메일·상태는 두 줄로, 길면 … */}
+          <div className="settings-row account-row">
+            <span className="account-info">
+              <span className="account-email">{account.user.email}</span>
               <span className="muted small">
-                {' · '}
                 {account.syncing
                   ? '동기화 중…'
                   : account.error
@@ -72,18 +72,9 @@ export function AccountGroup() {
                       : '아직 동기화 안 함'}
               </span>
             </span>
-            <span className="settings-row-actions">
-              <button type="button" className="small primary" disabled={account.syncing} onClick={() => void syncNow(true)}>
-                지금 동기화
-              </button>
-              <button
-                type="button"
-                className="small"
-                onClick={() => void signOutAccount().then(() => showToast('로그아웃했어요(이 기기 데이터는 그대로예요)'))}
-              >
-                로그아웃
-              </button>
-            </span>
+            <button type="button" className="small primary" disabled={account.syncing} onClick={() => void syncNow(true)}>
+              지금 동기화
+            </button>
           </div>
           <div className="settings-row">
             <span>
@@ -104,10 +95,17 @@ export function AccountGroup() {
               {syncEar ? '켜짐' : '꺼짐'}
             </ToggleButton>
           </div>
-          <details className="settings-advanced">
+          <details className="settings-advanced account-manage">
             <summary className="settings-group-title">
               <ChevronRightIcon size={14} /> 계정 관리
             </summary>
+            <button
+              type="button"
+              className="settings-row settings-link"
+              onClick={() => void signOutAccount().then(() => showToast('로그아웃했어요(이 기기 데이터는 그대로예요)'))}
+            >
+              <span>로그아웃</span>
+            </button>
             <button type="button" className="settings-row settings-link danger-text" onClick={() => void removeAccount()}>
               <span>계정 삭제</span>
             </button>

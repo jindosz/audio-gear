@@ -30,6 +30,8 @@ import { Modal } from './Modal'
 import { Select } from './Select'
 import { Help } from './Help'
 import { SpecFilterFields } from './ListFilterBar'
+import { SoundTagList } from './SoundTagList'
+import { useSoundTagger } from '../useSoundTagger'
 
 interface Props {
   open: boolean
@@ -330,6 +332,7 @@ function RecommendRow({
   onAdd: () => void
 }) {
   const { candidate } = r
+  const tagger = useSoundTagger()
   // 내 기기면 입력값(없으면 추정값), AutoEQ 후보면 추정값
   const { tags, estimated } = candidate.device
     ? displaySpecs(candidate.device)
@@ -352,6 +355,7 @@ function RecommendRow({
             {t}
           </span>
         ))}
+        <SoundTagList tags={tagger({ values: candidate.values }, candidate.category, candidate.rig)} />
         <div className="small">
           <span className="rec-score">
             {similarityLabel(r.distance)} ({r.distance.toFixed(1)}dB)

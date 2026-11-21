@@ -2809,3 +2809,56 @@ button.select-option:active {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+/* 성향 태그(SoundTagList.tsx): 작은 알약. 많음=따뜻한 색, 적음=차가운 색, 좁은 피크=경고색, 타깃에 가까움=초록 */
+.sound-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.sound-tag {
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 0 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--c-tag) 14%, transparent);
+  color: color-mix(in srgb, var(--c-tag) 80%, var(--text));
+  --c-tag: var(--muted);
+}
+
+.sound-tag.more {
+  --c-tag: var(--series-1);
+}
+
+.sound-tag.less {
+  --c-tag: var(--series-0);
+}
+
+.sound-tag.peak {
+  --c-tag: var(--danger);
+}
+
+.sound-tag.neutral {
+  --c-tag: var(--series-2);
+}
+
+/* 추천 결과·기기 상세에서는 줄을 바꿔 이름 아래에 */
+.rec-main > .sound-tags,
+.measurement-text > .sound-tags {
+  display: flex;
+  margin: 4px 0 2px;
+}
+
+/* 범례 한 줄(이름 · 출처 · 성향 태그): 폭이 모자라면 글자를 쪼개지 않고 출처·태그를 통째로 다음 줄로 */
+.legend li {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.legend .sound-tags {
+  margin-left: 0;
+}

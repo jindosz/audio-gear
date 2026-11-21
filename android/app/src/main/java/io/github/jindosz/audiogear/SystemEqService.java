@@ -324,8 +324,8 @@ public class SystemEqService extends Service {
     private DynamicsProcessing updateOrRecreate(DynamicsProcessing effect, int session) {
         if (effect.getConfig().getPreEqBandCount() == cutoffs.length) {
             effect.setPreEqAllChannelsTo(makeEq());
-            effect.setInputGainbyChannelIndex(0, leftGain());
-            effect.setInputGainbyChannelIndex(1, rightGain());
+            effect.setInputGainbyChannel(0, leftGain());
+            effect.setInputGainbyChannel(1, rightGain());
             return effect;
         }
         effect.release();

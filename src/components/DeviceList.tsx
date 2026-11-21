@@ -15,7 +15,7 @@ import {
 } from '../listFilter'
 import { readPref, writePref } from '../localPrefs'
 import { displaySpecs, specHint } from '../specHints'
-import { addDevice, setDeviceOwned, setDeviceWishlist, toggleSelection } from '../repo'
+import { addDevice, listSummaries, setDeviceOwned, setDeviceWishlist, toggleSelection } from '../repo'
 import { PALETTE_SIZE, seriesColor } from '../selection'
 import type { Device, DeviceCategory } from '../types'
 import { useCatalogDevices } from '../useCatalogDevices'
@@ -27,6 +27,11 @@ import { ListGrip } from './ListGrip'
 import { VirtualList } from './VirtualList'
 import { ArrowUpIcon, ChevronDownIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
+import { SoundTagList } from './SoundTagList'
+import { useSoundTagger } from '../useSoundTagger'
+import type { SoundTag } from '../soundTags'
+import { summarySource } from '../recommend'
+import { useLiveQuery } from 'dexie-react-hooks'
 
 interface Props {
   category: DeviceCategory
@@ -118,6 +123,19 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   // 목록(6천 개)이 바뀔 때만 다시 만든다
   // 키는 공백·기호를 지운 이름(normalize): 출처마다 표기가 조금 달라도 같은 기기로 찾는다
   const catalogByName = useMemo(() => new Map((catalogDevices ?? []).map((e) => [e.searchKey, e])), [catalogDevices])
+
+  // 성향 태그: 받은 기기는 그 측정치로, 아직 안 받은 목록 기기는 "측정치 미리 받기"로 저장한 요약값(경로로 찾음)으로
+  const tagger = useSoundTagger()
+  const summaries = useLiveQuery(() => listSummaries(category), [category])
+  const summaryByPath = useMemo(() => new Map((summaries ?? []).map((sm) => [sm.path, sm])), [summaries])
+  const myTags = (d: Device): SoundTag[] | null => {
+    const m = measurementsByDevice.get(d.id)?.[0]
+    return m ? tagger({ curve: m.curve, source: m.source }, d.category, m.rig) : null
+  }
+  const catalogTags = (entry: CatalogDevice): SoundTag[] | null => {
+    const sm = entry.primary && summaryByPath.get(entry.primary.path)
+    return sm ? tagger({ values: sm.values, source: summarySource(sm) }, sm.category, sm.rig) : null
+  }
 
   /** 내 기기의 측정자들: 저장된 측정치의 출처 + 목록(카탈로그)에서 더 받을 수 있는 측정자 */
   function myMeasurers(d: Device): Set<string> {
@@ -339,6 +357,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     name={deviceName(device)}
                     owned={device.owned}
                     sub={measurementLabel(measurement)}
+                    tags={tagger({ curve: measurement.curve, source: measurement.source }, device.category, measurement.rig)}
                     colorIndex={selection.colorIndex}
                     starred={device.wishlist}
                     onOwn={() => setDeviceOwned(device.id, !device.owned)}
@@ -363,6 +382,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     key={d.id}
                     name={deviceName(d)}
                     {...deviceSub(d, measurementsByDevice.has(d.id))}
+                    tags={myTags(d)}
                     owned
                     onOwn={() => setDeviceOwned(d.id, false)}
                     onClick={() => handleSelectMine(d)}
@@ -386,6 +406,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                     key={d.id}
                     name={deviceName(d)}
                     {...deviceSub(d, measurementsByDevice.has(d.id))}
+                    tags={myTags(d)}
                     starred
                     onStar={() => setDeviceWishlist(d.id, false)}
                     onOwn={() => setDeviceOwned(d.id, true)}
@@ -424,6 +445,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                   style={style}
                   name={item.name}
                   {...deviceSub(item.device, measurementsByDevice.has(item.device.id), true)}
+                  tags={myTags(item.device)}
                   onStar={() => setDeviceWishlist(item.device.id, true)}
                   onOwn={() => setDeviceOwned(item.device.id, true)}
                   onClick={() => handleSelectMine(item.device)}
@@ -435,6 +457,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
                   style={style}
                   name={item.name}
                   {...catalogSub(item.entry, pendingName === item.name)}
+                  tags={catalogTags(item.entry)}
                   onStar={() => handleWishCatalog(item.entry)}
                   onOwn={() => handleOwnCatalog(item.entry)}
                   onClick={() => handleSelectCatalog(item.entry)}
@@ -511,9 +534,11 @@ interface RowProps {
   onClick: () => void
   /** 없으면 ⋯ 버튼을 그리지 않는다(아직 받지 않은 AutoEQ 기기) */
   onMore?: () => void
+  /** 성향 태그(설명 옆에, 한 줄 목록은 1개·나머지는 2개까지) */
+  tags?: SoundTag[] | null
 }
 
-function Row({ name, sub, subEstimated, owned, starred, onStar, onOwn, colorIndex, compact, style, onClick, onMore }: RowProps) {
+function Row({ name, sub, subEstimated, owned, starred, onStar, onOwn, colorIndex, compact, style, onClick, onMore, tags }: RowProps) {
   const isSelected = colorIndex !== undefined
   const className = ['device-row', isSelected && 'selected', compact && 'compact'].filter(Boolean).join(' ')
   // --c: 이 줄의 색. CSS에서 배경(연한 색)과 왼쪽 띠(진한 색)에 쓴다
@@ -527,9 +552,16 @@ function Row({ name, sub, subEstimated, owned, starred, onStar, onOwn, colorInde
           {isSelected && owned && <span className="tag">보유</span>}
           {isSelected && starred && <span className="tag">찜</span>}
         </span>
-        {sub && (
-          <span className={subEstimated ? 'device-sub muted estimated' : 'device-sub muted'} title={subEstimated ? '추정값(이름으로 추정, 확인되지 않음)' : undefined}>
-            {sub}
+        {(sub || (tags && tags.length > 0)) && (
+          // 설명과 성향 태그를 한 줄에. 자리가 모자라면 설명이 먼저 잘린다
+          <span className="device-subline">
+            {sub && (
+              <span className={subEstimated ? 'device-sub muted estimated' : 'device-sub muted'} title={subEstimated ? '추정값(이름으로 추정, 확인되지 않음)' : undefined}>
+                {sub}
+              </span>
+            )}
+            {/* 한 줄 목록(compact)은 폭이 좁아 가장 두드러진 것 하나만, 나머지는 둘까지(줄바꿈 가능) */}
+            <SoundTagList tags={tags ? tags.slice(0, compact ? 1 : 2) : null} />
           </span>
         )}
       </button>

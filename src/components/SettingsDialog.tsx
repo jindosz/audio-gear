@@ -5,12 +5,22 @@ import { cleanupStoredDevices, exportAll, importAll } from '../repo'
 import { describeCleanup } from '../useStartupCleanup'
 import { setThemePref, useThemePref, type ThemePref } from '../theme'
 import { Modal } from './Modal'
+import { CatalogDataBox } from './CatalogDataBox'
+import { startAllSummaryJobs, useSummaryJob } from '../summaryJob'
+import { setSoundTagsEnabled, useSoundTagsEnabled } from '../useSoundTagger'
+import { Help } from './Help'
 import { isAndroidApp, saveTextFile } from '../platform'
-import { checkForUpdate } from '../appUpdate'
+import { checkForUpdate, PREVIEW_UPDATES_KEY, previewUpdatesOn } from '../appUpdate'
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
 import { askConfirm } from '../confirm'
+import { ToggleButton } from './ToggleButton'
+import { writePref } from '../localPrefs'
+import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
+import { balanceLabel } from '../earBalance'
+import { useEqStatus } from '../eqEngine'
+import { EarBalanceDialog } from './EarBalanceDialog'
 
 interface Props {
   open: boolean
@@ -22,7 +32,21 @@ export function SettingsDialog({ open, onClose }: Props) {
     <Modal open={open} onClose={onClose} title="설정">
       <div className="settings">
         <ThemeRow />
+        <SoundTagsRow />
+        <EarBalanceRow />
         <BackupGroup />
+        {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
+        <section className="settings-group">
+          <h3 className="settings-group-title">측정치 미리 받기</h3>
+          <AllDownloadRow />
+          <CatalogDataBox category="headphone" title="헤드폰" />
+          <CatalogDataBox category="iem" title="이어폰" />
+          <Help>
+            목록 기기의 측정치를 요약(곡선마다 숫자 60개 정도)해서 저장해요. AutoEQ에 있는 기기는 AutoEQ 추천 측정치, squig.link에만
+            있는 기기는 squig.link 측정치를 받아요. 받아 두면 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 돼요. 이어폰은 1만 개가
+            넘어 시간이 꽤 걸리지만, 화면을 닫아도 계속 받고 멈췄다가 이어 받을 수 있어요. 한 번에 한 종류씩 받아요.
+          </Help>
+        </section>
         {/* 자주 안 쓰는 항목은 접어 둔다 */}
         <details className="settings-advanced">
           <summary className="settings-group-title">
@@ -31,6 +55,7 @@ export function SettingsDialog({ open, onClose }: Props) {
           <CleanupRow />
           {/* 저장 공간 영구 보존은 브라우저 이야기라 안드로이드 앱에서는 숨긴다(앱 데이터는 앱을 지우기 전까지 남음) */}
           {!isAndroidApp() && <StorageRow />}
+          {isAndroidApp() && <PreviewUpdateRow />}
         </details>
         {/* 안드로이드 앱: 새 정식 버전이 있는지 바로 확인(평소에는 앱을 열 때 자동으로 확인) */}
         {isAndroidApp() && (
@@ -254,6 +279,88 @@ function StorageRow() {
       ) : (
         <span className="muted small">확인 중…</span>
       )}
+    </div>
+  )
+}
+
+/** 시험용(나중에 지울 것): 켜면 앱 안 업데이트가 미리 보기 빌드(android-preview)까지 확인한다 */
+function PreviewUpdateRow() {
+  const [on, setOn] = useState(previewUpdatesOn)
+  return (
+    <div className="settings-row">
+      <span>미리 보기 빌드도 업데이트(시험용)</span>
+      <ToggleButton
+        small
+        on={on}
+        onChange={(next) => {
+          setOn(next)
+          writePref(PREVIEW_UPDATES_KEY, next)
+        }}
+      >
+        {on ? '켜짐' : '꺼짐'}
+      </ToggleButton>
+    </div>
+  )
+}
+
+/** 성향 태그 보기 켜고 끄기(그래프 범례·기기 목록·기기 상세·비슷한 기기 찾기 결과) */
+function SoundTagsRow() {
+  const on = useSoundTagsEnabled()
+  return (
+    <div className="settings-row">
+      <span>성향 태그 보기</span>
+      <ToggleButton small on={on} onChange={setSoundTagsEnabled}>
+        {on ? '켜짐' : '꺼짐'}
+      </ToggleButton>
+    </div>
+  )
+}
+
+/**
+ * 내 귀 균형: 잰 값, 켜고 끄기(안드로이드 앱), [재기].
+ * 알림의 "끄기"로 폰 효과를 다 껐으면 설정은 켜짐이어도 "꺼짐"으로 보이고, 누르면 다시 건다
+ */
+function EarBalanceRow() {
+  const balance = useEarBalance()
+  const status = useEqStatus()
+  const [testing, setTesting] = useState(false)
+  const android = isAndroidApp()
+  const on = !!balance?.on && !!status?.on
+  return (
+    <div className="settings-row">
+      <span>
+        내 귀 균형
+        <span className="muted small">
+          {' · '}
+          {balance ? balanceLabel(balance.db) : '아직 안 쟀어요'}
+          {balance && !android && ' (안드로이드 앱에서 적용돼요)'}
+        </span>
+      </span>
+      <span className="settings-row-actions">
+        {balance && android && (
+          <ToggleButton small on={on} onChange={(next) => void setEarBalanceOn(next)}>
+            {on ? '켜짐' : '꺼짐'}
+          </ToggleButton>
+        )}
+        <button type="button" className="small" onClick={() => setTesting(true)}>
+          재기
+        </button>
+      </span>
+      <EarBalanceDialog open={testing} onClose={() => setTesting(false)} />
+    </div>
+  )
+}
+
+/** [전체 받기]: 헤드폰 → 이어폰을 차례로(이미 받은 것은 건너뜀). 받는 중에는 누를 수 없고, 멈추기는 각 상자에서 */
+function AllDownloadRow() {
+  const job = useSummaryJob()
+  const running = job.status === 'running' || job.status === 'stopping'
+  return (
+    <div className="settings-row">
+      <span>헤드폰·이어폰 전체</span>
+      <button type="button" className="primary small" onClick={() => void startAllSummaryJobs()} disabled={running}>
+        {running ? '받는 중…' : '전체 받기'}
+      </button>
     </div>
   )
 }

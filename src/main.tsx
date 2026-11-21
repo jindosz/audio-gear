@@ -5,6 +5,8 @@ import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import './index.css'
 import App from './App.tsx'
 import { setupBackButton } from './backButton'
+// 내 귀 균형 값을 EQ 엔진에 등록(어느 화면에서 EQ를 걸든 균형이 함께 걸리게)
+import './earBalanceStore'
 import { applyTheme, getThemePref } from './theme'
 
 // 화면을 그리기 전에 저장된 테마를 먼저 적용한다(잠깐 다른 색이 번쩍이지 않게)

@@ -6,6 +6,11 @@ const nearest = (hz: number) =>
   DEVICE_EQ_FREQS.reduce((best, f, i) => (Math.abs(Math.log(f / hz)) < Math.abs(Math.log(DEVICE_EQ_FREQS[best] / hz)) ? i : best), 0)
 
 describe('toDeviceEq', () => {
+  it('평평한 EQ(필터 없음)는 게인이 모두 0, 입력 게인 0(내 귀 균형만 걸 때)', () => {
+    const d = toDeviceEq({ filters: [], preamp: 0 })
+    expect(d.gains.every((g) => g === 0)).toBe(true)
+    expect(d.inputGain).toBe(0)
+  })
   it('밴드 127개, 밴드 끝은 이웃 주파수의 기하 평균이고 마지막은 20000Hz', () => {
     const d = toDeviceEq({ filters: [], preamp: 0 })
     expect(d.cutoffs).toHaveLength(127)

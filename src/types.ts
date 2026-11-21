@@ -67,11 +67,15 @@ export interface Target {
  * 전체 곡선 대신 이것만 저장해서, 후보 수천 개를 적은 용량으로 비교한다(similarity.ts의 SUMMARY_GRID 기준)
  */
 export interface CatalogSummary {
-  /** AutoEQ results 폴더 기준 경로(측정치 하나를 가리키는 고유 이름) */
+  /** 측정치 하나를 가리키는 고유 이름. AutoEQ는 results 폴더 기준 경로, squig.link는 "squig:<주소>" */
   path: string
+  /** 어디 목록의 측정치인지. 없으면 AutoEQ(squig.link를 받기 전에 저장한 요약값) */
+  provider?: 'autoeq' | 'squig'
+  /** squig.link: 다시 받을 파일 주소(왼쪽·오른쪽). 비교에 추가할 때 쓴다 */
+  files?: string[]
   name: string
   category: DeviceCategory
-  /** 측정자. 예: oratory1990 */
+  /** 측정자(AutoEQ) 또는 사이트 이름(squig.link). 예: oratory1990 */
   measurer: string
   rig: Rig
   values: (number | null)[]

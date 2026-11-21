@@ -13,6 +13,8 @@ import { EqDialog } from './EqDialog'
 import { RecommendDialog } from './RecommendDialog'
 import { TabBar } from './TabBar'
 import { TargetSelect } from './TargetSelect'
+import { SoundTagList } from './SoundTagList'
+import { useSoundTagger } from '../useSoundTagger'
 import { AlertIcon } from './Icons'
 
 // 그래프(Chart.js, 앱 코드의 절반 가까운 크기)는 필요할 때 따로 불러온다(lazy).
@@ -41,6 +43,7 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
   const [recommendOpen, setRecommendOpen] = useState(false)
   const [eqOpen, setEqOpen] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
+  const tagger = useSoundTagger()
   useTabSwitchAnimation(mainRef, tabs, tab?.id)
 
   // 같은 기기가 여러 번 선택됐는지 센다(그러면 이름 뒤에 구성/출처를 붙여 구분)
@@ -176,6 +179,8 @@ export function ComparePanel({ tabs, activeId, onSelectTab, category, onOpenEqPr
             {!labelOf(item).includes(sourceLabel(item.measurement.source)) && (
               <span className="muted small"> · {sourceLabel(item.measurement.source)}</span>
             )}
+            {/* 성향 태그: 기준 타깃(Harman 등)과 비교한 소리 성향 */}
+            <SoundTagList tags={tagger({ curve: item.measurement.curve, source: item.measurement.source }, item.device.category, item.measurement.rig)} />
           </li>
         ))}
         {target && (

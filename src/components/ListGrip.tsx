@@ -41,7 +41,9 @@ export function ListGrip() {
   const listCol = (el: HTMLElement) => el.closest<HTMLElement>('.list-col')
   const app = (el: HTMLElement) => el.closest<HTMLElement>('.app')
 
-  const snapsFor = (el: HTMLElement): SheetSnaps => sheetSnaps(window.innerHeight, el.offsetHeight)
+  // 펼침 자리는 위 메뉴 줄(.sidebar) 바로 아래까지
+  const snapsFor = (el: HTMLElement): SheetSnaps =>
+    sheetSnaps(window.innerHeight, el.offsetHeight, document.querySelector('.sidebar')?.getBoundingClientRect().bottom)
 
   /** 목록 높이를 px로 정한다. 중간 자리는 CSS 기본값(화면 비율)으로 돌려 화면 회전에도 맞게 한다 */
   function setHeight(el: HTMLElement, px: number) {

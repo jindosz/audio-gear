@@ -1992,9 +1992,18 @@ button:focus-visible,
 select:focus-visible,
 summary:focus-visible,
 a:focus-visible,
-.settings-link:focus-within {
+.settings-link:has(:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* 손가락 화면: 키보드로 옮겨 다니는 일이 거의 없는데, 안드로이드 앱 화면은 누른 뒤에도 포커스 테두리를 띄울 때가 있어
+   파란 네모가 남아 보였다 → 손가락 화면에서는 포커스 테두리를 끈다 */
+@media (pointer: coarse) {
+  :focus-visible,
+  .settings-link:has(:focus-visible) {
+    outline: none;
+  }
 }
 
 /* 손가락으로 쓰는 화면(폰·태블릿)에서만 누르는 영역을 넓힌다(안드로이드 기준 48dp, 최소 44px).
@@ -2370,6 +2379,8 @@ button.settings-row {
     bottom: 0;
     z-index: 5;
     overflow: hidden; /* 접힘 자리에서는 손잡이만 보이고 나머지는 시트 안에 숨는다 */
+    /* 펼친 높이는 px로 기억해 두는데, 키보드가 올라와 화면이 줄어도 위쪽(손잡이·검색창)이 화면 밖으로 나가지 않게 */
+    max-height: calc(100dvh - 8px);
     transition: height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
@@ -2808,4 +2819,170 @@ button.select-option:active {
 .quick-toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* 성향 태그(SoundTagList.tsx): 작은 알약. 많음=따뜻한 색, 적음=차가운 색, 좁은 피크=경고색, 타깃에 가까움=초록 */
+.sound-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.sound-tag {
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 0 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--c-tag) 14%, transparent);
+  color: color-mix(in srgb, var(--c-tag) 80%, var(--text));
+  --c-tag: var(--muted);
+}
+
+.sound-tag.more {
+  --c-tag: var(--series-1);
+}
+
+.sound-tag.less {
+  --c-tag: var(--series-0);
+}
+
+.sound-tag.peak {
+  --c-tag: var(--danger);
+}
+
+.sound-tag.neutral {
+  --c-tag: var(--series-2);
+}
+
+/* 추천 결과·기기 상세에서는 줄을 바꿔 이름 아래에 */
+.rec-main > .sound-tags,
+.measurement-text > .sound-tags {
+  display: flex;
+  margin: 4px 0 2px;
+}
+
+/* 범례 한 줄(이름 · 출처 · 성향 태그): 폭이 모자라면 글자를 쪼개지 않고 출처·태그를 통째로 다음 줄로 */
+.legend li {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.legend .sound-tags {
+  margin-left: 0;
+}
+
+/* 목록 줄: 설명(유선·밀폐형 등) + 성향 태그를 한 줄에. 자리가 모자라면 설명이 먼저 …로 줄고, 태그는 줄바꿈 없이 */
+.device-subline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.device-subline .device-sub {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.device-subline .sound-tags {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  margin-left: 0;
+}
+
+.device-row.compact .device-subline {
+  flex: 0 20 auto;
+}
+
+/* 높이가 자유로운 줄(선택됨·보유·찜)은 태그가 모자라면 다음 줄로(잘리지 않게) */
+.device-row:not(.compact) .device-subline {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+
+/* ---- 내 귀 균형 측정 팝업(EarBalanceDialog.tsx) ---- */
+.ear-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ear-balance p {
+  margin: 0;
+}
+.ear-balance-progress {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ear-balance-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ear-balance-step {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+}
+@media (pointer: coarse) {
+  .ear-balance-step {
+    width: 48px;
+    height: 48px;
+  }
+}
+.ear-balance-slider {
+  /* 입력칸 공통 모양(바탕·안쪽 여백)이 붙으면 팝업 밖으로 삐져나가서 지운다 */
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  height: 32px;
+}
+.ear-balance-ends {
+  display: flex;
+  /* 양옆 버튼만큼 들여서 슬라이더 끝과 글자를 맞춘다 */
+  padding: 0 44px;
+  justify-content: space-between;
+}
+.ear-balance-result {
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 12px 0;
+}
+.ear-balance-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+@media (pointer: coarse) {
+  .ear-balance-actions button {
+    flex: 1;
+    min-height: 48px;
+  }
+}
+.settings-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+@media (pointer: coarse) {
+  .ear-balance-ends {
+    padding: 0 56px;
+  }
 }

@@ -1,0 +1,67 @@
+// 측정치 미리 받기(추천용 데이터) 상자: 한 종류(헤드폰/이어폰)의 AutoEQ 추천 측정치를 요약해 저장한다(summaryJob.ts).
+// 몇 개 받았는지, 받기 시작/이어 받기/멈추기. 비슷한 기기 찾기 팝업과 설정 화면이 함께 쓴다.
+// 받아 두면 비슷한 기기 찾기의 후보가 되고, 기기 목록 줄에 성향 태그가 보인다
+import { useLiveQuery } from 'dexie-react-hooks'
+import { categoryLabels } from '../labels'
+import { getMeta, listSummaries } from '../repo'
+import { goneKey, retryKey, startSummaryJob, stopSummaryJob, useSummaryJob } from '../summaryJob'
+import type { DeviceCategory } from '../types'
+import { useCatalogDevices } from '../useCatalogDevices'
+
+/** 추천용 데이터 받기 상자: 몇 개 받았는지, 받기 시작/이어 받기/멈추기 */
+export function CatalogDataBox({ category, saved: savedProp, title }: { category: DeviceCategory; saved?: number; title?: string }) {
+  // 저장된 개수를 넘겨받지 않았으면(설정 화면) 직접 센다
+  const counted = useLiveQuery(() => (savedProp === undefined ? listSummaries(category).then((l) => l.length) : 0), [category, savedProp])
+  const saved = savedProp ?? counted ?? 0
+  const job = useSummaryJob()
+  const { catalogDevices } = useCatalogDevices()
+  // 이 카테고리에서 측정치를 받을 수 있는 기기 수(AutoEQ + squig.link에만 있는 기기) = 받을 수 있는 최대 개수.
+  // squig.link 목록을 아직 받는 중이면 AutoEQ 기기만 세고, 다 받으면 늘어난다
+  // 파일이 없다고 확인된 것(받을 수 없음)은 전체에서 뺀다(진행 막대가 100%까지 차게)
+  const goneRecord = useLiveQuery(() => getMeta(goneKey(category)), [category])
+  const gone = goneRecord ? (JSON.parse(goneRecord.value) as string[]).length : 0
+  // 나중에 다시 시도할 것(앱을 다시 열어도 남아 있게 저장된 목록에서 센다)
+  const retryRecord = useLiveQuery(() => getMeta(retryKey(category)), [category])
+  const retryCount = retryRecord ? (JSON.parse(retryRecord.value) as string[]).length : 0
+  const listed = catalogDevices?.filter((d) => d.category === category && d.primary).length
+  const available = listed === undefined ? undefined : Math.max(0, listed - gone)
+  const running = job.status === 'running' || job.status === 'stopping'
+  const thisJob = job.category === category
+  const total = available ?? (thisJob ? job.total : 0)
+  const percent = total ? Math.min(100, Math.round((saved / total) * 100)) : 0
+
+  let message = ''
+  if (running && !thisJob && job.queued?.includes(category)) message = '[전체 받기] 차례를 기다리는 중이에요'
+  else if (running && !thisJob) message = '다른 종류를 받는 중이에요'
+  else if (running && job.retrying) message = `실패했던 것 다시 받는 중 ${percent}%`
+  else if (running) message = `받는 중 ${percent}% (닫아도 계속 받아요)`
+  else if (thisJob && job.status === 'error') message = `오류: ${job.error}`
+  else if (saved === 0) message = `받으면 ${categoryLabels[category]} 전체의 성향 태그가 보이고 비슷한 기기 찾기 후보가 돼요(처음 한 번, 수 분~수십 분)`
+  else if (retryCount > 0) message = `실패 ${retryCount}개 — 나중에 자동으로 다시 시도해요`
+  // 파일이 없어 받을 수 없는 것은 따로 알려 준다(다시 시도하지 않음)
+  if (gone > 0 && !running) message = [message, `받을 수 없음 ${gone}개(파일 없음)`].filter(Boolean).join(' · ')
+
+  return (
+    <div className="data-box">
+      <div className="row">
+        <span className="small">
+          {title ?? '추천 데이터'} <strong>{saved.toLocaleString()}</strong>
+          {total > 0 && ` / ${total.toLocaleString()}개`}
+        </span>
+        {running && thisJob ? (
+          <button type="button" className="small" onClick={stopSummaryJob} disabled={job.status === 'stopping'}>
+            {job.status === 'stopping' ? '멈추는 중…' : '멈추기'}
+          </button>
+        ) : (
+          (total === 0 || saved < total) && (
+            <button type="button" className="small primary" onClick={() => startSummaryJob(category)} disabled={running}>
+              {saved > 0 ? '이어 받기' : '받기 시작'}
+            </button>
+          )
+        )}
+      </div>
+      {total > 0 && <progress max={100} value={percent} />}
+      {message && <p className="muted small">{message}</p>}
+    </div>
+  )
+}

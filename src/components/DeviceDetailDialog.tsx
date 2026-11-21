@@ -33,6 +33,8 @@ import { ToggleButton } from './ToggleButton'
 import { Help } from './Help'
 import { PlusIcon } from './Icons'
 import { askConfirm } from '../confirm'
+import { SoundTagList } from './SoundTagList'
+import { useSoundTagger } from '../useSoundTagger'
 
 interface Props {
   /** 보여줄 기기 id. null이면 팝업이 닫힌 상태 */
@@ -65,6 +67,9 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
   const tab = useLiveQuery(() => (tabId ? getTab(tabId) : undefined), [tabId])
   const [uploadOpen, setUploadOpen] = useState(false)
   const [notice, setNotice] = useState('')
+
+  // 훅은 아래의 "없으면 그리지 않음"보다 먼저 불러야 한다(그릴 때마다 같은 순서로)
+  const tagger = useSoundTagger()
 
   if (!device || !measurements) return null
   const name = `${device.brand} ${device.model}`
@@ -121,6 +126,7 @@ function DeviceDetailBody({ deviceId, tabId, onDeleted }: BodyProps) {
                 <span className="muted">
                   {sourceLabel(m.source)} · {m.curve.length}포인트
                 </span>
+                <SoundTagList tags={tagger({ curve: m.curve, source: m.source }, device.category, m.rig)} />
               </span>
               <span className="measurement-actions">
                 <button className="small" onClick={() => handleToggle(m.id)} aria-pressed={selected} disabled={!tabId}>

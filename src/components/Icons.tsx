@@ -160,6 +160,15 @@ export function ChevronDownIcon({ size }: SmallIconProps) {
   )
 }
 
+/** 꺾쇠: 왼쪽(내 귀 균형 미세 조정) */
+export function ChevronLeftIcon({ size }: SmallIconProps) {
+  return (
+    <svg {...small(size)}>
+      <path d="m15 6-6 6 6 6" />
+    </svg>
+  )
+}
+
 /** 꺾쇠: 오른쪽(접힘·다음 화면) */
 export function ChevronRightIcon({ size }: SmallIconProps) {
   return (

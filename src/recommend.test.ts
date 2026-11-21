@@ -1,7 +1,7 @@
 // recommend.ts 테스트(추천 결과 특징 필터). 실행: npm test
 import { describe, expect, it } from 'vitest'
 import { EMPTY_FILTER } from './listFilter'
-import { candidateMatches, recommend, type Candidate, type Reference } from './recommend'
+import { candidateMatches, fromSummary, recommend, summarySource, type Candidate, type Reference } from './recommend'
 import { SUMMARY_GRID } from './similarity'
 import type { Device } from './types'
 
@@ -50,5 +50,19 @@ describe('recommend + 필터', () => {
     const wired = recommend(ref, list, 1, (c) => candidateMatches(c, { ...EMPTY_FILTER, connection: 'wired' }))
     expect(wired.map((r) => r.candidate.name)).toEqual(['Sennheiser HD 600'])
     expect(recommend(ref, list, 1).map((r) => r.candidate.name)).toEqual(['Unknown X1'])
+  })
+})
+
+describe('요약값 출처(squig.link 포함)', () => {
+  const base = { path: 'p', name: 'X', category: 'iem' as const, measurer: 'Site', rig: 'other' as const, values: [], updatedAt: 0 }
+  it('provider가 없으면 AutoEQ(예전 요약값), squig면 squig.link', () => {
+    expect(summarySource(base)).toBe('AutoEQ · Site')
+    expect(summarySource({ ...base, provider: 'squig' })).toBe('squig.link · Site')
+  })
+  it('squig 요약값 → 후보: 출처·파일 주소를 그대로 넘겨 비교에 추가할 때 받을 수 있게', () => {
+    const c = fromSummary({ ...base, provider: 'squig', files: ['a L.txt', 'a R.txt'] })
+    expect(c.source).toBe('squig.link · Site')
+    expect(c.catalog?.provider).toBe('squig')
+    expect(c.catalog?.files).toEqual(['a L.txt', 'a R.txt'])
   })
 })

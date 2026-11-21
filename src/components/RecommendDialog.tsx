@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { addFromCatalog } from '../catalog'
-import { categoryLabels, rigLabels, sourceLabel, specTags } from '../labels'
+import { rigLabels, sourceLabel, specTags } from '../labels'
 import { EMPTY_FILTER, type ListFilter } from '../listFilter'
 import {
   candidateMatches,
@@ -20,16 +20,17 @@ import {
 import { listDevices, listMeasurements, listSummaries, putTarget, setTabTarget, toggleSelection } from '../repo'
 import { PALETTE_SIZE } from '../selection'
 import { prepare, SUMMARY_GRID } from '../similarity'
-import { startSummaryJob, stopSummaryJob, useSummaryJob } from '../summaryJob'
 import { applyAdjustments, averageValues, NO_ADJUSTMENTS, toCurve, type Adjustments } from '../taste'
 import type { Device, DeviceCategory, Measurement, Target } from '../types'
 import { displaySpecs, specHint } from '../specHints'
-import { useCatalogDevices } from '../useCatalogDevices'
 import type { SelectedItem } from '../useCompareData'
 import { Modal } from './Modal'
+import { CatalogDataBox } from './CatalogDataBox'
 import { Select } from './Select'
 import { Help } from './Help'
 import { SpecFilterFields } from './ListFilterBar'
+import { SoundTagList } from './SoundTagList'
+import { useSoundTagger } from '../useSoundTagger'
 
 interface Props {
   open: boolean
@@ -330,6 +331,7 @@ function RecommendRow({
   onAdd: () => void
 }) {
   const { candidate } = r
+  const tagger = useSoundTagger()
   // 내 기기면 입력값(없으면 추정값), AutoEQ 후보면 추정값
   const { tags, estimated } = candidate.device
     ? displaySpecs(candidate.device)
@@ -352,6 +354,7 @@ function RecommendRow({
             {t}
           </span>
         ))}
+        <SoundTagList tags={tagger({ values: candidate.values, source: candidate.source }, candidate.category, candidate.rig)} />
         <div className="small">
           <span className="rec-score">
             {similarityLabel(r.distance)} ({r.distance.toFixed(1)}dB)
@@ -370,46 +373,3 @@ function RecommendRow({
   )
 }
 
-/** 추천용 데이터 받기 상자: 몇 개 받았는지, 받기 시작/이어 받기/멈추기 */
-function CatalogDataBox({ category, saved }: { category: DeviceCategory; saved: number }) {
-  const job = useSummaryJob()
-  const { catalogDevices } = useCatalogDevices()
-  // 이 카테고리에서 측정치가 공개된 AutoEQ 기기 수 = 받을 수 있는 최대 개수
-  // 추천용 데이터는 AutoEQ 측정치만 받는다(squig.link는 수가 너무 많아 제외)
-  const available = catalogDevices?.filter((d) => d.category === category && d.primary?.provider === 'autoeq').length
-  const running = job.status === 'running' || job.status === 'stopping'
-  const thisJob = job.category === category
-  const total = available ?? (thisJob ? job.total : 0)
-  const percent = total ? Math.min(100, Math.round((saved / total) * 100)) : 0
-
-  let message = ''
-  if (running && !thisJob) message = '다른 종류를 받는 중이에요'
-  else if (running) message = `받는 중 ${percent}%${job.failed ? ` · 실패 ${job.failed}개` : ''} (닫아도 계속 받아요)`
-  else if (thisJob && job.status === 'error') message = `오류: ${job.error}`
-  else if (saved === 0) message = `받으면 ${categoryLabels[category]} 전체가 후보가 돼요(처음 한 번, 몇 분)`
-  else if (thisJob && job.failed) message = `실패 ${job.failed}개 — "이어 받기"로 다시 시도`
-
-  return (
-    <div className="data-box">
-      <div className="row">
-        <span className="small">
-          추천 데이터 <strong>{saved.toLocaleString()}</strong>
-          {total > 0 && ` / ${total.toLocaleString()}개`}
-        </span>
-        {running && thisJob ? (
-          <button type="button" className="small" onClick={stopSummaryJob} disabled={job.status === 'stopping'}>
-            {job.status === 'stopping' ? '멈추는 중…' : '멈추기'}
-          </button>
-        ) : (
-          (total === 0 || saved < total) && (
-            <button type="button" className="small primary" onClick={() => startSummaryJob(category)} disabled={running}>
-              {saved > 0 ? '이어 받기' : '받기 시작'}
-            </button>
-          )
-        )}
-      </div>
-      {total > 0 && <progress max={100} value={percent} />}
-      {message && <p className="muted small">{message}</p>}
-    </div>
-  )
-}

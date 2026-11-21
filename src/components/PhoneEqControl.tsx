@@ -5,6 +5,7 @@
 // - PhoneEqControl: 편집 칸. [폰에 적용] 켜고 끄기. 걸어 둔 EQ를 고치면 0.3초 멈춘 뒤 폰에도 자동으로 다시 건다(끊김 없음)
 import { useEffect, useState } from 'react'
 import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
+import { setEarEqOn, useEarProfile } from '../earEqStore'
 import {
   applyPreset,
   isEarOnly,
@@ -39,11 +40,19 @@ function useAction() {
 export function PhoneEqStatusBar() {
   const status = useEqStatus()
   const balance = useEarBalance()
+  const earProfile = useEarProfile()
   const { busy, error, run } = useAction()
   if (getEqEngine().kind === 'none' || !status?.on) return null
   // 균형만 걸린 상태면 "끄기" = 균형 끄기(EQ 끄기는 균형만 남기므로 그대로면 아무 일도 안 일어남)
   const balanceOnly = isEarOnly(status)
-  const off = balanceOnly ? () => setEarBalanceOn(false).then(() => ({})) : turnOffPhoneEq
+  // "내 귀 보정"만 걸린 상태면 [끄기] = 균형·보정 둘 다 끄기
+  const off = balanceOnly
+    ? async () => {
+        await setEarBalanceOn(false)
+        await setEarEqOn(false)
+        return {}
+      }
+    : turnOffPhoneEq
   return (
     <div className="phone-eq-status small">
       <span>
@@ -52,6 +61,7 @@ export function PhoneEqStatusBar() {
         {!balanceOnly && balance?.on && balance.db !== 0 && (
           <span className="muted"> · 균형 {balance.db > 0 ? '왼쪽' : '오른쪽'} −{Math.abs(balance.db)}dB</span>
         )}
+        {!balanceOnly && earProfile?.on && <span className="muted"> · 내 귀 보정</span>}
       </span>
       <button type="button" onClick={() => run(off)} disabled={busy}>
         끄기

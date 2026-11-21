@@ -2986,3 +2986,59 @@ button.select-option:active {
     padding: 0 56px;
   }
 }
+
+/* ---- 내 귀 보정(EarEqDialog.tsx·EarEqResult.tsx) ---- */
+.ear-eq-device {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ear-eq-hear {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: var(--radius-xl);
+  touch-action: manipulation;
+  user-select: none;
+}
+.ear-eq-hear.flash {
+  filter: brightness(0.8);
+}
+@media (pointer: coarse) {
+  .ear-eq-hear {
+    min-height: 40vh;
+  }
+}
+.ear-eq-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ear-eq-chart {
+  height: 180px;
+}
+.ear-eq-chart.small-chart {
+  height: 140px;
+}
+.ear-eq-strength {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ear-eq-legend {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+}
+.ear-eq-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ear-eq-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}

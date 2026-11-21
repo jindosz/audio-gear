@@ -21,6 +21,10 @@ import { setEarBalanceOn, useEarBalance } from '../earBalanceStore'
 import { balanceLabel } from '../earBalance'
 import { useEqStatus } from '../eqEngine'
 import { EarBalanceDialog } from './EarBalanceDialog'
+import { EarEqDialog } from './EarEqDialog'
+import { EarEqResult } from './EarEqResult'
+import { saveEarProfile, setEarEqOn, useEarProfile } from '../earEqStore'
+import { showToast } from '../toast'
 
 interface Props {
   open: boolean
@@ -34,6 +38,7 @@ export function SettingsDialog({ open, onClose }: Props) {
         <ThemeRow />
         <SoundTagsRow />
         <EarBalanceRow />
+        <EarEqRow />
         <BackupGroup />
         {/* 측정치 미리 받기: 받아 두면 기기 목록에 성향 태그가 보이고 비슷한 기기 찾기 후보가 된다 */}
         <section className="settings-group">
@@ -347,6 +352,60 @@ function EarBalanceRow() {
         </button>
       </span>
       <EarBalanceDialog open={testing} onClose={() => setTesting(false)} />
+    </div>
+  )
+}
+
+/**
+ * 내 귀 보정: 잰 날짜·기기, 켜고 끄기(안드로이드 앱), [결과](그래프·세기), [재기].
+ * 알림의 "끄기"로 폰 효과를 다 껐으면 설정은 켜짐이어도 "꺼짐"으로 보이고, 누르면 다시 건다
+ */
+function EarEqRow() {
+  const profile = useEarProfile()
+  const status = useEqStatus()
+  const [testing, setTesting] = useState(false)
+  const [viewing, setViewing] = useState(false)
+  const android = isAndroidApp()
+  const on = !!profile?.on && !!status?.on
+  const when = profile ? new Date(profile.measuredAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : ''
+  return (
+    <div className="settings-row">
+      <span>
+        내 귀 보정
+        <span className="muted small">
+          {' · '}
+          {profile ? `${when}${profile.device ? ` · ${profile.device.label}` : ''}` : '아직 안 쟀어요'}
+          {profile && !android && ' (안드로이드 앱에서 적용돼요)'}
+        </span>
+      </span>
+      <span className="settings-row-actions">
+        {profile && android && (
+          <ToggleButton small on={on} onChange={(next) => void setEarEqOn(next)}>
+            {on ? '켜짐' : '꺼짐'}
+          </ToggleButton>
+        )}
+        {profile && (
+          <button type="button" className="small" onClick={() => setViewing(true)}>
+            결과
+          </button>
+        )}
+        <button type="button" className="small" onClick={() => setTesting(true)}>
+          재기
+        </button>
+      </span>
+      <EarEqDialog open={testing} onClose={() => setTesting(false)} />
+      <Modal open={viewing} onClose={() => setViewing(false)} title="내 귀 보정 결과">
+        {profile && (
+          <EarEqResult
+            profile={profile}
+            saveLabel="저장"
+            onSave={(p) => {
+              void saveEarProfile(p).then(() => showToast('저장했어요'))
+              setViewing(false)
+            }}
+          />
+        )}
+      </Modal>
     </div>
   )
 }

@@ -129,7 +129,7 @@ function BackupGroup() {
     if (hasEar) {
       const answer = await askChoice({
         title: '내 귀 설정',
-        message: '내 귀 균형·보정 결과도 백업에 넣을까요? 다른 사람에게 주는 파일이면 빼는 게 좋아요.',
+        message: '내 귀 균형·보정 결과도 백업에 넣을까요?',
         ok: '넣기',
         cancel: '빼기',
       })

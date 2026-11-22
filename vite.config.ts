@@ -21,8 +21,8 @@ export default defineConfig(({ command, isPreview, mode }) => ({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'icon.svg'],
         manifest: {
-          name: 'audio-gear',
-          short_name: 'audio-gear',
+          name: 'Klang',
+          short_name: 'Klang',
           description: '헤드폰·이어폰 주파수 응답(FR) 비교',
           lang: 'ko',
           theme_color: '#2a78d6',

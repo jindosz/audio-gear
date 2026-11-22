@@ -2,6 +2,8 @@
 
 헤드폰·이어폰을 측정치(FR 곡선)와 성향 정보와 함께 관리하고, 여러 기기를 그래프로 겹쳐 비교하는 개인용 웹앱.
 
+**앱 이름: Klang**(2026-11-22 "audio-gear"에서 바꿈. 바뀐 곳: 앱 이름(`capacitor.config.ts`·`android/.../strings.xml`), 웹 제목·PWA 이름(`index.html`·`vite.config.ts`), 설정 맨 아래 버전 줄, 백업 파일 이름 `klang-backup-날짜.json`, APO 내보내기 파일 `Klang EQ 이름.txt`, README. **그대로 둔 것(바꾸면 깨짐)**: appId `io.github.jindosz.audiogear`(바꾸면 다른 앱이 되어 덮어쓰기 업데이트 불가), IndexedDB 이름·localStorage 키 `audio-gear`(데이터가 사라짐), APK 파일 이름 `audio-gear-0.1.N.apk`(자동 업데이트가 이 이름으로 찾음), 백업 안의 `app: 'audio-gear'`(예전 백업 호환), 저장소·사이트 주소)
+
 ## 작업 방식 (중요)
 
 - 사용자는 개발 입문 단계의 개발자 지망생이다. 예전에 Flutter로 앱 하나를 만들어 본 경험이 있지만 기억이 희미하다.

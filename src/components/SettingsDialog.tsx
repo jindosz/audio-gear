@@ -76,7 +76,7 @@ export function SettingsDialog({ open, onClose }: Props) {
           </button>
         )}
         {/* 지금 쓰는 앱이 몇 번째 빌드인지(업데이트가 됐는지 확인용) */}
-        <p className="settings-version">audio-gear · {buildLabel()}</p>
+        <p className="settings-version">Klang · {buildLabel()}</p>
       </div>
     </Modal>
   )

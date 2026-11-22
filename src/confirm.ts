@@ -11,10 +11,13 @@ export interface ConfirmOptions {
   ok?: string
   /** 지우기처럼 되돌릴 수 없는 일이면 확인 버튼을 빨갛게 */
   danger?: boolean
+  /** 왼쪽 버튼 글자. 없으면 "취소" */
+  cancel?: string
 }
 
 export interface ConfirmRequest extends ConfirmOptions {
-  resolve: (ok: boolean) => void
+  /** true = 오른쪽(확인), false = 왼쪽(취소) 버튼, null = 고르지 않고 닫음(✕·뒤로 가기·바깥 누르기) */
+  resolve: (answer: boolean | null) => void
 }
 
 // 화면 밖(일반 함수)에서 팝업을 열 수 있게, 지금 화면에 있는 ConfirmHost의 "열기 함수"를 여기에 둔다
@@ -26,6 +29,14 @@ export function setConfirmHandler(handler: ((req: ConfirmRequest) => void) | nul
 }
 
 export function askConfirm(options: ConfirmOptions): Promise<boolean> {
+  return askChoice(options).then((answer) => answer === true)
+}
+
+/**
+ * 두 가지 중 고르기(예: 백업에 내 귀 설정을 [넣기]/[빼기]). 닫기와 왼쪽 버튼을 구분해야 할 때 쓴다:
+ * true = 오른쪽 버튼(ok), false = 왼쪽 버튼(cancel), null = 고르지 않고 닫음(하던 일을 그만둠)
+ */
+export function askChoice(options: ConfirmOptions): Promise<boolean | null> {
   return new Promise((resolve) => {
     if (show) show({ ...options, resolve })
     else resolve(window.confirm(options.message)) // 혹시 팝업 자리가 없으면 예전 방식으로

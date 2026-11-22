@@ -15,7 +15,7 @@ import { checkForUpdate, PREVIEW_UPDATES_KEY, previewUpdatesOn } from '../appUpd
 import { buildLabel } from '../buildInfo'
 import { ChevronRightIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
-import { askConfirm } from '../confirm'
+import { askChoice, askConfirm } from '../confirm'
 import { ToggleButton } from './ToggleButton'
 import { writePref } from '../localPrefs'
 import { getEarBalance, restoreEarBalance, setEarBalanceOn, useEarBalance } from '../earBalanceStore'
@@ -25,7 +25,6 @@ import { EarBalanceDialog } from './EarBalanceDialog'
 import { EarEqDialog } from './EarEqDialog'
 import { EarEqResult } from './EarEqResult'
 import { getEarProfile, saveEarProfile, setEarEqOn, useEarProfile } from '../earEqStore'
-import { readPref } from '../localPrefs'
 import { showToast } from '../toast'
 
 interface Props {
@@ -112,26 +111,33 @@ function ThemeRow() {
   )
 }
 
-/** 백업에 내 귀 설정을 넣을지(이 기기에 기억) */
-const EXPORT_EAR_KEY = 'backup.ear'
-
 function BackupGroup() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   // 가져올 파일을 읽어 검사까지 마친 내용. 사용자가 방식을 고르고 확인하면 DB에 넣는다
   const [pending, setPending] = useState<{ fileName: string; data: BackupData } | null>(null)
   const [mode, setMode] = useState<'merge' | 'replace'>('merge')
-  // 내 귀 설정(균형·보정): 내보낼 때 넣을지(이 기기에 기억, 기본 안 넣음), 가져올 때 받을지(기본 받음)
+  // 내 귀 설정(균형·보정): 내보낼 때 그때마다 묻고(있을 때만), 가져올 때 받을지(기본 받음)
   const earBalance = useEarBalance()
   const earProfile = useEarProfile()
   const hasEar = !!earBalance || !!earProfile
-  const [exportEar, setExportEar] = useState(() => readPref<boolean>(EXPORT_EAR_KEY, false))
   const [importEar, setImportEar] = useState(true)
 
   async function handleExport() {
     setError('')
+    let withEar = false
+    if (hasEar) {
+      const answer = await askChoice({
+        title: '내 귀 설정',
+        message: '내 귀 균형·보정 결과도 백업에 넣을까요? 다른 사람에게 주는 파일이면 빼는 게 좋아요.',
+        ok: '넣기',
+        cancel: '빼기',
+      })
+      if (answer === null) return // 고르지 않고 닫음 = 내보내기 그만
+      withEar = answer
+    }
     const data = await exportAll()
-    if (exportEar && hasEar) data.ear = { balance: getEarBalance(), profile: getEarProfile() }
+    if (withEar) data.ear = { balance: getEarBalance(), profile: getEarProfile() }
     try {
       // 브라우저는 파일 내려받기, 안드로이드 앱은 공유 창(platform.ts)
       const result = await saveTextFile(backupFileName(), JSON.stringify(data), 'application/json')
@@ -201,21 +207,6 @@ function BackupGroup() {
         <ChevronRightIcon />
         <input type="file" accept=".json,application/json" onChange={handleFile} hidden />
       </label>
-      {hasEar && (
-        <div className="settings-row">
-          <span>백업에 내 귀 설정 넣기</span>
-          <ToggleButton
-            small
-            on={exportEar}
-            onChange={(next) => {
-              setExportEar(next)
-              writePref(EXPORT_EAR_KEY, next)
-            }}
-          >
-            {exportEar ? '넣음' : '안 넣음'}
-          </ToggleButton>
-        </div>
-      )}
 
       {pending && summary && (
         <div className="import-box">

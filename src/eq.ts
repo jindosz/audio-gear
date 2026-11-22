@@ -65,10 +65,16 @@ function weight(f: number): number {
   return 1 - (f - 8000) / 4000
 }
 
-/** 목표 EQ 곡선 만들기: 들어볼 기기 − 지금 기기, 부스트 제한, 고음은 점점 0으로 */
-export function targetEq(current: FrCurve, wish: FrCurve, grid: number[] = FINE_GRID): Values {
-  const a = prepare(current, grid, 3)
-  const b = prepare(wish, grid, 3)
+/** 폰에 곡선 그대로 걸 때의 스무딩(1/6옥타브): 필터 10개로는 못 따라가는 좁은 모양까지 따라간다 */
+export const EXACT_SMOOTHING = 6
+
+/**
+ * 목표 EQ 곡선 만들기: 들어볼 기기 − 지금 기기, 부스트 제한, 고음은 점점 0으로.
+ * smoothing: 1/n옥타브의 n. 기본 3(필터로 맞출 큰 음색), 폰에 곡선 그대로 걸 때는 EXACT_SMOOTHING
+ */
+export function targetEq(current: FrCurve, wish: FrCurve, grid: number[] = FINE_GRID, smoothing = 3): Values {
+  const a = prepare(current, grid, smoothing)
+  const b = prepare(wish, grid, smoothing)
   return grid.map((f, i) => {
     const x = a[i]
     const y = b[i]

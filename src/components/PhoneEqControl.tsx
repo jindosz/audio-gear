@@ -15,7 +15,7 @@ import {
   useAppliedEq,
   useEqStatus,
 } from '../eqEngine'
-import type { EqSettings } from '../eqExport'
+import type { PhoneEqSettings } from '../eqDevice'
 import { ToggleButton } from './ToggleButton'
 
 /** 버튼을 누르는 동안의 상태와 오류를 함께 다룬다 */
@@ -74,7 +74,7 @@ export function PhoneEqStatusBar() {
 interface Props {
   presetId: string
   name: string
-  eq: EqSettings
+  eq: PhoneEqSettings
 }
 
 /** 고친 뒤 이만큼 멈추면 폰에 다시 건다(EQ 자동 저장과 같은 간격) */

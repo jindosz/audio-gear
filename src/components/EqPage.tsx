@@ -4,7 +4,8 @@
 // - 그래프에서 "원래 → EQ 적용 후 → 목표"를 바로 비교하고, 다 만든 EQ는 기기 전체 EQ 앱에 넣는다
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { autoPreamp, fitPeq, targetEq, totalResponse } from '../eq'
+import { autoPreamp, EXACT_SMOOTHING, fitPeq, targetEq, totalResponse } from '../eq'
+import { isAndroidApp } from '../platform'
 import { categoryLabels, rigLabels, sourceLabel } from '../labels'
 import { EQ_ACTIVE_KEY, readPref, writePref } from '../localPrefs'
 import {
@@ -196,7 +197,7 @@ export function EqPage() {
   )
 }
 
-type Draft = Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'>
+type Draft = Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters' | 'curveMode'>
 
 /** EQ 하나 편집. 고친 내용은 잠깐(0.3초) 멈췄을 때 DB에 저장한다(슬라이더를 끄는 동안 매번 저장하지 않게) */
 function EqEditor({
@@ -221,6 +222,7 @@ function EqEditor({
     measurementId: preset.measurementId,
     goal: preset.goal,
     filters: preset.filters,
+    curveMode: preset.curveMode,
   }))
   const [loadingTarget, setLoadingTarget] = useState(false)
   const [error, setError] = useState('')
@@ -272,6 +274,15 @@ function EqEditor({
   const after = before?.map((v, i) => (v === null ? null : v + response[i])) ?? null
   const goalCurve = goal ? display(goal.curve) : null
   const wantedEq = goal && current ? targetEq(current.measurement.curve, goal.curve) : null
+  // 폰에 걸 EQ: 자동 계산 직후(curveMode)면 목표 곡선 그대로(1/6옥타브), 아니면 밴드
+  const phoneEq =
+    draft.curveMode && goal && current
+      ? {
+          filters,
+          preamp,
+          curve: targetEq(current.measurement.curve, goal.curve, FINE_GRID, EXACT_SMOOTHING).map((v) => v ?? 0),
+        }
+      : { filters, preamp }
 
   async function handleGoal(value: string) {
     setError('')
@@ -287,7 +298,8 @@ function EqEditor({
         setLoadingTarget(false)
       }
     }
-    update({ goal: value })
+    // 목표가 바뀌면 밴드는 예전 목표 기준이라 곡선 그대로 걸기를 끈다(다시 자동 계산하면 켜짐)
+    update({ goal: value, curveMode: false })
   }
 
   async function handleAuto() {
@@ -299,7 +311,8 @@ function EqEditor({
       return
     // 이름을 아직 안 바꿨으면("새 EQ 3") 무엇을 위한 EQ인지 알 수 있게 이름도 붙여 준다
     const name = /^새 EQ \d+$/.test(draft.name) ? `${current.name} → ${goal.shortName}` : draft.name
-    update({ filters: fitPeq(wantedEq).filters, name })
+    // 자동 계산 직후엔 폰에 목표 곡선을 그대로 건다(밴드를 손대면 밴드로 돌아감)
+    update({ filters: fitPeq(wantedEq).filters, name, curveMode: true })
   }
 
   // 목표와 남은 차이(dB, 20Hz~12kHz 평균 제곱근). 자동 계산이 따라가는 범위와 같다
@@ -330,13 +343,21 @@ function EqEditor({
       </div>
 
       {/* 안드로이드 앱에서만 보임: 이 EQ를 폰 전체 소리에 걸기 */}
-      <PhoneEqControl presetId={preset.id} name={draft.name} eq={{ filters, preamp }} />
+      <PhoneEqControl presetId={preset.id} name={draft.name} eq={phoneEq} />
+      {isAndroidApp() && draft.curveMode && wantedEq && (
+        <p className="muted small" title="폰 EQ는 127밴드라 필터 10개로 바꾸지 않고 목표 곡선을 1/6옥타브까지 그대로 걸어요. 밴드를 고치면 밴드로 걸어요. PC·Wavelet 내보내기는 밴드를 써요">
+          폰에는 목표 곡선을 그대로 걸어요(밴드를 고치면 밴드로)
+        </p>
+      )}
 
       <div className="row eq-pickers">
         <div className="eq-pick-group">
           <label>
             지금 쓰는 기기{' '}
-            <Select value={current?.measurement.id ?? ''} onChange={(e) => update({ measurementId: e.target.value })}>
+            <Select
+              value={current?.measurement.id ?? ''}
+              onChange={(e) => update({ measurementId: e.target.value, curveMode: false })}
+            >
               {!current && (
                 <option value="" disabled>
                   [다른 기기]로 찾아 주세요
@@ -426,8 +447,8 @@ function EqEditor({
         preferCategory={category}
         preferredSource={knownSource(findFor === 'goal' ? current?.measurement.source : goal?.source)}
         onPicked={(id) => {
-          if (findFor === 'goal') update({ goal: `m:${id}` })
-          else update({ measurementId: id })
+          if (findFor === 'goal') update({ goal: `m:${id}`, curveMode: false })
+          else update({ measurementId: id, curveMode: false })
           setFindFor(null)
         }}
       />
@@ -527,7 +548,7 @@ function EqEditor({
         </span>
       </div>
 
-      <EqBandTable filters={filters} onChange={(f) => update({ filters: f })} />
+      <EqBandTable filters={filters} onChange={(f) => update({ filters: f, curveMode: false })} />
 
       {filters.length > 0 && <EqExport eq={{ filters, preamp }} name={draft.name} />}
     </>

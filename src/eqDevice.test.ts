@@ -1,6 +1,7 @@
 // eqDevice.ts 테스트(PEQ → 안드로이드 127밴드). 실행: npm test
 import { describe, expect, it } from 'vitest'
 import { DEVICE_EQ_FREQS, toDeviceEq } from './eqDevice'
+import { FINE_GRID } from './similarity'
 
 const nearest = (hz: number) =>
   DEVICE_EQ_FREQS.reduce((best, f, i) => (Math.abs(Math.log(f / hz)) < Math.abs(Math.log(DEVICE_EQ_FREQS[best] / hz)) ? i : best), 0)
@@ -56,6 +57,20 @@ describe('toDeviceEq', () => {
     const d = toDeviceEq({ filters: [{ freq: 1000, gain: 20, q: 1 }], preamp: -6 }, { left: six, right: six })
     expect(d.gains[nearest(1000)]).toBe(12)
     expect(d.inputGain).toBe(-12)
+  })
+
+  it('곡선 그대로(curve): 필터 대신 FINE_GRID 곡선을 127개 주파수로 옮기고, 입력 게인은 가장 큰 부스트만큼 낮춤', () => {
+    // 1kHz 근처만 +4, 나머지 0인 곡선
+    const curve = FINE_GRID.map((f) => (Math.abs(Math.log2(f / 1000)) < 0.1 ? 4 : 0))
+    const d = toDeviceEq({ filters: [{ freq: 100, gain: 6, q: 1 }], preamp: 0, curve })
+    expect(d.gains[nearest(1000)]).toBeCloseTo(4, 1)
+    expect(d.gains[nearest(100)]).toBeCloseTo(0, 6) // 필터는 무시
+    expect(d.inputGain).toBeCloseTo(-4, 1)
+  })
+
+  it('곡선 그대로도 +6/−24dB로 자른다', () => {
+    const curve = FINE_GRID.map(() => 10)
+    expect(Math.max(...toDeviceEq({ filters: [], preamp: 0, curve }).gains)).toBe(6)
   })
 
   it('입력 게인은 올리지 않는다(최대 0dB)', () => {

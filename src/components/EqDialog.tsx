@@ -4,7 +4,8 @@
 // 만든 EQ는 EQ 목록(EQ 화면)에 저장해 두고 나중에 다시 고치거나 내보낼 수 있다.
 import { lazy, Suspense, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { fitPeq, matchError, MAX_BOOST, targetEq } from '../eq'
+import { EXACT_SMOOTHING, fitPeq, matchError, MAX_BOOST, targetEq } from '../eq'
+import { isAndroidApp } from '../platform'
 import { addCatalogMeasurement, catalogCurvesFor, catalogSourceLabel } from '../catalog'
 import { pickCommonSource } from '../sameMeasurer'
 import { showToast } from '../toast'
@@ -116,6 +117,10 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
   // 들어볼 기기와 실제로 남은 차이(안전 제한 등으로 못 따라간 부분 포함). EQ 전과 비교해 얼마나 가까워졌는지 보여준다
   const before = matchError(current.curve, wish.curve, [])
   const after = matchError(current.curve, wish.curve, eq.response)
+  // 안드로이드 앱: 폰 EQ는 127밴드라 필터로 바꾸지 않고 목표 곡선을 그대로(1/6옥타브까지) 건다
+  const android = isAndroidApp()
+  const exactCurve = targetEq(current.curve, wish.curve, FINE_GRID, EXACT_SMOOTHING).map((v) => v ?? 0)
+  const afterExact = matchError(current.curve, wish.curve, exactCurve)
   const sameSource = !!current.source && current.source === wish.source
   const pair = `${current.key}|${wish.key}`
 
@@ -171,7 +176,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
         setSaved({ pair, id: same.id, name: same.name, existing: true })
         return { id: same.id, name: same.name }
       }
-      const id = await addEqPreset({ name, measurementId: current.key, goal: wish.goal, filters: eq.filters })
+      const id = await addEqPreset({ name, measurementId: current.key, goal: wish.goal, filters: eq.filters, curveMode: true })
       setSaved({ pair, id, name })
       return { id, name }
     } catch (err) {
@@ -186,7 +191,7 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
     const preset = await handleSave()
     if (!preset) return setPhoneMessage('')
     try {
-      const result = await applyPreset(preset.id, preset.name, eq)
+      const result = await applyPreset(preset.id, preset.name, { ...eq, curve: exactCurve })
       setPhoneMessage(result.on ? `폰에 적용했습니다: ${preset.name}` : `적용하지 못했습니다${result.error ? `: ${result.error}` : ''}`)
     } catch (err) {
       setPhoneMessage(`적용하지 못했습니다: ${err instanceof Error ? err.message : String(err)}`)
@@ -237,8 +242,11 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
       )}
 
       <p className="eq-match" title="300Hz~8kHz, 전체 음량 차이는 빼고 모양만 비교. 안전 제한(+6/−12dB)·고음 줄임 때문에 못 따라간 부분까지 포함">
-        들어볼 소리와 차이 <strong>{after.toFixed(1)}dB</strong>
-        <span className="muted small"> (EQ 전 {before.toFixed(1)}dB)</span>
+        들어볼 소리와 차이 <strong>{(android ? afterExact : after).toFixed(1)}dB</strong>
+        <span className="muted small">
+          {' '}
+          (EQ 전 {before.toFixed(1)}dB{android && ` · 폰에는 곡선 그대로, 내보내기 필터는 ${after.toFixed(1)}dB`})
+        </span>
       </p>
       <p className="small muted">
         필터 {eq.filters.length}개 · 프리앰프 {eq.preamp.toFixed(1)}dB · 필터 오차 {eq.error.toFixed(1)}dB

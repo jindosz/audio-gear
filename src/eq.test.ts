@@ -27,3 +27,18 @@ describe('matchError: EQ를 건 뒤 들어볼 기기와 남은 차이', () => {
     expect(matchError(flat, bump(14000, 6), FINE_GRID.map(() => 0))).toBeLessThan(0.3)
   })
 })
+
+describe('targetEq 스무딩', () => {
+  it('1/6옥타브(곡선 그대로 걸기)는 1/3옥타브보다 좁은 피크를 더 따라감', () => {
+    const flat = [
+      { freq: 20, db: 0 },
+      { freq: 20000, db: 0 },
+    ]
+    const narrow = Array.from({ length: 400 }, (_, i) => {
+      const freq = 20 * 1000 ** (i / 399)
+      return { freq, db: 6 * Math.exp(-((Math.log2(freq / 3000)) ** 2) * 60) }
+    })
+    const peak = (v: (number | null)[]) => Math.max(...v.map((x) => x ?? 0))
+    expect(peak(targetEq(flat, narrow, FINE_GRID, 6))).toBeGreaterThan(peak(targetEq(flat, narrow)) + 0.5)
+  })
+})

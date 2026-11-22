@@ -140,6 +140,11 @@ export interface EqPreset {
   filters: PeakFilter[]
   /** 즐겨찾기(목록 맨 위에 고정). 예전 데이터엔 없음 */
   favorite?: boolean
+  /**
+   * 폰에 목표 곡선을 그대로 걸지(자동 계산한 뒤 밴드를 손대지 않았을 때 true). 밴드를 고치면 false로 돌아가 밴드를 건다.
+   * PC·Wavelet 내보내기는 늘 밴드. 예전 데이터엔 없음(= 밴드)
+   */
+  curveMode?: boolean
   createdAt: number
   updatedAt: number
 }

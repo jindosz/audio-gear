@@ -3270,3 +3270,32 @@ button.select-option:active {
 .chart-legend i.dashed {
   background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px);
 }
+
+/* EQ 목록 줄의 지우기(휴지통) 버튼: 별처럼 바탕 없이 흐리게, PC는 줄에 마우스를 올렸을 때만 보임 */
+.row-delete-btn {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+@media (hover: hover) {
+  .row-delete-btn {
+    visibility: hidden;
+  }
+  .eq-row:hover .row-delete-btn,
+  .row-delete-btn:focus-visible {
+    visibility: visible;
+  }
+  .row-delete-btn:hover {
+    color: var(--danger);
+  }
+}
+@media (pointer: coarse) {
+  .row-delete-btn {
+    min-width: 44px;
+    min-height: 40px;
+  }
+}

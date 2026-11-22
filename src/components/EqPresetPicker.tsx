@@ -5,7 +5,7 @@ import { useAppliedEq, useEqStatus } from '../eqEngine'
 import { groupPresets } from '../eqPresetList'
 import { setEqPresetFavorite } from '../repo'
 import type { EqPreset } from '../types'
-import { PlusIcon, StarIcon } from './Icons'
+import { PlusIcon, StarIcon, TrashIcon } from './Icons'
 
 interface Props {
   presets: EqPreset[]
@@ -15,9 +15,11 @@ interface Props {
   onSelect: (id: string) => void
   onNew: () => void
   newDisabled: boolean
+  /** 목록에서 바로 지우기(확인은 받는 쪽에서) */
+  onDelete: (preset: EqPreset) => void
 }
 
-export function EqPresetPicker({ presets, deviceNameOf, activeId, onSelect, onNew, newDisabled }: Props) {
+export function EqPresetPicker({ presets, deviceNameOf, activeId, onSelect, onNew, newDisabled, onDelete }: Props) {
   const [query, setQuery] = useState('')
   const applied = useAppliedEq(useEqStatus())
   const groups = groupPresets(presets, deviceNameOf, query)
@@ -60,6 +62,15 @@ export function EqPresetPicker({ presets, deviceNameOf, activeId, onSelect, onNe
                   aria-label={p.favorite ? `${p.name} 즐겨찾기 해제` : `${p.name} 즐겨찾기`}
                 >
                   <StarIcon filled={!!p.favorite} />
+                </button>
+                <button
+                  type="button"
+                  className="row-delete-btn"
+                  onClick={() => onDelete(p)}
+                  title="EQ 삭제"
+                  aria-label={`${p.name} 삭제`}
+                >
+                  <TrashIcon />
                 </button>
               </li>
             ))}

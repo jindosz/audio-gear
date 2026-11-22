@@ -125,7 +125,8 @@ export function EqPage() {
     if (!(await askConfirm({ title: 'EQ 삭제', message: `"${preset.name}"을(를) 삭제할까요?`, ok: '삭제', danger: true }))) return
     const rest = presets!.filter((p) => p.id !== preset.id)
     await deleteEqPreset(preset.id)
-    setActiveId(rest[0]?.id ?? '')
+    // 보고 있던 EQ를 지웠을 때만 다른 EQ로 옮긴다(목록에서 다른 EQ를 지웠으면 그대로)
+    if (preset.id === active?.id) setActiveId(rest[0]?.id ?? '')
   }
 
   return (
@@ -152,6 +153,7 @@ export function EqPage() {
             onSelect={setActiveId}
             onNew={handleNew}
             newDisabled={false}
+            onDelete={(p) => void handleDelete(p)}
           />
         </aside>
 
@@ -174,6 +176,7 @@ export function EqPage() {
               setPickerOpen(false)
             }}
             newDisabled={false}
+            onDelete={(p) => void handleDelete(p)}
           />
         </Modal>
 

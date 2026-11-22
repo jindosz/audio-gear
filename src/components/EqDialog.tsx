@@ -16,6 +16,7 @@ import { findSamePreset } from '../eqPresetList'
 import { FINE_GRID } from '../similarity'
 import type { DeviceCategory, FrCurve, Target } from '../types'
 import type { SelectedItem } from '../useCompareData'
+import { ChartLegend } from './ChartLegend'
 import { EqExport } from './EqExport'
 import { Select } from './Select'
 import { Help } from './Help'
@@ -258,13 +259,22 @@ function EqBody({ selected, target, category, onOpenPreset }: Omit<Props, 'open'
             grid={FINE_GRID}
             series={[
               { label: '목표 EQ', colorIndex: null, values: eq.target },
-              { label: '만든 EQ', colorIndex: 0, values: eq.response },
+              // 앱: 폰에는 목표 곡선을 그대로 걸어서 그 곡선을 따로 보여주고, 필터는 내보내기용이라고 적는다
+              ...(android ? [{ label: '폰에 거는 EQ', colorIndex: 2, values: exactCurve }] : []),
+              { label: android ? '필터(내보내기)' : '만든 EQ', colorIndex: 0, values: eq.response },
             ]}
             yTitle="EQ (dB)"
             signed
           />
         </Suspense>
       </div>
+      <ChartLegend
+        items={[
+          { label: '목표 EQ', colorIndex: null },
+          ...(android ? [{ label: '폰에 거는 EQ', colorIndex: 2 }] : []),
+          { label: android ? '필터(내보내기)' : '만든 EQ', colorIndex: 0 },
+        ]}
+      />
 
       {/* 할 일 버튼을 먼저: 폰에 적용(안드로이드 앱) · EQ 목록에 저장 */}
       <div className="row">

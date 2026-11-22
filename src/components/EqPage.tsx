@@ -22,6 +22,7 @@ import { seriesColor } from '../selection'
 import { FINE_GRID, prepare } from '../similarity'
 import { BUILTIN_TARGETS, ensureTarget } from '../targets'
 import type { Device, DeviceCategory, EqPreset, FrCurve, Measurement, Target } from '../types'
+import { ChartLegend } from './ChartLegend'
 import { EqBandTable } from './EqBandTable'
 import { Select } from './Select'
 import { EqExport } from './EqExport'
@@ -283,6 +284,9 @@ function EqEditor({
           curve: targetEq(current.measurement.curve, goal.curve, FINE_GRID, EXACT_SMOOTHING).map((v) => v ?? 0),
         }
       : { filters, preamp }
+  // 앱에서 곡선 그대로 걸 때는 그래프에도 폰에 실제로 거는 곡선과 그 결과를 그린다(웹은 내보내기라 밴드 그대로)
+  const phoneCurve = isAndroidApp() && 'curve' in phoneEq ? phoneEq.curve : null
+  const phoneAfter = phoneCurve && before ? before.map((v, i) => (v === null ? null : v + phoneCurve[i])) : after
 
   async function handleGoal(value: string) {
     setError('')
@@ -500,7 +504,7 @@ function EqEditor({
                 grid={FINE_GRID}
                 series={[
                   { label: '원래', colorIndex: 1, values: before },
-                  { label: 'EQ 적용 후', colorIndex: 0, values: after },
+                  { label: phoneCurve ? '폰에 걸면' : 'EQ 적용 후', colorIndex: 0, values: phoneCurve && phoneAfter ? phoneAfter : after },
                   ...(goal && goalCurve ? [{ label: goal.label, colorIndex: null, values: goalCurve }] : []),
                 ]}
                 yTitle="dB (300Hz~3kHz 평균 = 0)"
@@ -523,7 +527,8 @@ function EqEditor({
           <FrChart
             grid={FINE_GRID}
             series={[
-              { label: '만든 EQ', colorIndex: 0, values: response },
+              ...(phoneCurve ? [{ label: '폰에 거는 EQ', colorIndex: 2, values: phoneCurve }] : []),
+              { label: phoneCurve ? '밴드(내보내기)' : '만든 EQ', colorIndex: 0, values: response },
               ...(wantedEq ? [{ label: '목표까지 필요한 EQ', colorIndex: null, values: wantedEq }] : []),
             ]}
             yTitle="EQ (dB)"
@@ -531,6 +536,16 @@ function EqEditor({
           />
         </Suspense>
       </div>
+      {/* 앱에서 곡선 그대로 걸 때만 곡선이 3개라 어느 게 무엇인지 범례로 */}
+      {phoneCurve && (
+        <ChartLegend
+          items={[
+            { label: '폰에 거는 EQ', colorIndex: 2 },
+            { label: '밴드(내보내기)', colorIndex: 0 },
+            ...(wantedEq ? [{ label: '목표까지 필요한 EQ', colorIndex: null }] : []),
+          ]}
+        />
+      )}
 
       <div className="row">
         <button

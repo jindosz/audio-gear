@@ -15,19 +15,19 @@ export function ConfirmHost() {
     return () => setConfirmHandler(null)
   }, [])
 
-  function answer(ok: boolean) {
-    request?.resolve(ok)
+  function answer(value: boolean | null) {
+    request?.resolve(value)
     setOpen(false) // 내용(request)은 닫히는 애니메이션 동안 그대로 둔다
   }
 
   return (
-    <Modal open={open} onClose={() => answer(false)} title={request?.title ?? '확인'}>
+    <Modal open={open} onClose={() => answer(null)} title={request?.title ?? '확인'}>
       {request && (
         <div className="confirm">
           <p>{request.message}</p>
           <div className="confirm-actions">
             <button type="button" onClick={() => answer(false)}>
-              취소
+              {request.cancel ?? '취소'}
             </button>
             <button type="button" className={request.danger ? 'danger' : 'primary'} onClick={() => answer(true)} data-autofocus>
               {request.ok ?? '확인'}

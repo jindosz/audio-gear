@@ -8,6 +8,7 @@ import type { EarBalance } from './earBalanceStore'
 import type { EarProfile } from './earEq'
 import type { CompareTab, Device, EqPreset, Measurement, Target } from './types'
 
+/** 백업 파일 안의 앱 표시. 앱 이름이 Klang으로 바뀌었어도(2026-11-22) 예전 백업과 맞게 그대로 둔다 */
 export const BACKUP_APP = 'audio-gear'
 /** 백업 형식 버전. 나중에 형식을 바꾸면 올리고, 가져올 때 옛 버전을 변환한다 */
 export const BACKUP_VERSION = 1
@@ -156,7 +157,7 @@ export function parseBackup(text: string): BackupData {
   } catch {
     throw new Error('JSON 파일이 아닙니다.')
   }
-  if (!isObject(raw) || raw.app !== BACKUP_APP) throw new Error('audio-gear 백업 파일이 아닙니다.')
+  if (!isObject(raw) || raw.app !== BACKUP_APP) throw new Error('Klang 백업 파일이 아닙니다.')
   if (!isNumber(raw.version) || raw.version > BACKUP_VERSION) {
     throw new Error('이 앱보다 새로운 버전에서 만든 백업입니다. 앱을 업데이트한 뒤 가져오세요.')
   }
@@ -183,8 +184,8 @@ export function parseBackup(text: string): BackupData {
   }
 }
 
-/** 백업 파일 이름. 예: audio-gear-backup-2026-10-22.json */
+/** 백업 파일 이름. 예: klang-backup-2026-10-22.json */
 export function backupFileName(date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `audio-gear-backup-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.json`
+  return `klang-backup-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.json`
 }

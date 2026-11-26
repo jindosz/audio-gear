@@ -6,8 +6,7 @@
 import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 import { useEffect, useState } from 'react'
 import type { EarLayer } from './earEq'
-import { toDeviceEq } from './eqDevice'
-import type { EqSettings } from './eqExport'
+import { toDeviceEq, type PhoneEqSettings } from './eqDevice'
 import { EQ_APPLIED_KEY, readPref, writePref } from './localPrefs'
 import { isAndroidApp } from './platform'
 
@@ -26,7 +25,7 @@ export interface EqEngine {
    * EQ를 건다. 이미 켜져 있으면 바꾼다(끊김 없이). 결과 상태를 돌려준다.
    * balanceDb: 내 귀 균형(earBalance.ts의 값, 0이면 없음). 큰 쪽 채널만 줄인다
    */
-  apply(name: string, eq: EqSettings, balanceDb?: number, layer?: EarLayer | null): Promise<EqStatus>
+  apply(name: string, eq: PhoneEqSettings, balanceDb?: number, layer?: EarLayer | null): Promise<EqStatus>
   off(): Promise<EqStatus>
   status(): Promise<EqStatus>
   /** 켜져 있으면 균형 값만 바꾼다(EQ는 그대로). 꺼져 있으면 아무것도 안 함 */
@@ -157,12 +156,13 @@ export interface AppliedEq {
   signature: string
   /** 건 이름·값(내 귀 균형·보정이 바뀌면 다시 걸려고). 예전 기록엔 없음 */
   name?: string
-  eq?: EqSettings
+  eq?: PhoneEqSettings
 }
 
 /** 이름·필터·프리앰프가 같으면 같은 문자열 */
-export function eqSignature(name: string, eq: EqSettings): string {
-  return JSON.stringify([name, eq.filters, eq.preamp])
+export function eqSignature(name: string, eq: PhoneEqSettings): string {
+  // 곡선 그대로 걸 때는 곡선도(값이 바뀌면 다시 걸게). 소수 둘째 자리까지만 봐서 서명이 너무 길지 않게
+  return JSON.stringify([name, eq.filters, eq.preamp, eq.curve?.map((v) => Math.round(v * 100))])
 }
 
 let applied: AppliedEq | null = readPref<AppliedEq | null>(EQ_APPLIED_KEY, null)
@@ -204,7 +204,7 @@ export function setEarLayerProvider(p: () => EarLayer | null): void {
 const earActive = () => balanceProvider.on() || layerProvider() !== null
 
 /** 지금 균형·보정을 붙여서 건다 */
-const applyWithEar = (name: string, eq: EqSettings) => getEqEngine().apply(name, eq, balanceProvider.db(), layerProvider())
+const applyWithEar = (name: string, eq: PhoneEqSettings) => getEqEngine().apply(name, eq, balanceProvider.db(), layerProvider())
 
 /** 평평한 EQ로 내 귀 균형·보정만 건다 */
 export async function applyEarOnly(): Promise<EqStatus> {
@@ -214,7 +214,7 @@ export async function applyEarOnly(): Promise<EqStatus> {
 }
 
 /** 이 EQ를 폰에 건다(이미 켜져 있으면 끊김 없이 바꿈). 성공하면 무엇을 걸었는지 기억한다(균형·보정이 바뀌면 다시 걸려고) */
-export async function applyPreset(id: string, name: string, eq: EqSettings): Promise<EqStatus> {
+export async function applyPreset(id: string, name: string, eq: PhoneEqSettings): Promise<EqStatus> {
   const result = await applyWithEar(name, eq)
   setApplied(result.on ? { id, signature: eqSignature(name, eq), name, eq } : null)
   return result

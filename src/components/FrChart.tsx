@@ -49,8 +49,8 @@ function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }
 
-/** 손가락으로 본 값 표시가 사라지기까지(ms, 마지막으로 만진 뒤) */
-const TOOLTIP_HIDE_MS = 2500
+/** 손가락으로 본 값 표시가 사라지기까지(ms, 손가락을 뗀 뒤) */
+const TOOLTIP_HIDE_MS = 1000
 
 export function FrChart({ grid, series, yTitle, signed = false, className }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -104,27 +104,33 @@ export function FrChart({ grid, series, yTitle, signed = false, className }: Pro
     })
     chartRef.current = chart
 
-    // 손가락으로 눌러 본 값(툴팁)은 뗀 뒤에도 남아 있어서, 마지막으로 만진 뒤 잠시 지나면 지운다.
-    // 마우스는 그래프 밖으로 나가면 원래 사라지니 그대로 둔다
+    // 손가락으로 눌러 본 값(툴팁)은 뗀 뒤에도 남아 있어서, 손가락을 떼고 1초 지나면 지운다(누르고 있는 동안은 그대로).
+    // 길게 누르면 브라우저가 스크롤로 가져가 pointer 신호가 끊기는데(pointercancel) 차트는 touch 신호로 계속 툴팁을 그려서,
+    // pointer와 touch 신호를 둘 다 본다. 마우스는 그래프 밖으로 나가면 원래 사라지니 그대로 둔다
     const canvas = canvasRef.current!
     let hideTimer: ReturnType<typeof setTimeout> | undefined
-    const scheduleHide = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse') return
-      clearTimeout(hideTimer)
-      hideTimer = setTimeout(() => {
-        chart.setActiveElements([])
-        chart.tooltip?.setActiveElements([], { x: 0, y: 0 })
-        chart.update('none')
-      }, TOOLTIP_HIDE_MS)
+    const hide = () => {
+      chart.setActiveElements([])
+      chart.tooltip?.setActiveElements([], { x: 0, y: 0 })
+      chart.update('none')
     }
-    canvas.addEventListener('pointerdown', scheduleHide)
-    canvas.addEventListener('pointermove', scheduleHide)
-    canvas.addEventListener('pointerup', scheduleHide)
+    const press = (e: Event) => {
+      if (e instanceof PointerEvent && e.pointerType === 'mouse') return
+      clearTimeout(hideTimer)
+    }
+    const release = (e: Event) => {
+      if (e instanceof PointerEvent && e.pointerType === 'mouse') return
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(hide, TOOLTIP_HIDE_MS)
+    }
+    const pressEvents = ['pointerdown', 'touchstart']
+    const releaseEvents = ['pointerup', 'pointercancel', 'touchend', 'touchcancel']
+    pressEvents.forEach((t) => canvas.addEventListener(t, press, { passive: true }))
+    releaseEvents.forEach((t) => canvas.addEventListener(t, release, { passive: true }))
     return () => {
       clearTimeout(hideTimer)
-      canvas.removeEventListener('pointerdown', scheduleHide)
-      canvas.removeEventListener('pointermove', scheduleHide)
-      canvas.removeEventListener('pointerup', scheduleHide)
+      pressEvents.forEach((t) => canvas.removeEventListener(t, press))
+      releaseEvents.forEach((t) => canvas.removeEventListener(t, release))
       chart.destroy()
     }
   }, [])

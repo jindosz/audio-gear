@@ -27,9 +27,9 @@ export function EqExport({ eq, name }: Props) {
   const [shareFailed, setShareFailed] = useState(false)
 
   const text = eqText(app, eq)
-  // 파일 이름에 못 쓰는 글자는 뺀다. Wavelet은 파일 이름이 곧 프로필 이름이라 앞에 "audio-gear-eq"를 붙이지 않는다
+  // 파일 이름에 못 쓰는 글자는 뺀다. Wavelet은 파일 이름이 곧 프로필 이름이라 앞에 "Klang EQ"를 붙이지 않는다
   const cleanName = name.replace(/[\\/:*?"<>|]/g, '').trim() || 'EQ'
-  const fileName = app === 'wavelet' ? `${cleanName}.txt` : `audio-gear-eq ${cleanName}.txt`
+  const fileName = app === 'wavelet' ? `${cleanName}.txt` : `Klang EQ ${cleanName}.txt`
   const file = new File([text], fileName, { type: 'text/plain' })
   // 안드로이드 앱에서는 "파일로 저장"이 이미 공유 창을 열어서 공유 버튼을 따로 두지 않는다
   const shareable = !isAndroidApp() && canShareFiles(file)

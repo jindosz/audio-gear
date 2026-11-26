@@ -237,14 +237,19 @@ export function listEqPresets(): Promise<EqPreset[]> {
 }
 
 /** 새 EQ를 저장하고 id를 돌려준다 */
-export async function addEqPreset(preset: Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'>): Promise<string> {
+export async function addEqPreset(
+  preset: Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'> & Pick<Partial<EqPreset>, 'curveMode'>,
+): Promise<string> {
   const id = crypto.randomUUID()
   const now = Date.now()
   await db.eqPresets.add({ ...preset, id, createdAt: now, updatedAt: now })
   return id
 }
 
-export async function updateEqPreset(id: string, patch: Partial<Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters'>>): Promise<void> {
+export async function updateEqPreset(
+  id: string,
+  patch: Partial<Pick<EqPreset, 'name' | 'measurementId' | 'goal' | 'filters' | 'curveMode'>>,
+): Promise<void> {
   await db.eqPresets.update(id, { ...patch, updatedAt: Date.now() })
 }
 

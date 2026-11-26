@@ -65,10 +65,16 @@ function weight(f: number): number {
   return 1 - (f - 8000) / 4000
 }
 
-/** 목표 EQ 곡선 만들기: 들어볼 기기 − 지금 기기, 부스트 제한, 고음은 점점 0으로 */
-export function targetEq(current: FrCurve, wish: FrCurve, grid: number[] = FINE_GRID): Values {
-  const a = prepare(current, grid, 3)
-  const b = prepare(wish, grid, 3)
+/** 폰에 곡선 그대로 걸 때의 스무딩(1/6옥타브): 필터 10개로는 못 따라가는 좁은 모양까지 따라간다 */
+export const EXACT_SMOOTHING = 6
+
+/**
+ * 목표 EQ 곡선 만들기: 들어볼 기기 − 지금 기기, 부스트 제한, 고음은 점점 0으로.
+ * smoothing: 1/n옥타브의 n. 기본 3(필터로 맞출 큰 음색), 폰에 곡선 그대로 걸 때는 EXACT_SMOOTHING
+ */
+export function targetEq(current: FrCurve, wish: FrCurve, grid: number[] = FINE_GRID, smoothing = 3): Values {
+  const a = prepare(current, grid, smoothing)
+  const b = prepare(wish, grid, smoothing)
   return grid.map((f, i) => {
     const x = a[i]
     const y = b[i]
@@ -185,4 +191,28 @@ export function fitPeq(target: Values, grid: number[] = FINE_GRID, maxFilters = 
     preamp,
     error,
   }
+}
+
+/** 남은 차이를 셀 범위(Hz): 귀가 민감하고 측정이 안정적인 곳. 8kHz 위는 측정 편차가 커서 뺌 */
+const MATCH_LOW = 300
+const MATCH_HIGH = 8000
+
+/**
+ * EQ를 건 뒤 들어볼 기기와 실제로 남은 차이(dB, RMS, 300Hz~8kHz, 1/3옥타브 스무딩).
+ * fitPeq의 error(필터가 목표 EQ를 얼마나 따라갔나)와 달리, 안전 제한(+6/−12dB)·고음 줄임 때문에 못 따라간 부분까지 들어간다.
+ * 전체 음량 차이는 빼고 모양만 본다. response = 0이면 EQ 전 차이
+ */
+export function matchError(current: FrCurve, wish: FrCurve, response: number[], grid: number[] = FINE_GRID): number {
+  const a = prepare(current, grid, 3)
+  const b = prepare(wish, grid, 3)
+  const diffs: number[] = []
+  grid.forEach((f, i) => {
+    const x = a[i]
+    const y = b[i]
+    if (f < MATCH_LOW || f > MATCH_HIGH || x === null || y === null) return
+    diffs.push(x + (response[i] ?? 0) - y)
+  })
+  if (!diffs.length) return 0
+  const mean = diffs.reduce((s, d) => s + d, 0) / diffs.length
+  return Math.sqrt(diffs.reduce((s, d) => s + (d - mean) ** 2, 0) / diffs.length)
 }

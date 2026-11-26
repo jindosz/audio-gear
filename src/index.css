@@ -2801,9 +2801,17 @@ button.select-option:active {
   left: 50%;
   bottom: calc(24px + env(safe-area-inset-bottom));
   z-index: 60;
+  /* left: 50%라서 폭을 정하지 않으면 화면 오른쪽 절반만 쓸 수 있는 폭으로 줄바꿈된다 → 글 길이만큼(최대 화면 폭) */
+  width: max-content;
   max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  text-align: center;
+  /* 한글은 단어 중간에서 끊지 않기 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   padding: 10px 18px;
-  border-radius: 999px;
+  /* 두 줄이 되어도 어색하지 않게 알약 대신 둥근 사각형 */
+  border-radius: 20px;
   background: color-mix(in srgb, var(--text) 88%, transparent);
   color: var(--bg);
   font-size: 14px;

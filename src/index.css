@@ -3190,9 +3190,11 @@ button.select-option:active {
 .settings-advanced > summary.settings-group-title {
   margin-top: 0;
 }
-/* 비교 칸: 손가락 화면에서 위아래 스크롤은 브라우저가, 옆으로 미는 건 탭 넘기기(useSwipeTabs.ts)가 받게 */
+/* 비교 칸·기기 목록: 손가락 화면에서 위아래 스크롤은 브라우저가, 옆으로 미는 건 넘기기(useSwipeTabs.ts)가 받게
+   (비교 칸 = 옆 탭, 목록 = 헤드폰/이어폰) */
 @media (pointer: coarse) {
-  .main-col {
+  .main-col,
+  .list-col {
     touch-action: pan-y;
   }
 }

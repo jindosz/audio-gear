@@ -1,6 +1,6 @@
 // 가운데 목록 열: 검색창, 기기 추가 버튼, "선택됨 → 보유 기기 → 찜한 기기 → 전체 기기" 목록
 // 전체 기기 = 내가 가진 기기(보유 제외) + AutoEQ 목록의 모든 기기. 수천 개라 가상 스크롤로 그린다.
-import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { addFromCatalog, entryFor, normalize, splitBrand, type CatalogDevice } from '../catalog'
 import { categoryLabels, measurementLabel, specTags } from '../labels'
 import {
@@ -28,6 +28,7 @@ import { VirtualList } from './VirtualList'
 import { ArrowUpIcon, ChevronDownIcon, MoreIcon, OwnedIcon, PlusIcon, StarIcon } from './Icons'
 import { SegmentedGroup } from './SegmentedGroup'
 import { SoundTagList } from './SoundTagList'
+import { useSwipeTabs } from './useSwipeTabs'
 import { useSoundTagger } from '../useSoundTagger'
 import type { SoundTag } from '../soundTags'
 import { summarySource } from '../recommend'
@@ -82,6 +83,9 @@ function catalogSub(entry: CatalogDevice, pending: boolean): Pick<RowProps, 'sub
   return hint ? { sub: specTags(hint)[0], subEstimated: true } : {}
 }
 
+/** 목록을 옆으로 밀 때의 순서(왼쪽 → 오른쪽) */
+const CATEGORIES = Object.keys(categoryLabels) as DeviceCategory[]
+
 export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   const { loading, devices, measurementsByDevice, selected } = useCompareData(tabId)
   const { catalogDevices, catalogError, squigReady, squigError, squigProgress } = useCatalogDevices()
@@ -93,6 +97,10 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
   // 측정치를 받는 중인 AutoEQ 기기 이름
   const [pendingName, setPendingName] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // 손가락으로 목록을 빠르게 옆으로 밀면 헤드폰 ↔ 이어폰(비교 탭 넘기기와 같은 판단)
+  const listRef = useRef<HTMLElement>(null)
+  const selectCategory = useCallback((id: string) => onCategoryChange(id as DeviceCategory), [onCategoryChange])
+  useSwipeTabs(listRef, CATEGORIES, category, selectCategory)
   // 필터는 카테고리마다 따로 기억한다(헤드폰 브랜드를 고른 채 이어폰으로 가도 빈 목록이 되지 않게)
   const [filters, setFilters] = useState<Record<DeviceCategory, ListFilter>>({ headphone: EMPTY_FILTER, iem: EMPTY_FILTER })
   const [filterOpen, setFilterOpen] = useState(false)
@@ -306,7 +314,7 @@ export function DeviceList({ category, tabId, onCategoryChange }: Props) {
     !loading && catalogDevices !== null && owned.length === 0 && wished.length === 0 && allItems.length === 0
 
   return (
-    <aside className="list-col">
+    <aside className="list-col" ref={listRef}>
       {/* 폰에서만 보임: 잡고 끌어서 목록 높이 조절, 누르면 펼치기/되돌리기(높이는 기억하지 않음) */}
       <ListGrip />
       {/* 폰에서만 보임: 왼쪽 메뉴 대신 목록 위에서 헤드폰/이어폰 전환 */}
